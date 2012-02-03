@@ -1,0 +1,255 @@
+1/31/12
+
+TA section:
+
+Makefile:
+scanner.o : scanner.c scanner_token.h : compile from c and h to o
+
+SHould have a driver file for the lex generated file b/c it doesn't have main
+also a file that specifies constants
+eg  #define CHAR 11
+
+should use a test framework
+
+Lex file:
+
+%option yylineno # keep track of line numbers
+%option nounput
+%option noyywrap
+
+Top {% %} part:
+  include stdlib, errno, string (for copying strings), assert (like java assert)
+  if including own file, put in "" no <>
+
+Next part in %% %%: regexes
+  eg  newline \n
+  can use [[:digit:]], alpha
+  {letter}: any letter
+
+Next part:
+  {newline}: can do line_number++ or do nothing and let Lex count lines
+  
+Reserved words
+  eg  char  return CHAR # first 'char' is just the regex, 2nd CHAR is from the constants file
+
+When returning the type eg NUMBER, can also set yyval (a static/external variable) to the value of the number, or if returning lots of info about the number, use a struct
+
+strtoul(text, NULL, 10): string to unsigned long, 10 is the base
+
+Can define struct number{ int i} and then have a function that returns number
+To declare a variable of type number:
+  num = (struct number *)malloc(sizeof(struct number));
+To assign value to a struct field: 
+  num->overflow = 1;
+In the function that finds values of number strings, test by value if they are long or int, signed or unsigned
+#define ADDNAME(ARRAY, TOKEN) ARRAY[TOKEN] = #TOKEN # this is a macro that gets the value of TOKEN in the constant file
+
+yylex() returns either a token or 0 -> call repeatedly
+
+Print output with line numbers:
+  fprintf(output, "line = %-5d\t", yylineno)
+
+for (token = yylex(); 0 != token; token = yylex())
+
+Output of driver program should be a list of tokens with line numbers, types, values
+
+Example test:
+  TEST_F(ScannerTest, SlashTest) {
+  fputs("/", test_input);
+  fclose(test_input);
+  
+  EXPECT_EQ(SLASH, yylex()); # expect yylex to return the SLASH token
+  }
+  
+Put this in a separate unit_test file
+
+
+ssh lbui@nice.harvard.edu
+
+Class
+
+Lexer should return 2 tokens 0 and 1 for input "01"
+a ^ b is not the same as (a != 0) ^ (b != 0)
+a || is the same as (a != 0) || (b != 0)
+
+Logical operators:
+  a && b
+  !a
+  a || b
+  a ? b : c
+Bitwise operators:
+  a ^ b
+  a & b
+  a | b
+  ~a: complement, reverses bits
+Comparison
+  a == b
+  a != b
+  a < b
+  a > b
+  a <= b
+  a >= b
+Arithmetic
+  +
+  -
+  * /
+  % (remainer not modulo)
+  a++
+  a--
+  ++a
+  --a
+  -a
+Assignment
+  =
+  +=
+  -=
+  *=
+  /=
+  %=
+  &=
+  |=
+  ^=
+  >>=
+  <<=
+Shift
+  a >> b (shift a's bits left b times)
+  <<
+Separator characters
+  ()
+  []
+  {}
+  a = b,c,d; # comma is a 'sequence point'
+  ;
+  :
+  …
+
+comma in C?
+
+Can't rewrite a += b as a = a + b because a may have changed, as in:
+  a[b++] = a[b++] + c (b will have changed)
+
+Given
+  struct node {
+    int val;
+    struct node *next;
+  } myNode;
+Then I can say myNode.val
+
+a -> b is equivalent to (*a).b
+
+Forward reference is the ability to reference a symbol earlier in the program text than where that symbol is declared or defined.
+  Declaration vs definition:
+    Declaration: storage isn't allocated
+      eg int f(int x); (prototype declaration; this appears at the top of the file)
+      extern int i;
+    Definition:
+      int f(int x) {
+        return x * x;
+      }
+  Instance where forward reference can happen: 
+    in the node struct above where node next* appears before node is done being defined.
+    labels:
+      void f(void) {
+        goto exitCode; # forward reference
+        exitCode: ...
+      }
+Scope: file scope (eg main()), block scope (local variables)
+Overloading happens when a later definition overwrites an earlier one, or when 2 functions/operators have the same name eg postincrement and preincrement (both named ++)
+
+macros?
+
+Extent: length of time that storage is allocated for that variable
+  void f(void) {
+    static int i; // this hasn't changed the scope of i, but it changes the extent of i. i now lives for as long as the file lives, but it's still only visible in f. i is initialized to zero because it's static. If I call f recursively, the i in the 2nd f will be this i too. The opposite is auto
+    C doesn't allocate and deallocate space for block variables when it enters a block. It figures out how much space the variables in a function needs when it enters the function. It does that by looking at block nesting and figuring out the maximum storage needed. IF there are 2 blocks at the same level, it takes the estimate of one that requires more memory. It also allocates the parameters at the same time.
+    
+    i = 35; // if you call i after f, it'll be 35
+  }
+  
+static functions:
+  static int f(void): can't be seen by other files
+  int g(void): can be seen by other files
+Type qualifiers
+  int *p; // p is a pointer to an int.  This allocates storage for p but not the int that it points to
+  p = &i; // p gets the address of i
+  *p = 3; // changes what p points to
+  If we have
+    const int *p1; // p1 is a pointer to constant, so can't say *p1= but can say p1 =
+    int * const p2; // p2 is a constant pointer to an int, so can't say p2 = … but can say *p2 = 
+    const int * const p3; // p3 is a constant pointer to a constant int 
+
+There are 5 classes of identifiers
+  macros
+  labels: can have the same name as a variable because it's only used after goto
+  tags: what follows struct, union and enum eg the 'node' in 'struct node', also can be the same as variables
+  component names: fields in structs and unions eg val in struct node above
+  all other names: variables, functions, typedef names, enum constants. Every one of these requires creating a new symbol table
+
+C module?
+
+main isn't a reserved word; it's just a requirement of the linker
+
+
+Regular expressions
+  sigma: alphabet
+  epsilon: a regex
+  L(epsilon): language accepted by epsilon which is {epsilon}
+  a is a symbol in the alphabet
+    a is a regex
+    L(a) = {a} 
+  (r) | (s)
+    L(r) union L(s)
+  (r)(s)
+    L(r)L(s): strings accepted by r concatenated with strings accepted by s
+  (r)* 
+    L(r)*
+  * is idempotent: you can apply it multiple times and it'll just be like applying it once
+  Ex: {letter}({letter}|{digit})*/[^a-zA-Z0-9]
+  things after the slash are required to be present but aren't part of the symbol, so characters that aren't a-z, A-Z, 0-9 must follow the string but aren't part of the string
+  <Fig. 1>
+  
+Lex
+  Special characters
+    ^: NOT and beginning of line
+    $: end of line
+    /: must be followed by
+  Rules
+    c matches the single no-operator character c
+    \c matches the character c
+    [^s]: matches any one character not in s
+    r{m, n}: matches between m and n occurrences of r
+    (r) matches r where r is a regex
+    {name} matches the regex defined by name
+  Extension .lex
+  Format
+    <definitions>
+    %%
+    <rules>
+    %%
+    <user functions>
+  Anything in definitions sectin that's delimited by a line with %{}% is copied directly to the C output
+  Definition section: each line has format <name><regex>
+  The kind of token gets returned
+    Things with the same precedence can be returned together eg multiplicative_operator
+  The value of the token gets placed in yylval
+  
+  
+  Compiling a Lex file
+    lex lexer.lex
+    gcc lex.yy.c -c // -c means create an object file, but don't link
+      object file will have .o extension
+      returns lex.yy.o
+    gcc -pedantic -Wall lex.yy.o lexer.c -lfl -o lexer
+      pedantic means ensure standard compliance
+      Wall: issue all warnings
+      lfl: link with the flex libraries
+  Special symbols (mostly for use with yacc):
+    yytext: the matched string as a null terminated string
+    yyleng: length of yytext
+    yylex(): name of generated lexer function
+    yylval: value of the token returned
+      What type should it be? struct or union if needed
+  Sample Makefile on course website
+  Lex always prefers longer string match to resolv ambiguity
+  If 2 matches match strings of the same length, Lex will pick the one that comes earlier in the .lex file
+  
