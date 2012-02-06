@@ -123,8 +123,6 @@ Separator characters
   :
   …
 
-comma in C?
-
 Can't rewrite a += b as a = a + b because a may have changed, as in:
   a[b++] = a[b++] + c (b will have changed)
 
@@ -156,8 +154,6 @@ Forward reference is the ability to reference a symbol earlier in the program te
 Scope: file scope (eg main()), block scope (local variables)
 Overloading happens when a later definition overwrites an earlier one, or when 2 functions/operators have the same name eg postincrement and preincrement (both named ++)
 
-macros?
-
 Extent: length of time that storage is allocated for that variable
   void f(void) {
     static int i; // this hasn't changed the scope of i, but it changes the extent of i. i now lives for as long as the file lives, but it's still only visible in f. i is initialized to zero because it's static. If I call f recursively, the i in the 2nd f will be this i too. The opposite is auto
@@ -184,8 +180,6 @@ There are 5 classes of identifiers
   tags: what follows struct, union and enum eg the 'node' in 'struct node', also can be the same as variables
   component names: fields in structs and unions eg val in struct node above
   all other names: variables, functions, typedef names, enum constants. Every one of these requires creating a new symbol table
-
-C module?
 
 main isn't a reserved word; it's just a requirement of the linker
 
@@ -227,8 +221,8 @@ Lex
     <rules>
     %%
     <user functions>
-  Anything in definitions sectin that's delimited by a line with %{}% is copied directly to the C output
-  Definition section: each line has format <name><regex>
+  Anything in definitions section that's delimited by a line with %{}% is copied directly to the C output
+  Definition section: each line has format <name><regex>. MUST NOT HAVE SPACE BEFORE REGEX!
   The kind of token gets returned
     Things with the same precedence can be returned together eg multiplicative_operator
   The value of the token gets placed in yylval
@@ -250,6 +244,16 @@ Lex
     yylval: value of the token returned
       What type should it be? struct or union if needed
   Sample Makefile on course website
-  Lex always prefers longer string match to resolv ambiguity
+  Lex always prefers longer string match to resolve ambiguity
   If 2 matches match strings of the same length, Lex will pick the one that comes earlier in the .lex file
   
+lvalue and rvalue: when you have eg int a = 3, there are 2 relevant values, 3 and a's memory address
+  lvalue is the memory address, retrieved with &
+  rvalue is the value 3, retrieved with *
+
+#define is a preprocessor
+union: like struct in most ways except can only call 1 field at a time (they're stored at the same address). Good for variables whose value can only be 1 of several types.
+
+&: address-of operator (mnemonic: address-ampersand)
+
+strcmp(str1, str2) returns 0 if the strings are equal, 1 if str1 is lexically larger (alphabetically behind) str2, -1 otherwise
