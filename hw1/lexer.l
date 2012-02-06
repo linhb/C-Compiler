@@ -8,12 +8,11 @@
 
 	struct number *create_num(char *yytext);
 
-	extern void *yylval;
-
-	#define NUM 2
+	void *yylval;
 %}
-
-number		[[:digit:]]+ 
+delimiter 	\s
+whitespace	{delimiter}+
+number    	[[:digit:]]+
 
 %%
 {number} {

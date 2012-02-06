@@ -4,12 +4,14 @@
 #include "token_constants.h"
 
 int yylex();
-extern yyleng;
+extern int yyleng;
 extern FILE *yyin;
 extern char *yytext;
 extern int yylineno;
 extern void *yylval;
 
+void initialize_token_names();
+void get_token_name(char *name, int token_number);
 
 int main(int argc, char **argv) {
 	FILE *input, *output;
@@ -17,15 +19,18 @@ int main(int argc, char **argv) {
 	output = stdout;
 	initialize_token_names();
 	int token;
-	char *name;
+	// char *name;
 	struct number *number;
 	char *id;
 	
 	for (token = yylex(); token != 0; token = yylex()) {
-		get_token_name(name, token);
-		printf("%s\t", name);
-		if (token == NUM)
-			printf("%d", yylval);
+		// name = malloc(strlen(token_names[token]) + 1);
+		// strcpy(name, token_names[token]);
+		printf("%s\t", token_names[token]);
+		if (token == NUM) {
+			number = (struct number*)yylval;
+			printf("%ld", number->value);
+		}
 	}
 	if (output != stdout)
 		fclose(output);
@@ -35,10 +40,10 @@ int main(int argc, char **argv) {
 }
 
 void initialize_token_names() {
-	token_names[NUM] = NUM;
+	ADD_TOKEN_NAME(token_names, NUM);
 }
 
-void *get_token_name(char *name, int token_number) {
-	strcpy(name, token_names[token_number]);
-}
-
+// void get_token_name(char *name, int token_number) {
+// 	strcpy(name, token_names[token_number]);
+// }
+// 

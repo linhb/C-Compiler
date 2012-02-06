@@ -456,10 +456,8 @@ char *yytext;
 
 	struct number *create_num(char *yytext);
 
-	extern void *yylval;
-
-	#define NUM 2
-#line 463 "lex.yy.c"
+	void *yylval;
+#line 461 "lex.yy.c"
 
 #define INITIAL 0
 
@@ -641,9 +639,9 @@ YY_DECL
 	register char *yy_cp, *yy_bp;
 	register int yy_act;
     
-#line 18 "lexer.l"
+#line 17 "lexer.l"
 
-#line 647 "lex.yy.c"
+#line 645 "lex.yy.c"
 
 	if ( !(yy_init) )
 		{
@@ -728,7 +726,7 @@ do_action:	/* This label is used only to access EOF actions. */
 
 case 1:
 YY_RULE_SETUP
-#line 19 "lexer.l"
+#line 18 "lexer.l"
 {
 	yylval = (struct number *)create_num(yytext);
 	return NUM;
@@ -736,10 +734,10 @@ YY_RULE_SETUP
 	YY_BREAK
 case 2:
 YY_RULE_SETUP
-#line 23 "lexer.l"
+#line 22 "lexer.l"
 ECHO;
 	YY_BREAK
-#line 743 "lex.yy.c"
+#line 741 "lex.yy.c"
 case YY_STATE_EOF(INITIAL):
 	yyterminate();
 
@@ -1736,7 +1734,7 @@ void yyfree (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 23 "lexer.l"
+#line 22 "lexer.l"
 
 
 
@@ -1745,3 +1743,4 @@ struct number *create_num(char *yytext) {
 	num->value = strtoul(yytext, NULL, 10);
 	return num;
 }
+
