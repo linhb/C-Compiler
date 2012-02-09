@@ -1,5 +1,6 @@
 %option noyywrap
 %option yylineno
+%option nounput
 
 %{
   #include <stdio.h>
@@ -13,8 +14,8 @@
 	void *yylval;
 %}
 
-comments		(\/\*.*\*\/)|(\/\/.*)\n
-delimiter 	[ |\t\n]
+comments		\/\*.*\*\/
+delimiter 	[ \t\n\v\f]
 whitespace	{delimiter}+
 identifier	[A-Za-z_][A-Za-z0-9_]*
 number    	[0-9]+
@@ -63,7 +64,7 @@ while				yylval = (char *)token_names[WHILE]; return WHILE;
 "\|\|"     yylval	= (char *)token_names[LOGICAL_OR];               	 return	LOGICAL_OR;
 "&&"     yylval	= (char *)token_names[LOGICAL_AND];              	 return	LOGICAL_AND;
 "^"      yylval	= (char *)token_names[BITWISE_XOR];              	 return	BITWISE_XOR;
-"&"      yylval	= (char *)token_names[BITWISE_AND];              	 return	BITWISE_AND;
+"&"      yylval	= (char *)token_names[AMPERSAND];              	 return	AMPERSAND;
 "\|"      yylval	= (char *)token_names[BITWISE_OR];               	 return	BITWISE_OR;
 "~"      yylval	= (char *)token_names[BITWISE_COMPLEMENT];       	 return	BITWISE_COMPLEMENT;
 "=="     yylval	= (char *)token_names[IS_EQUAL];                 	 return	IS_EQUAL;
@@ -86,12 +87,13 @@ while				yylval = (char *)token_names[WHILE]; return WHILE;
 "+"      yylval	= (char *)token_names[PLUS];                     	 return	PLUS;
 "-"      yylval	= (char *)token_names[DASH];                    	 return	DASH;
 "*"      yylval	= (char *)token_names[STAR];                 	 return	STAR;
-"/"      yylval	= (char *)token_names[DIVIDE];                   	 return	DIVIDE;
+"/"      yylval	= (char *)token_names[SLASH];                   	 return	SLASH;
 "%"      yylval	= (char *)token_names[REMAINDER];                	 return	REMAINDER;
 "++"     yylval	= (char *)token_names[PREINCREMENT];             	 return	PREINCREMENT;
 "--"     yylval	= (char *)token_names[PREDECREMENT];             	 return	PREDECREMENT;
 ">>"     yylval	= (char *)token_names[BITSHIFT_LEFT];            	 return	BITSHIFT_LEFT;
 "<<"     yylval	= (char *)token_names[BITSHIFT_RIGHT];           	 return	BITSHIFT_RIGHT;
+"?"	     yylval	= (char *)token_names[QUESTION_MARK];           	 return	QUESTION_MARK;
 
 "("      yylval = (char *)token_names[LEFT_PAREN];                    return LEFT_PAREN;
 ")"      yylval = (char *)token_names[RIGHT_PAREN];                   return RIGHT_PAREN;

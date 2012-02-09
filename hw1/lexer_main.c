@@ -12,44 +12,43 @@ extern int yylineno;
 extern void *yylval;
 
 void initialize_token_names();
-void initialize_token_names();
-void print_value(void *value);
+void print_value(FILE *output, void *yylval);
 
 int main(int argc, char **argv) {
 	FILE *input, *output;
 	if (argc < 2 || !strcmp(argv[1], "-")) {
 		input = stdin;		
 	} else {
-		input = fopen(argv[1], 'r');
+		input = fopen(argv[1], "r");
 	}
 	if (argc < 3 || !strcmp(argv[2], "-")) {
-		output = fopen(argv[2], 'w');
-	} else {
 		output = stdout;
+	} else {
+		output = fopen(argv[2], "w");
 	}
 	initialize_token_names();
-	initialize_token_names();
 	int token;
+	yyin = input;
 	
 	for (token = yylex(); token != 0; token = yylex()) {
 		if (token > 0) {
-			printf("Line number:\t%d\tToken text:\t%s\tToken type:\t%s\t", yylineno, yytext, token_names[token]);
+			fprintf(output, "Line number:\t%d\tToken text:\t%s\tToken type:\t%s\t", yylineno, yytext, token_names[token]);
 			switch (token) {
 				struct number *number;
 				case NUM_CONST: 
 					number = (struct number *)yylval;
-					printf("Token value:\t%ld\t", number->value);
+					fprintf(output, "Token value:\t%ld\t", number->value);
 					break;
 				case STRING_CONST:
 				case CHAR_CONST:
 				case IDENTIFIER:
-					print_value(yylval);		
+					print_value(output, yylval);		
 					break;
 				case LOGICAL_NOT:
 				case LOGICAL_OR:
 				case LOGICAL_AND:
 				case BITWISE_XOR:
-				case BITWISE_AND:
+				case AMPERSAND:
 				case BITWISE_OR:
 				case BITWISE_COMPLEMENT:
 				case IS_EQUAL:
@@ -72,7 +71,7 @@ int main(int argc, char **argv) {
 				case PLUS:
 				case DASH:
 				case STAR:
-				case DIVIDE:
+				case SLASH:
 				case REMAINDER:
 				case PREINCREMENT:
 				case PREDECREMENT:
@@ -80,6 +79,7 @@ int main(int argc, char **argv) {
 				case POSTDECREMENT:
 				case BITSHIFT_LEFT:
 				case BITSHIFT_RIGHT:
+				case QUESTION_MARK:
 
 				case LEFT_PAREN:
 				case RIGHT_PAREN:
@@ -90,7 +90,7 @@ int main(int argc, char **argv) {
 				case COMMA:
 				case SEMICOLON:
 				case COLON:
-					print_value(yylval);		
+					print_value(output, yylval);		
 					break;
 				case DO:
 				case FOR:
@@ -112,10 +112,9 @@ int main(int argc, char **argv) {
 			}
 		}
 		else {
-			printf("ERROR");
+			fprintf(output, "ERROR");
 		}
-		printf("\n");
-		yylineno++;
+		fprintf(output, "\n");
 	}
 	if (output != stdout)
 		fclose(output);
@@ -152,7 +151,7 @@ void initialize_token_names() {
 	ADD_TOKEN_NAME(token_names, LOGICAL_OR);
 	ADD_TOKEN_NAME(token_names, LOGICAL_AND);
 	ADD_TOKEN_NAME(token_names, BITWISE_XOR);
-	ADD_TOKEN_NAME(token_names, BITWISE_AND);
+	ADD_TOKEN_NAME(token_names, AMPERSAND);
 	ADD_TOKEN_NAME(token_names, BITWISE_OR);
 	ADD_TOKEN_NAME(token_names, BITWISE_COMPLEMENT);
 	ADD_TOKEN_NAME(token_names, IS_EQUAL);
@@ -175,7 +174,7 @@ void initialize_token_names() {
 	ADD_TOKEN_NAME(token_names, PLUS);
 	ADD_TOKEN_NAME(token_names, DASH);
 	ADD_TOKEN_NAME(token_names, STAR);
-	ADD_TOKEN_NAME(token_names, DIVIDE);
+	ADD_TOKEN_NAME(token_names, SLASH);
 	ADD_TOKEN_NAME(token_names, REMAINDER);
 	ADD_TOKEN_NAME(token_names, PREINCREMENT);
 	ADD_TOKEN_NAME(token_names, PREDECREMENT);
@@ -183,6 +182,7 @@ void initialize_token_names() {
 	ADD_TOKEN_NAME(token_names, POSTDECREMENT);
 	ADD_TOKEN_NAME(token_names, BITSHIFT_LEFT);
 	ADD_TOKEN_NAME(token_names, BITSHIFT_RIGHT);
+	ADD_TOKEN_NAME(token_names, QUESTION_MARK);
 		
 	ADD_TOKEN_NAME(token_names, LEFT_PAREN);
 	ADD_TOKEN_NAME(token_names, RIGHT_PAREN);
@@ -195,8 +195,8 @@ void initialize_token_names() {
 	ADD_TOKEN_NAME(token_names, COLON);
 }
 
-void print_value(void *yylval) {
+void print_value(FILE *output, void *yylval) {
 	char *value = strdup((char *)yylval);
-	printf("Token value:\t%s\t", value);			
+	fprintf(output, "Token value:\t%s\t", value);			
 	free(value);
 }

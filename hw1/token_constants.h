@@ -1,4 +1,4 @@
-// reserved words
+/*  reserved words */
 #define          	DO               	1
 #define          	FOR              	2
 #define          	RETURN           	3
@@ -15,18 +15,18 @@
 #define          	CONTINUE         	14
 #define          	LONG             	15
 #define          	WHILE            	16
-//constants
+/* constants */
 #define          	NUM_CONST        	17
 #define          	STRING_CONST     	18
 #define          	CHAR_CONST       	19
-//identifier
+/* identifier */
 #define          	IDENTIFIER       	20
-//operators
+/* operators */
 #define LOGICAL_NOT              	21
 #define LOGICAL_OR               	22
 #define LOGICAL_AND              	23
 #define BITWISE_XOR              	24
-#define BITWISE_AND              	25
+#define AMPERSAND             	25
 #define BITWISE_OR               	26
 #define BITWISE_COMPLEMENT       	27
 #define IS_EQUAL                 	28
@@ -49,7 +49,7 @@
 #define PLUS                     	45
 #define DASH                     	46
 #define STAR                     	47
-#define DIVIDE                   	48
+#define SLASH                  	48
 #define REMAINDER                	49
 #define PREINCREMENT             	50
 #define PREDECREMENT             	51
@@ -57,7 +57,8 @@
 #define POSTDECREMENT            	53
 #define BITSHIFT_LEFT            	54
 #define BITSHIFT_RIGHT           	55
-//separators
+#define QUESTION_MARK							65
+/* separators */
 #define LEFT_PAREN               	56
 #define RIGHT_PAREN              	57
 #define LEFT_BRACKET             	58
@@ -69,11 +70,8 @@
 #define COLON                    	64
 
 #define ADD_TOKEN_NAME(TOKEN_NAMES, TOKEN) TOKEN_NAMES[TOKEN] = #TOKEN
-#define ADD_OPERATOR_NAME(OPERATOR_NAMES, OP) OPERATOR_NAMES[OP] = #OP
 
 const char *token_names[100];
-const char *operator_names[100];
-
 
 struct number {
 	unsigned long value;
