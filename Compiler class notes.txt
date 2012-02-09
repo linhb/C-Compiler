@@ -257,3 +257,110 @@ union: like struct in most ways except can only call 1 field at a time (they're 
 &: address-of operator (mnemonic: address-ampersand)
 
 strcmp(str1, str2) returns 0 if the strings are equal, 1 if str1 is lexically larger (alphabetically behind) str2, -1 otherwise
+
+2/7/12
+TA section:
+yylex() must return all info asked for
+
+At the very end of rule definitions in lexer.l, can do
+	.	return -1;
+	This will catch every token that didn't match any above, then you can test if token < 0 to output errors
+
+Treat everything strictly according to their appearance eg star, not what they could mean.
+
+Identifier limit 31
+String: just check memory was successfully allocated
+Should return a unique number for every operator
+Make int and long different tokens based on rule: it's the first type that it fits in this list: int, long, unsigned long
+
+Have make clean target
+
+make clean before submitting
+
+Run script in hw1 directory, do some manual testing, Ctrl D when done
+
+Submitting:
+	submit libe295 1 <absolute path to hw directory eg ~/hw1>
+	
+Don't submit irrelevant files like .git
+
+Can submit multiple times.
+
+Add token type for comments
+
+Lecture:
+
+Problem set 2:
+
+Lex program that works with YACC:
+	
+Goal: build a tree
+	output must look like input but with treelike annotations, as proof that parser parsed the input and formed a tree
+	no need to build symbol table
+	just make a copy of every string you find
+	things that belong to the language should be abstracted into a node
+	only things the user specifies should be made strings (identifiers, etc)
+	If no signed modifier, assume signed
+	void can be return type or parameter 
+	no pointer to functions
+	no declarations without definitions except function prototypes. Prototype param list doens't need to resemble actual signature.
+	should say approx line number 
+	
+
+Example of tree:
+	main() {
+		int lhs, alpha, beta, gamma;
+		lhs = alpha + beta * gamma;
+	}
+	<Fig. 2>
+
+There's a grammar on the website that can be parsed into a grammar
+
+YACC format:
+
+<declarations>
+%%
+<translation rules>
+%%
+<supporting C functions>
+
+<declarations> have all the constants currently in token_constants.h
+	everything between %{ and %} is copied into output, so should have prototypes for supporting functions
+	Each line in declarations
+		%start <nonterminal>
+		%token <listOfNames> // list of tokens having the same precedence
+		%left <listOfTerminals>
+		%right <listOfTerminals>
+		%nonassoc <listOfTerminals>
+	Precedence: in order of declaration, lowest first
+	Translation rules:
+		<head>	:	<body1> {<semantic action 1>}
+						| <body2> {<semantic action 2>}
+						;
+	single quoted char is terminal symbol
+	$$: attribute associated with head
+	$i: attribute of ith symbol
+	unquoted strings not declared to be tokens are nonterminals
+	in reduce conflict, 1st one listed wins
+	shift wins over reduction
+	
+	#include lex.yy.c in 3rd part of Yacc file ()
+	DIfference from standalone version of lexer:
+		YYSTYPE: macro indicating the type you want yylval to be
+		struct node: have fields for all types of info the nodes should have, enum type, *operator, node *left, *right, int val. Nodes will need to say the base type of pointers for later type checking.
+		have print_tree function
+	Translation rules
+		a : b: a can be rewritten as b
+		More rules => less precedence to worry about and vice versa
+	Output: has node type, addresses of children so we can reconstruct the tree
+Dragon app for recording?     c
+How to tell if i have an expr if the rule for expr is expr + term | term
+	Yacc tries to match the longest string
+	a method that looks for expr will look for it first thing every time it calls itself, so it'll recurse forever, hence 'left recursive' language
+	look at rule for factor: (expr) | number -> if doesn't start with ( or number, not a factor
+	To avoid left recursion, 
+		if a: a | b
+		rewrite:
+		a: b a'
+		a': a a' | epsilon
+		This however doesn't produce a correctly balanced tree as in Figs 3, 4. In Fig 4, the tree is right associative, while the language is left associative
