@@ -22,22 +22,51 @@
 //identifier
 #define          	IDENTIFIER       	20
 //operators
-#define          	LOGICAL_OP       	21
-#define          	BITWISE_OP       	22
-#define          	COMPARISON_OP    	23
-#define          	ASSIGNMENT_OP    	24
-#define          	ARITHMETIC_OP    	25
-#define          	BITSHIFT_OP      	26
+#define LOGICAL_NOT              	21
+#define LOGICAL_OR               	22
+#define LOGICAL_AND              	23
+#define BITWISE_XOR              	24
+#define BITWISE_AND              	25
+#define BITWISE_OR               	26
+#define BITWISE_COMPLEMENT       	27
+#define IS_EQUAL                 	28
+#define IS_NOT_EQUAL             	29
+#define LESS_THAN                	30
+#define GREATER_THAN             	31
+#define LESS_THAN_OR_EQUAL       	32
+#define GREATER_THAN_OR_EQUAL    	33
+#define ASSIGN                   	34
+#define ADD_AND_ASSIGN           	35
+#define SUBTRACT_AND_ASSIGN      	36
+#define MULTIPLY_AND_ASSIGN      	37
+#define DIVIDE_AND_ASSIGN        	38
+#define REMAINDER_AND_ASSIGN     	39
+#define BITWISE_AND_AND_ASSIGN   	40
+#define BITWISE_OR_AND_ASSIGN    	41
+#define BITWISE_XOR_AND_ASSIGN   	42
+#define BITSHIFT_LEFT_AND_ASSIGN 	43
+#define BITSHIFT_RIGHT_AND_ASSIGN	44
+#define PLUS                     	45
+#define DASH                     	46
+#define STAR                     	47
+#define DIVIDE                   	48
+#define REMAINDER                	49
+#define PREINCREMENT             	50
+#define PREDECREMENT             	51
+#define POSTINCREMENT            	52
+#define POSTDECREMENT            	53
+#define BITSHIFT_LEFT            	54
+#define BITSHIFT_RIGHT           	55
 //separators
-#define          	LEFT_PAREN       	27
-#define          	RIGHT_PAREN      	28
-#define          	LEFT_BRACKET     	29
-#define          	RIGHT_BRACKET    	30
-#define          	LEFT_CURLY_BRACE 	31
-#define          	RIGHT_CURLY_BRACE	32
-#define          	COMMA            	33
-#define          	SEMICOLON        	34
-#define          	COLON            	35
+#define LEFT_PAREN               	56
+#define RIGHT_PAREN              	57
+#define LEFT_BRACKET             	58
+#define RIGHT_BRACKET            	59
+#define LEFT_CURLY_BRACE         	60
+#define RIGHT_CURLY_BRACE        	61
+#define COMMA                    	62
+#define SEMICOLON                	63
+#define COLON                    	64
 
 #define ADD_TOKEN_NAME(TOKEN_NAMES, TOKEN) TOKEN_NAMES[TOKEN] = #TOKEN
 #define ADD_OPERATOR_NAME(OPERATOR_NAMES, OP) OPERATOR_NAMES[OP] = #OP
@@ -45,46 +74,6 @@
 const char *token_names[100];
 const char *operator_names[100];
 
-#define	LOGICAL_NOT              	1
-#define	LOGICAL_OR               	2
-#define	LOGICAL_AND              	3
-
-#define	BITWISE_XOR              	5
-#define	BITWISE_AND              	6
-#define	BITWISE_OR               	7
-#define	BITWISE_COMPLEMENT       	8
-
-#define	IS_EQUAL                 	9
-#define	IS_NOT_EQUAL             	10
-#define	LESS_THAN                	11
-#define	GREATER_THAN             	12
-#define	LESS_THAN_OR_EQUAL       	13
-#define	GREATER_THAN_OR_EQUAL    	14
-
-#define	ASSIGN                   	15
-#define	ADD_AND_ASSIGN           	16
-#define	SUBTRACT_AND_ASSIGN      	17
-#define	MULTIPLY_AND_ASSIGN      	18
-#define	DIVIDE_AND_ASSIGN        	19
-#define	REMAINDER_AND_ASSIGN     	20
-#define	BITWISE_AND_AND_ASSIGN   	21
-#define	BITWISE_OR_AND_ASSIGN    	22
-#define	BITWISE_XOR_AND_ASSIGN   	23
-#define	BITSHIFT_LEFT_AND_ASSIGN 	24
-#define	BITSHIFT_RIGHT_AND_ASSIGN	25
-
-#define	PLUS                     	26
-#define	DASH                    	27
-#define	MULTIPLY                 	28
-#define	DIVIDE                   	29
-#define	REMAINDER                	30
-#define	PREINCREMENT             	31
-#define	PREDECREMENT             	32
-#define	POSTINCREMENT            	33
-#define	POSTDECREMENT            	34
-
-#define	BITSHIFT_LEFT            	36
-#define	BITSHIFT_RIGHT           	37
 
 struct number {
 	unsigned long value;

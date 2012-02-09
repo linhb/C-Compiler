@@ -12,15 +12,23 @@ extern int yylineno;
 extern void *yylval;
 
 void initialize_token_names();
-void initialize_operator_names();
+void initialize_token_names();
 void print_value(void *value);
 
 int main(int argc, char **argv) {
 	FILE *input, *output;
-	input = stdin;
-	output = stdout;
+	if (argc < 2 || !strcmp(argv[1], "-")) {
+		input = stdin;		
+	} else {
+		input = fopen(argv[1], 'r');
+	}
+	if (argc < 3 || !strcmp(argv[2], "-")) {
+		output = fopen(argv[2], 'w');
+	} else {
+		output = stdout;
+	}
 	initialize_token_names();
-	initialize_operator_names();
+	initialize_token_names();
 	int token;
 	
 	for (token = yylex(); token != 0; token = yylex()) {
@@ -37,13 +45,42 @@ int main(int argc, char **argv) {
 				case IDENTIFIER:
 					print_value(yylval);		
 					break;
-				case LOGICAL_OP:
-				case BITWISE_OP:
-				case COMPARISON_OP:
-				case ASSIGNMENT_OP:
-				case ARITHMETIC_OP:
-				case BITSHIFT_OP:
-				
+				case LOGICAL_NOT:
+				case LOGICAL_OR:
+				case LOGICAL_AND:
+				case BITWISE_XOR:
+				case BITWISE_AND:
+				case BITWISE_OR:
+				case BITWISE_COMPLEMENT:
+				case IS_EQUAL:
+				case IS_NOT_EQUAL:
+				case LESS_THAN:
+				case GREATER_THAN:
+				case LESS_THAN_OR_EQUAL:
+				case GREATER_THAN_OR_EQUAL:
+				case ASSIGN:
+				case ADD_AND_ASSIGN:
+				case SUBTRACT_AND_ASSIGN:
+				case MULTIPLY_AND_ASSIGN:
+				case DIVIDE_AND_ASSIGN:
+				case REMAINDER_AND_ASSIGN:
+				case BITWISE_AND_AND_ASSIGN:
+				case BITWISE_OR_AND_ASSIGN:
+				case BITWISE_XOR_AND_ASSIGN:
+				case BITSHIFT_LEFT_AND_ASSIGN:
+				case BITSHIFT_RIGHT_AND_ASSIGN:
+				case PLUS:
+				case DASH:
+				case STAR:
+				case DIVIDE:
+				case REMAINDER:
+				case PREINCREMENT:
+				case PREDECREMENT:
+				case POSTINCREMENT:
+				case POSTDECREMENT:
+				case BITSHIFT_LEFT:
+				case BITSHIFT_RIGHT:
+
 				case LEFT_PAREN:
 				case RIGHT_PAREN:
 				case LEFT_BRACKET:
@@ -111,13 +148,42 @@ void initialize_token_names() {
 	
 	ADD_TOKEN_NAME(token_names, IDENTIFIER);
 	
-	ADD_TOKEN_NAME(token_names, LOGICAL_OP);
-	ADD_TOKEN_NAME(token_names,	BITWISE_OP);
-	ADD_TOKEN_NAME(token_names,	COMPARISON_OP);
-	ADD_TOKEN_NAME(token_names,	ASSIGNMENT_OP);
-	ADD_TOKEN_NAME(token_names,	ARITHMETIC_OP);
-	ADD_TOKEN_NAME(token_names,	BITSHIFT_OP);
-	
+	ADD_TOKEN_NAME(token_names, LOGICAL_NOT);
+	ADD_TOKEN_NAME(token_names, LOGICAL_OR);
+	ADD_TOKEN_NAME(token_names, LOGICAL_AND);
+	ADD_TOKEN_NAME(token_names, BITWISE_XOR);
+	ADD_TOKEN_NAME(token_names, BITWISE_AND);
+	ADD_TOKEN_NAME(token_names, BITWISE_OR);
+	ADD_TOKEN_NAME(token_names, BITWISE_COMPLEMENT);
+	ADD_TOKEN_NAME(token_names, IS_EQUAL);
+	ADD_TOKEN_NAME(token_names, IS_NOT_EQUAL);
+	ADD_TOKEN_NAME(token_names, LESS_THAN);
+	ADD_TOKEN_NAME(token_names, GREATER_THAN);
+	ADD_TOKEN_NAME(token_names, LESS_THAN_OR_EQUAL);
+	ADD_TOKEN_NAME(token_names, GREATER_THAN_OR_EQUAL);
+	ADD_TOKEN_NAME(token_names, ASSIGN);
+	ADD_TOKEN_NAME(token_names, ADD_AND_ASSIGN);
+	ADD_TOKEN_NAME(token_names, SUBTRACT_AND_ASSIGN);
+	ADD_TOKEN_NAME(token_names, MULTIPLY_AND_ASSIGN);
+	ADD_TOKEN_NAME(token_names, DIVIDE_AND_ASSIGN);
+	ADD_TOKEN_NAME(token_names, REMAINDER_AND_ASSIGN);
+	ADD_TOKEN_NAME(token_names, BITWISE_AND_AND_ASSIGN);
+	ADD_TOKEN_NAME(token_names, BITWISE_OR_AND_ASSIGN);
+	ADD_TOKEN_NAME(token_names, BITWISE_XOR_AND_ASSIGN);
+	ADD_TOKEN_NAME(token_names, BITSHIFT_LEFT_AND_ASSIGN);
+	ADD_TOKEN_NAME(token_names, BITSHIFT_RIGHT_AND_ASSIGN);
+	ADD_TOKEN_NAME(token_names, PLUS);
+	ADD_TOKEN_NAME(token_names, DASH);
+	ADD_TOKEN_NAME(token_names, STAR);
+	ADD_TOKEN_NAME(token_names, DIVIDE);
+	ADD_TOKEN_NAME(token_names, REMAINDER);
+	ADD_TOKEN_NAME(token_names, PREINCREMENT);
+	ADD_TOKEN_NAME(token_names, PREDECREMENT);
+	ADD_TOKEN_NAME(token_names, POSTINCREMENT);
+	ADD_TOKEN_NAME(token_names, POSTDECREMENT);
+	ADD_TOKEN_NAME(token_names, BITSHIFT_LEFT);
+	ADD_TOKEN_NAME(token_names, BITSHIFT_RIGHT);
+		
 	ADD_TOKEN_NAME(token_names, LEFT_PAREN);
 	ADD_TOKEN_NAME(token_names, RIGHT_PAREN);
 	ADD_TOKEN_NAME(token_names, LEFT_BRACKET);
@@ -127,44 +193,6 @@ void initialize_token_names() {
 	ADD_TOKEN_NAME(token_names, COMMA);
 	ADD_TOKEN_NAME(token_names, SEMICOLON);
 	ADD_TOKEN_NAME(token_names, COLON);
-}
-
-void initialize_operator_names() {
-	ADD_OPERATOR_NAME(operator_names, LOGICAL_NOT);
-	ADD_OPERATOR_NAME(operator_names, LOGICAL_OR);
-	ADD_OPERATOR_NAME(operator_names, LOGICAL_AND);
-	ADD_OPERATOR_NAME(operator_names, BITWISE_XOR);
-	ADD_OPERATOR_NAME(operator_names, BITWISE_AND);
-	ADD_OPERATOR_NAME(operator_names, BITWISE_OR);
-	ADD_OPERATOR_NAME(operator_names, BITWISE_COMPLEMENT);
-	ADD_OPERATOR_NAME(operator_names, IS_EQUAL);
-	ADD_OPERATOR_NAME(operator_names, IS_NOT_EQUAL);
-	ADD_OPERATOR_NAME(operator_names, LESS_THAN);
-	ADD_OPERATOR_NAME(operator_names, GREATER_THAN);
-	ADD_OPERATOR_NAME(operator_names, LESS_THAN_OR_EQUAL);
-	ADD_OPERATOR_NAME(operator_names, GREATER_THAN_OR_EQUAL);
-	ADD_OPERATOR_NAME(operator_names, ASSIGN);
-	ADD_OPERATOR_NAME(operator_names, ADD_AND_ASSIGN);
-	ADD_OPERATOR_NAME(operator_names, SUBTRACT_AND_ASSIGN);
-	ADD_OPERATOR_NAME(operator_names, MULTIPLY_AND_ASSIGN);
-	ADD_OPERATOR_NAME(operator_names, DIVIDE_AND_ASSIGN);
-	ADD_OPERATOR_NAME(operator_names, REMAINDER_AND_ASSIGN);
-	ADD_OPERATOR_NAME(operator_names, BITWISE_AND_AND_ASSIGN);
-	ADD_OPERATOR_NAME(operator_names, BITWISE_OR_AND_ASSIGN);
-	ADD_OPERATOR_NAME(operator_names, BITWISE_XOR_AND_ASSIGN);
-	ADD_OPERATOR_NAME(operator_names, BITSHIFT_LEFT_AND_ASSIGN);
-	ADD_OPERATOR_NAME(operator_names, BITSHIFT_RIGHT_AND_ASSIGN);
-	ADD_OPERATOR_NAME(operator_names, PLUS);
-	ADD_OPERATOR_NAME(operator_names, DASH);
-	ADD_OPERATOR_NAME(operator_names, MULTIPLY);
-	ADD_OPERATOR_NAME(operator_names, DIVIDE);
-	ADD_OPERATOR_NAME(operator_names, REMAINDER);
-	ADD_OPERATOR_NAME(operator_names, PREINCREMENT);
-	ADD_OPERATOR_NAME(operator_names, PREDECREMENT);
-	ADD_OPERATOR_NAME(operator_names, POSTINCREMENT);
-	ADD_OPERATOR_NAME(operator_names, POSTDECREMENT);
-	ADD_OPERATOR_NAME(operator_names, BITSHIFT_LEFT);
-	ADD_OPERATOR_NAME(operator_names, BITSHIFT_RIGHT);
 }
 
 void print_value(void *yylval) {

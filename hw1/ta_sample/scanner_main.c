@@ -41,13 +41,13 @@ int main(int argc, char **argv) {
   char *id;
 
   /* figure out whether we're using stdin/stdout or file in/file out */
-  if (argc < 2 || !strcmp("-", argv[1])) { // if there's fewer than 2 arguments, it must be just the program name and nothing else. 
+  if (argc < 2 || !strcmp(argv[1], "-")) { // if there's fewer than 2 arguments, it must be just the program name and nothing else. 
     input = stdin;
   } else {
     input = fopen(argv[1], "r");
   }
 
-  if (argc < 3 || !strcmp("-", argv[2])) { // if <3 arguments, no output file was given
+  if (argc < 3 || !strcmp(argv[2], "-")) { // if <3 arguments, no output file was given
     output = stdout;
   } else {
     output = fopen(argv[2], "w");
