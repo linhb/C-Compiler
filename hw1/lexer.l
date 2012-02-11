@@ -6,25 +6,28 @@
   #include <stdio.h>
   #include <string.h>
   #include <stdlib.h>
+  #include <assert.h>
   #include "token_constants.h"
 
-	struct number *create_num(char *yytext);
-	void create_value_string();
+void create_num(char *yytext);
+void create_value_string();
 
-	void *yylval;
+void *yylval;
+
 %}
-
-comments		\/\*.*\*\/
+comments		\/\*([^\*]|\*[^\/])*?\*\/
 delimiter 	[ \t\n\v\f]
 whitespace	{delimiter}+
 identifier	[A-Za-z_][A-Za-z0-9_]*
-number    	[0-9]+
-string    	\"[^\"\n]*\"
-char_const	\'.\'
+digit				[0-9]
+escape			\\({digit}{1,3}|[ntbrfv\\\'\"a\?])
+number    	{digit}+(E[+\-]{digit}+)?
+string    	\"((\\\")|[^\"\n])*\"
+char_const	\'({escape}|.)\'
 
 %%
-{whitespace}	
 {comments}	
+{whitespace}	
 
 do 					yylval = (char *)token_names[DO]; return DO;	
 for     		yylval = (char *)token_names[FOR]; return FOR;	
@@ -48,8 +51,8 @@ while				yylval = (char *)token_names[WHILE]; return WHILE;
 	return IDENTIFIER;
 }
 {number} {
-	yylval = (struct number *)create_num(yytext);
-	return NUM_CONST;
+	create_num(yytext);
+	return (((struct number*)yylval)->type);
 }
 {string} {
 	create_value_string();
@@ -105,18 +108,50 @@ while				yylval = (char *)token_names[WHILE]; return WHILE;
 ";"      yylval = (char *)token_names[SEMICOLON];                     return SEMICOLON;
 ":"      yylval = (char *)token_names[COLON];                         return COLON;
 
-.	return -1;
+.	return ERROR;
 
 %%
 
-struct number *create_num(char *yytext) {
+/*
+	create_num: read the numeric value of input containing a number, classify the number as int or long, creates a struct containing the number's value and type, and set yylval to the struct
+
+	Parameters:
+		yytext: string, contains the raw input read by lex
+	Return: none
+  Side effects: set global variable yylval to newly created struct number
+
+*/
+
+void create_num(char *yytext) {
 	struct number *num = (struct number *)malloc(sizeof(struct number));
+	assert(NULL != num);                   
+	num->overflow = 0;
 	num->value = strtoul(yytext, NULL, 10);
-	return num;
+	long int ul_limit = 4294967295UL;
+	long int int_limit = 2147483647UL;
+	long int value = num->value;
+	if (value >= (-int_limit - 1) && value <= int_limit)
+		num->type = INTEGER_CONST;    
+ 	else if (value >= 0 && value <= ul_limit)
+		num->type = UNSIGNED_LONG_CONST;    
+	else { /* overflow */
+		num->value = ul_limit;
+		num->type = UNSIGNED_LONG_CONST;    
+		num->overflow = 1;
+	}
+	yylval = num;
 }
+
+/*
+	create_value_string: create a string containing the value of identifier, string and char tokens, then point yylval to the created string
+	Parameters: none
+	Return: none
+  Side effects: set global variable yylval to newly created string
+*/
 
 void create_value_string() {
 	char *value = (char *)malloc(yyleng + 1);
+	assert(NULL != value);
 	strcpy(value, yytext);
 	yylval = value; 
 }

@@ -1,4 +1,4 @@
-CFLAGS += -g -Wall -Wextra -pedantic
+CFLAGS += -g -Wall -Wextra
 
 all:
 	lex lexer.l

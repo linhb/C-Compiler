@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <assert.h>
 
 #include "token_constants.h"
 
@@ -13,6 +14,15 @@ extern void *yylval;
 
 void initialize_token_names();
 void print_value(FILE *output, void *yylval);
+                                         
+/*
+ 	main: interface to the lexer. Reads input from stdin or a file, writes output to stdout or a file. Input is passed to yylex() to tokenize. main then prints the line number, the input read, the token type and the token value if available.	
+	Argument:
+		1st argument: input source. If the first argument is a filename, that file is taken as input. If it is blank or "-", stdin is taken as input.
+		2nd argument: output source. If the first argument is a filename, output is written to that file. If it is blank or "-", output is printed to stdout.
+	Return: 
+		0 if executed normally
+*/
 
 int main(int argc, char **argv) {
 	FILE *input, *output;
@@ -31,89 +41,86 @@ int main(int argc, char **argv) {
 	yyin = input;
 	
 	for (token = yylex(); token != 0; token = yylex()) {
-		if (token > 0) {
-			fprintf(output, "Line number:\t%d\tToken text:\t%s\tToken type:\t%s\t", yylineno, yytext, token_names[token]);
-			switch (token) {
-				struct number *number;
-				case NUM_CONST: 
-					number = (struct number *)yylval;
-					fprintf(output, "Token value:\t%ld\t", number->value);
-					break;
-				case STRING_CONST:
-				case CHAR_CONST:
-				case IDENTIFIER:
-					print_value(output, yylval);		
-					break;
-				case LOGICAL_NOT:
-				case LOGICAL_OR:
-				case LOGICAL_AND:
-				case BITWISE_XOR:
-				case AMPERSAND:
-				case BITWISE_OR:
-				case BITWISE_COMPLEMENT:
-				case IS_EQUAL:
-				case IS_NOT_EQUAL:
-				case LESS_THAN:
-				case GREATER_THAN:
-				case LESS_THAN_OR_EQUAL:
-				case GREATER_THAN_OR_EQUAL:
-				case ASSIGN:
-				case ADD_AND_ASSIGN:
-				case SUBTRACT_AND_ASSIGN:
-				case MULTIPLY_AND_ASSIGN:
-				case DIVIDE_AND_ASSIGN:
-				case REMAINDER_AND_ASSIGN:
-				case BITWISE_AND_AND_ASSIGN:
-				case BITWISE_OR_AND_ASSIGN:
-				case BITWISE_XOR_AND_ASSIGN:
-				case BITSHIFT_LEFT_AND_ASSIGN:
-				case BITSHIFT_RIGHT_AND_ASSIGN:
-				case PLUS:
-				case DASH:
-				case STAR:
-				case SLASH:
-				case REMAINDER:
-				case PREINCREMENT:
-				case PREDECREMENT:
-				case POSTINCREMENT:
-				case POSTDECREMENT:
-				case BITSHIFT_LEFT:
-				case BITSHIFT_RIGHT:
-				case QUESTION_MARK:
+		fprintf(output, "Line number:\t%-5d\tToken text:\t%-20s\tToken type:\t%-25s\t", yylineno, yytext, token_names[token]);
+		switch (token) {
+			struct number *number;
+			case INTEGER_CONST: 
+			case SHORT_CONST: 
+			case UNSIGNED_LONG_CONST: 
+				number = (struct number *)yylval;
+				fprintf(output, "Token value:\t%-12ld\tOverflow: %-1d", number->value, number->overflow);
+				break;
+			case STRING_CONST:
+			case CHAR_CONST:
+			case IDENTIFIER:
+				print_value(output, yylval);		
+				break;
+			case LOGICAL_NOT:
+			case LOGICAL_OR:
+			case LOGICAL_AND:
+			case BITWISE_XOR:
+			case AMPERSAND:
+			case BITWISE_OR:
+			case BITWISE_COMPLEMENT:
+			case IS_EQUAL:
+			case IS_NOT_EQUAL:
+			case LESS_THAN:
+			case GREATER_THAN:
+			case LESS_THAN_OR_EQUAL:
+			case GREATER_THAN_OR_EQUAL:
+			case ASSIGN:
+			case ADD_AND_ASSIGN:
+			case SUBTRACT_AND_ASSIGN:
+			case MULTIPLY_AND_ASSIGN:
+			case DIVIDE_AND_ASSIGN:
+			case REMAINDER_AND_ASSIGN:
+			case BITWISE_AND_AND_ASSIGN:
+			case BITWISE_OR_AND_ASSIGN:
+			case BITWISE_XOR_AND_ASSIGN:
+			case BITSHIFT_LEFT_AND_ASSIGN:
+			case BITSHIFT_RIGHT_AND_ASSIGN:
+			case PLUS:
+			case DASH:
+			case STAR:
+			case SLASH:
+			case REMAINDER:
+			case PREINCREMENT:
+			case PREDECREMENT:
+			case POSTINCREMENT:
+			case POSTDECREMENT:
+			case BITSHIFT_LEFT:
+			case BITSHIFT_RIGHT:
+			case QUESTION_MARK:
 
-				case LEFT_PAREN:
-				case RIGHT_PAREN:
-				case LEFT_BRACKET:
-				case RIGHT_BRACKET:
-				case LEFT_CURLY_BRACE:
-				case RIGHT_CURLY_BRACE:
-				case COMMA:
-				case SEMICOLON:
-				case COLON:
-					print_value(output, yylval);		
-					break;
-				case DO:
-				case FOR:
-				case RETURN:
-				case BREAK:
-				case SHORT:
-				case ELSE:
-				case GOTO:
-				case SIGNED:
-				case UNSIGNED:
-				case CHAR:
-				case IF:
-				case VOID:
-				case INT:
-				case CONTINUE:
-				case LONG:
-				case WHILE:
-					break;
-			}
-		}
-		else {
-			fprintf(output, "ERROR");
-		}
+			case LEFT_PAREN:
+			case RIGHT_PAREN:
+			case LEFT_BRACKET:
+			case RIGHT_BRACKET:
+			case LEFT_CURLY_BRACE:
+			case RIGHT_CURLY_BRACE:
+			case COMMA:
+			case SEMICOLON:
+			case COLON:
+				print_value(output, yylval);		
+				break;
+			case DO:
+			case FOR:
+			case RETURN:
+			case BREAK:
+			case SHORT:
+			case ELSE:
+			case GOTO:
+			case SIGNED:
+			case UNSIGNED:
+			case CHAR:
+			case IF:
+			case VOID:
+			case INT:
+			case CONTINUE:
+			case LONG:
+			case WHILE:
+				break;
+		}    
 		fprintf(output, "\n");
 	}
 	if (output != stdout)
@@ -141,7 +148,9 @@ void initialize_token_names() {
 	ADD_TOKEN_NAME(token_names, LONG);
 	ADD_TOKEN_NAME(token_names, WHILE);
 	
-	ADD_TOKEN_NAME(token_names, NUM_CONST);
+	ADD_TOKEN_NAME(token_names, INTEGER_CONST);
+	ADD_TOKEN_NAME(token_names, SHORT_CONST);
+	ADD_TOKEN_NAME(token_names, UNSIGNED_LONG_CONST);
 	ADD_TOKEN_NAME(token_names, STRING_CONST);
 	ADD_TOKEN_NAME(token_names, CHAR_CONST);
 	
@@ -193,10 +202,22 @@ void initialize_token_names() {
 	ADD_TOKEN_NAME(token_names, COMMA);
 	ADD_TOKEN_NAME(token_names, SEMICOLON);
 	ADD_TOKEN_NAME(token_names, COLON);
+	ADD_TOKEN_NAME(token_names, ERROR);
 }
+
+/*
+	print_value: prints the given value to the given output
+	Parameters:
+		output: FILE pointer referencing either stdin or a file
+		yylval: void pointer referencing either a struct number whose value field is to be printed, or a string which is to be printed as is		  
+	Return: none
+	Side effect: the global variable 
+*/              
 
 void print_value(FILE *output, void *yylval) {
 	char *value = strdup((char *)yylval);
-	fprintf(output, "Token value:\t%s\t", value);			
+	assert(NULL != value);
+	fprintf(output, "Token value:\t%-20s\t", value);			
 	free(value);
+	value = NULL;
 }
