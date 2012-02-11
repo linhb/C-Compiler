@@ -22,6 +22,7 @@ void print_value(FILE *output, void *yylval);
 		2nd argument: output source. If the first argument is a filename, output is written to that file. If it is blank or "-", output is printed to stdout.
 	Return: 
 		0 if executed normally
+	Note: sample input and output for this function can be found in ./test_input_1.txt and ./test_output.txt, respectively.
 */
 
 int main(int argc, char **argv) {
@@ -54,71 +55,6 @@ int main(int argc, char **argv) {
 			case CHAR_CONST:
 			case IDENTIFIER:
 				print_value(output, yylval);		
-				break;
-			case LOGICAL_NOT:
-			case LOGICAL_OR:
-			case LOGICAL_AND:
-			case BITWISE_XOR:
-			case AMPERSAND:
-			case BITWISE_OR:
-			case BITWISE_COMPLEMENT:
-			case IS_EQUAL:
-			case IS_NOT_EQUAL:
-			case LESS_THAN:
-			case GREATER_THAN:
-			case LESS_THAN_OR_EQUAL:
-			case GREATER_THAN_OR_EQUAL:
-			case ASSIGN:
-			case ADD_AND_ASSIGN:
-			case SUBTRACT_AND_ASSIGN:
-			case MULTIPLY_AND_ASSIGN:
-			case DIVIDE_AND_ASSIGN:
-			case REMAINDER_AND_ASSIGN:
-			case BITWISE_AND_AND_ASSIGN:
-			case BITWISE_OR_AND_ASSIGN:
-			case BITWISE_XOR_AND_ASSIGN:
-			case BITSHIFT_LEFT_AND_ASSIGN:
-			case BITSHIFT_RIGHT_AND_ASSIGN:
-			case PLUS:
-			case DASH:
-			case STAR:
-			case SLASH:
-			case REMAINDER:
-			case PREINCREMENT:
-			case PREDECREMENT:
-			case POSTINCREMENT:
-			case POSTDECREMENT:
-			case BITSHIFT_LEFT:
-			case BITSHIFT_RIGHT:
-			case QUESTION_MARK:
-
-			case LEFT_PAREN:
-			case RIGHT_PAREN:
-			case LEFT_BRACKET:
-			case RIGHT_BRACKET:
-			case LEFT_CURLY_BRACE:
-			case RIGHT_CURLY_BRACE:
-			case COMMA:
-			case SEMICOLON:
-			case COLON:
-				print_value(output, yylval);		
-				break;
-			case DO:
-			case FOR:
-			case RETURN:
-			case BREAK:
-			case SHORT:
-			case ELSE:
-			case GOTO:
-			case SIGNED:
-			case UNSIGNED:
-			case CHAR:
-			case IF:
-			case VOID:
-			case INT:
-			case CONTINUE:
-			case LONG:
-			case WHILE:
 				break;
 		}    
 		fprintf(output, "\n");
