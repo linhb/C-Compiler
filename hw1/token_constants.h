@@ -75,7 +75,7 @@ This file defines the numbers that stand for each type of token returned by yyle
 #define SEMICOLON                	63
 #define COLON                    	64
 
-#define ERROR                    	-1
+#define ERROR                    	68
 
 /*
 add the name of each token type to a global array, token_names, that yylex() uses to retrieve token names

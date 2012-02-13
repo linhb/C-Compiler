@@ -49,13 +49,13 @@ int main(int argc, char **argv) {
 			case SHORT_CONST: 
 			case UNSIGNED_LONG_CONST: 
 				number = (struct number *)yylval;
-				fprintf(output, "Token value:\t%-12ld\tOverflow: %-1d", number->value, number->overflow);
+				fprintf(output, "Token value:\t%-12lu\tOverflow: %-1d", number->value, number->overflow);
 				break;
 			case STRING_CONST:
 			case CHAR_CONST:
 			case IDENTIFIER:
 				print_value(output, yylval);		
-				break;
+				break;    
 		}    
 		fprintf(output, "\n");
 	}
@@ -65,6 +65,13 @@ int main(int argc, char **argv) {
 		fclose(input);
 	return 0;
 }
+                                                                    
+/*
+	initialize_token_names: populates the global array token_names with the names of token types. These names are then retrieved by yylex() using the numbers associated with each type, which token_names is indexed by.
+	Parameters: none
+	Return: none
+	Side effects: modifies the global array token_names	
+*/
 
 void initialize_token_names() {
 	ADD_TOKEN_NAME(token_names, DO);
@@ -151,9 +158,5 @@ void initialize_token_names() {
 */              
 
 void print_value(FILE *output, void *yylval) {
-	char *value = strdup((char *)yylval);
-	assert(NULL != value);
-	fprintf(output, "Token value:\t%-20s\t", value);			
-	free(value);
-	value = NULL;
+	fprintf(output, "Token value:\t%-20s\t", (char *)yylval);			
 }

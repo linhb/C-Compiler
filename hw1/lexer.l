@@ -123,16 +123,16 @@ while				yylval = (char *)token_names[WHILE]; return WHILE;
 */
 
 void create_num(char *yytext) {
-	struct number *num = (struct number *)malloc(sizeof(struct number));
-	assert(NULL != num);                   
+	struct number *num = malloc(sizeof *num);
+	assert(num != NULL);                   
 	num->overflow = 0;
 	num->value = strtoul(yytext, NULL, 10);
-	long int ul_limit = 4294967295UL;
-	long int int_limit = 2147483647UL;
-	long int value = num->value;
-	if (value >= (-int_limit - 1) && value <= int_limit)
+	unsigned long int ul_limit = 4294967295UL;
+	unsigned long int int_limit = 2147483647UL;
+	unsigned long int value = num->value;
+	if (value <= int_limit)
 		num->type = INTEGER_CONST;    
- 	else if (value >= 0 && value <= ul_limit)
+ 	else if (value <= ul_limit)
 		num->type = UNSIGNED_LONG_CONST;    
 	else { /* overflow */
 		num->value = ul_limit;
@@ -150,8 +150,6 @@ void create_num(char *yytext) {
 */
 
 void create_value_string() {
-	char *value = (char *)malloc(yyleng + 1);
-	assert(NULL != value);
-	strcpy(value, yytext);
-	yylval = value; 
+	yylval = strdup(yytext);
+	assert(yylval != NULL);
 }
