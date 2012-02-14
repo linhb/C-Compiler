@@ -301,11 +301,13 @@ Goal: build a tree
 	things that belong to the language should be abstracted into a node
 	only things the user specifies should be made strings (identifiers, etc)
 	If no signed modifier, assume signed
-	void can be return type or parameter 
+	void can be return type or parameter, no void pointers
 	no pointer to functions
-	no declarations without definitions except function prototypes. Prototype param list doens't need to resemble actual signature.
+	function can either always return something or implicitly return int when not specified
+	no declarations without definitions except function prototypes. Prototype param list doesn't need to resemble actual signature.
+	must have any level of pointers, any dimension of arrays
 	should say approx line number 
-	
+	variables can only be defined once, at any scope, except functions which can have prototypes
 
 Example of tree:
 	main() {
@@ -314,7 +316,11 @@ Example of tree:
 	}
 	<Fig. 2>
 
++ and * nodes don't have to be different kinds of nodes if you specify the precedence
+
 There's a grammar on the website that can be parsed into a grammar
+
+Don't have every production as a node
 
 YACC format:
 
