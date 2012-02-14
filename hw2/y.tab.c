@@ -66,12 +66,12 @@
    /* Put the tokens into the symbol table, so that GDB and other debuggers
       know about them.  */
    enum yytokentype {
-     ID = 258,
+     IDENTIFIER = 258,
      PLUS = 259
    };
 #endif
 /* Tokens.  */
-#define ID 258
+#define IDENTIFIER 258
 #define PLUS 259
 
 
@@ -404,7 +404,7 @@ static const yytype_uint8 yyrline[] =
    First, the terminals, then, starting at YYNTOKENS, nonterminals.  */
 static const char *const yytname[] =
 {
-  "$end", "error", "$undefined", "ID", "PLUS", "$accept", "expr", 0
+  "$end", "error", "$undefined", "IDENTIFIER", "PLUS", "$accept", "expr", 0
 };
 #endif
 

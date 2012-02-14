@@ -2,11 +2,11 @@
 	#include <stdio.h>
 %}
 
-%token ID
+%token IDENTIFIER
 %token PLUS
 
 %%
-expr	:		ID PLUS ID	{printf("matched!\n");}
+expr	:		IDENTIFIER PLUS IDENTIFIER	{printf("matched!\n");}
 ;
 %%
 
