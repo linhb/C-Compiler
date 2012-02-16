@@ -349,8 +349,12 @@ YACC format:
 	unquoted strings not declared to be tokens are nonterminals
 	in reduce conflict, 1st one listed wins
 	shift wins over reduction
+	tries to take care of as many tokens as possible
+	default precedence of a production is that of its rightmost terminal
 	
 	#include lex.yy.c in 3rd part of Yacc file ()
+	the tokens in the yacc file actually get declared first, before lex
+	
 	DIfference from standalone version of lexer:
 		YYSTYPE: macro indicating the type you want yylval to be
 		struct node: have fields for all types of info the nodes should have, enum type, *operator, node *left, *right, int val. Nodes will need to say the base type of pointers for later type checking.
@@ -370,3 +374,162 @@ How to tell if i have an expr if the rule for expr is expr + term | term
 		a: b a'
 		a': a a' | epsilon
 		This however doesn't produce a correctly balanced tree as in Figs 3, 4. In Fig 4, the tree is right associative, while the language is left associative
+		
+2/14/12
+TA section
+Pretty printer
+	basically print source program but with indentation and parens around everything that can use parens (required)
+	regularize indentation
+	parenthesize everything
+	print escape sequences 
+	to print binary ops: print ( then left operand then space then right operand then )
+	can have all the parens you want especially to clarify precedence
+	good test: feed program in, get output, put output in, should get itself
+	all functions take int indent, increment whenever you enter new scope
+	can use phpsyntaxtree to visualize
+main functions is the same as lexer
+	call yyparse, get 1 value
+	yyparse sets yynerrs
+	if >0, set result to 1
+parser
+	yystype is node*
+	default action is $$ = $1 (the thing returns from the first symbol)
+	example of non default: left_paren expr right_paren: $$ = $2
+	global var root_node so you can get it back
+	$$ is yylval?
+	can use union type for node, can be number, identifier etc, each of which is a struct with specific fields. These can be defined in node.h
+	the actions create node*'s
+	the specific node creators call create_node to malloc
+statement_list node: has 2 children, left one expands into the another statement_list and the 3rd from last statement, etc. Then you traverse the node recursively to print. one of the bottom statement_list nodes will have NULL as a child because it only contained 1 statement
+	yylval is what was returned by yylex(), so when you assign the value of a terminal to the value of a production ($$), $$ will end up being the same as yylval. $$ and yylval do have to be the same type.
+error
+	error production: error SEMICOLON -> means if you see error, keep scanning until you see a semicolon. If you don't have this production, the parser will exit when it gets an error.
+	Bison knows that if lex returns -1, it's an error
+	implement yyerror(char *msg) which Bison calls automatically when it gets an error
+epsilon: 
+	pass NULL to creator function eg parse.y:59
+statement vs expression:
+	statement can have operators, can be an expression
+compound statement = block
+
+Lecture
+
+Updated PS1 and HTML grammar
+Recursive descent = top down = predictive
+
+Predictive parsing: 
+	2 important functions: first and follow
+Generate NFA   from regex:
+	ba*b(a|b)a
+	Fig 5                             
+	epsilon-closure(state): all possible states you can be from state based on transitions alone
+	epsilon-closure(set of states): union of ES of each state in the set
+	If building algo to find ES, have to keep a set of states to check for epsilon paths coming out of them, because some results can be reached with >2 epsilon transitions
+Build DFA from NFA:
+	notebook
+How parsers work
+	notebook  
+Generating grammars
+	ba*bba
+		Ao => bA1bba
+		A1 => aA1 | epsilon # basically break down parts of the regex that aren't static into rules
+	if (if...() endif) endif
+		so => if S1 endif S1
+		S1 => S0 | epsilon
+		Not possible with regex
+	stmt -> if expr then stmt |
+					if expr then stmt else stmt |
+					other
+		ambiguous eg if e1 then if e2 then s1 else s2
+		Fix:
+			stmt -> matched-stmt | open-stmt
+			ms -> if e then m-s else m-s | other
+			o-s -> if e then stmt |
+						 if e then m-s else o-s # this says only m-s can be between if and then, and m-s is defined above to have else bound to the correct if
+Fixing recursive productions:
+	notebook
+
+First and follow functions
+	Non left recursive grammar for + and *:
+		E -> TE'
+		E' -> + TE' | epsilon
+		T -> FT'
+		T' -> * FT' | epsilon
+		F -> (E) | id
+	first(alpha): set of terminals that can appear as the first token in alpha. Can include epsilon
+		if X -> Y1Y2...Yk
+			then first(X) will include first(Y1)
+			if first(Y1) includes epsilon then first(X) includes first(Y2) (makes sense b/c that means Y1 can disappear leaving Y2 at the top)
+ 	follow(nonterm): set of terminals that can follow any sentence derived from nonterm
+		useful for error recovery: can look for a symbol in follow if error found, thus terminating erroneous string
+		the follow set for the start symbol should always include the endmarker $ because it definitely follows the topmost nonterminal
+	
+	alpha	first(alpha)	follow(A)
+	+    	{+}
+	*    	{*}
+	(    	{(}
+	)    	{)}
+	id   	{id}
+	---
+	E    	{(, id}	    	{), $}
+	E'   	{+, epsilon}	{), $}
+	T    	{(, id}     	{+, ), $} # everything in first(E') except epsilon should be in follow(T) because E' follows T
+	T'   	{*, epsilon}	{+, ), $}
+	F    	{(, id}     	{*, +, ), $} 
+	
+Now we can automatically construct a recursive descent parser:
+	LL(1) grammars:
+		L1: left to right
+		L2: leftmost derivation
+		1: token of lookahead
+	Build predictive parsing table M:
+		Grammar again, numbered:
+			E -> TE' (1)
+			E' -> + TE'	(2) | epsilon (3)
+			T -> FT' (4)
+			T' -> * FT' (5) | epsilon (6)
+			F -> (E) (7) | id (8)
+			
+		
+		Nonterm 	id			+   			*			(					)							$
+		E	      	E->TE'						 			E->TE'
+		E'      					E->+TE										E'->epsilon   E'->epsilon
+		T	      	T->FT'						 			T->FT'
+		T'      					T'->eps		T'->*FT'				T'->eps				T'->eps
+		F	      	F->id 						 			F->(E)
+		
+		Example: (id + id) * id + id $
+		Looking for E, see (, look into table at E and (, 
+		
+		Matched			Stack				Input								Action
+		            E$        	(id+id)*id+id$
+		            TE'$     	 	''                  E->TE'
+		            FT'E'$   	 	''                  T->FT'
+		            (E)T'E'$ 	 	''                  F->(E)
+		(           E)T'E'$	 	 	id+id)*id+id$				match (
+		            TE')T'E'$	 	''                  E->TE'
+		            FT'E')T'E'$ ''                T->FT'
+		            idT'E')T'E'$ ''               F->id
+		(id         T'E')T'E'$ 	+id)*id+id$        match id
+		            E')T'E'$    ''                T->eps
+		            +TE')T'E'$  ''                E'->+TE'
+		(id+        TE')T'E'$   id)*id+id$        match +
+		            FT'E')T'E'$ ''                T->FT'
+		            idT'E')T'E'$ ''               F->id
+		(id+id      T'E')T'E'$  )*id+id$          match id
+		            E')T'E'$    ''                T'->eps
+		            )T'E'$      ''                E'->eps
+		(id+id)			T'E'$       *id+id$           match )
+		            *FT'E'$     ''                T'->*FT'
+		(id+id)*    FT'E'$      id+id$            match *
+		            idT'E'$     ''                F->id
+		(id+id)*id  T'E'$       +id$              match id
+		            E'$         ''                T'->eps
+		            +TE$        ''                E->+TE
+		(id+id)*id+ TE$         id$               match +
+		            FT'E$        ''               T->FT'
+		            idT'E$       ''               F->id
+		(id+id)*id+id T'E$          $             match id
+		            E$                            T'->eps
+		            $                             E'->eps
+		
