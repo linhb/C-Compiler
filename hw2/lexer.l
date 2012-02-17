@@ -7,9 +7,10 @@
   #include <string.h>
   #include <stdlib.h>
   #include <assert.h>
+	#include "node.h"
 
-void create_num(char *yytext);
-void create_value_string();
+// void create_num(char *yytext);
+// void create_value_string();
 
 %}
 comments		\/\*([^\*]|\*[^\/])*?\*\/
@@ -49,7 +50,7 @@ while				 return WHILE;
 }
 {number} {
 	create_num(yytext);
-	return (((struct number*)yylval)->type);
+	return yylval->data.type);
 }
 {string} {
 	create_value_string();
@@ -57,7 +58,7 @@ while				 return WHILE;
 }
 {char_const}	{
 	create_value_string();
-	return CHAR_CONST;
+	return INTEGER_CONST;
 }
 
 "!"                    	 return	LOGICAL_NOT;
@@ -89,8 +90,8 @@ while				 return WHILE;
 "*"                       	 return	STAR;
 "/"                         	 return	SLASH;
 "%"                      	 return	REMAINDER;
-"++"                  	 return	PREINCREMENT;
-"--"                  	 return	PREDECREMENT;
+"++"                  	 return	INCREMENT;
+"--"                  	 return	DECREMENT;
 ">>"                 	 return	BITSHIFT_LEFT;
 "<<"                	 return	BITSHIFT_RIGHT;
 "?"	                	 return	QUESTION_MARK;
@@ -105,7 +106,7 @@ while				 return WHILE;
 ";"                           return SEMICOLON;
 ":"                               return COLON;
 
-.	return ERROR;
+.	return -1;
 
 %%
 
@@ -120,24 +121,24 @@ while				 return WHILE;
 */
 
 void create_num(char *yytext) {
-	struct number *num = malloc(sizeof *num);
+	struct node *num = malloc(sizeof(*num));
 	assert(num != NULL);                   
-	num->overflow = 0;
-	num->value = strtoul(yytext, NULL, 10);
+	num->data.number = malloc(sizeof())
+	num->data.value = strtoul(yytext, NULL, 10);
 	unsigned long int ul_limit = 4294967295UL;
 	unsigned long int int_limit = 2147483647UL;
-	unsigned long int value = num->value;
+	unsigned long int value = num->data.value;
 	if (value <= int_limit)
-		num->type = INTEGER_CONST;    
+		num->data.type = INTEGER_CONST;    
  	else if (value <= ul_limit)
-		num->type = UNSIGNED_LONG_CONST;    
+		num->data.type = UNSIGNED_LONG_CONST;    
 	else { /* overflow */
-		num->value = ul_limit;
-		num->type = UNSIGNED_LONG_CONST;    
-		num->overflow = 1;
+		num->data.value = ul_limit;
+		num->data.type = UNSIGNED_LONG_CONST;    
+		num->data.overflow = 1;
 	}
 	yylval = num;
-}
+}     
 
 /*
 	create_value_string: create a string containing the value of identifier, string and char tokens, then point yylval to the created string
@@ -150,3 +151,6 @@ void create_value_string() {
 	yylval = strdup(yytext);
 	assert(yylval != NULL);
 }
+
+// void 
+
