@@ -50,7 +50,7 @@ while				 return WHILE;
 }
 {number} {
 	create_num(yytext);
-	return yylval->data.type);
+	return yylval->data->type;
 }
 {string} {
 	create_value_string();
@@ -121,9 +121,10 @@ while				 return WHILE;
 */
 
 void create_num(char *yytext) {
-	struct node *num = malloc(sizeof(*num));
+	struct node *num = malloc(sizeof(num));
 	assert(num != NULL);                   
-	num->data.number = malloc(sizeof())
+	num->data.number = malloc(sizeof(number));
+	assert(num->data.number);
 	num->data.value = strtoul(yytext, NULL, 10);
 	unsigned long int ul_limit = 4294967295UL;
 	unsigned long int int_limit = 2147483647UL;

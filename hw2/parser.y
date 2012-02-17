@@ -36,8 +36,8 @@ decl : declaration_specifiers initialized_declarator_list SEMICOLON
 ;
 function_definition : function_def_specifier compound_statement 
 ;
-compound_statement : LEFT_BRACKET declaration_or_statement_list RIGHT_BRACKET |
-                     LEFT_BRACKET RIGHT_BRACKET
+compound_statement : LEFT_CURLY_BRACE declaration_or_statement_list RIGHT_CURLY_BRACE |
+                     LEFT_CURLY_BRACE RIGHT_CURLY_BRACE
 ;
 declaration_or_statement_list : declaration_or_statement |
  declaration_or_statement_list declaration_or_statement 
@@ -45,18 +45,64 @@ declaration_or_statement_list : declaration_or_statement |
 declaration_or_statement : decl |
  statement 
 ;
-statement : expression_statement // |
- // labeled_statement |
- // compound_statement |
- // conditional_statement |
- // iterative_statement |
- // break_statement |
- // continue_statement |
- // return_statement |
- // goto_statement |
- // null_statement              
+statement : expression_statement |
+ labeled_statement |
+ compound_statement |
+ conditional_statement |
+ iterative_statement |
+ break_statement |
+ continue_statement |
+ return_statement |
+ goto_statement |
+ null_statement              
+;
+labeled_statement : label COLON statement 
 ;
 expression_statement : expr SEMICOLON 
+;
+conditional_statement : if_statement |
+ if_else_statement 
+;
+iterative_statement : while_statement |
+ do_statement |
+ for_statement 
+;
+break_statement : BREAK SEMICOLON 
+;
+continue_statement : CONTINUE SEMICOLON 
+;
+return_statement : RETURN expr SEMICOLON |
+                   RETURN SEMICOLON
+;
+goto_statement : GOTO named_label SEMICOLON 
+;
+named_label : IDENTIFIER 
+;
+null_statement : SEMICOLON 
+;
+label : named_label 
+;
+if_else_statement : IF LEFT_PAREN expr RIGHT_PAREN statement ELSE statement 
+;
+if_statement : IF LEFT_PAREN expr RIGHT_PAREN statement 
+;
+while_statement : WHILE LEFT_PAREN expr RIGHT_PAREN statement 
+;
+do_statement : DO statement WHILE LEFT_PAREN expr RIGHT_PAREN SEMICOLON 
+;
+for_statement : FOR for_expr statement 
+;
+for_expr : LEFT_PAREN initial_clause SEMICOLON expr SEMICOLON expr RIGHT_PAREN |
+           LEFT_PAREN SEMICOLON expr SEMICOLON expr RIGHT_PAREN |
+           LEFT_PAREN initial_clause SEMICOLON SEMICOLON expr RIGHT_PAREN |
+           LEFT_PAREN initial_clause SEMICOLON expr SEMICOLON RIGHT_PAREN |
+           LEFT_PAREN initial_clause SEMICOLON SEMICOLON RIGHT_PAREN |
+           LEFT_PAREN SEMICOLON expr SEMICOLON RIGHT_PAREN |
+           LEFT_PAREN SEMICOLON SEMICOLON expr RIGHT_PAREN |
+           LEFT_PAREN SEMICOLON SEMICOLON RIGHT_PAREN
+;
+initial_clause : expr |
+ decl 
 ;
 function_def_specifier : declaration_specifiers declarator |
                          declarator
@@ -72,14 +118,43 @@ pointer : STAR |
 pointer_decl : pointer direct_declarator 
 ;
 direct_declarator : simple_declarator |
- LEFT_PAREN declarator RIGHT_PAREN // |
-  // function_declarator |
-  // array_declarator                 
+ LEFT_PAREN declarator RIGHT_PAREN |
+   function_declarator |
+   array_declarator                 
 ;
 simple_declarator : IDENTIFIER 
 ;
+function_declarator : direct_declarator LEFT_PAREN parameter_type_list RIGHT_PAREN 
+;
+parameter_decl : declaration_specifiers declarator |
+ declaration_specifiers abstract_declarator |
+	declaration_specifiers
+;
+abstract_declarator : pointer |
+ pointer direct_abstract_declarator |
+	direct_abstract_declarator
+;
+direct_abstract_declarator : LEFT_PAREN abstract_declarator RIGHT_PAREN |
+ direct_abstract_declarator LEFT_BRACKET constant_expr RIGHT_BRACKET |
+  LEFT_BRACKET constant_expr RIGHT_BRACKET |
+ direct_abstract_declarator LEFT_BRACKET RIGHT_BRACKET |
+ direct_abstract_declarator LEFT_PAREN parameter_type_list RIGHT_PAREN |
+  LEFT_PAREN parameter_type_list RIGHT_PAREN |
+ direct_abstract_declarator LEFT_PAREN RIGHT_PAREN 
+;
+parameter_list : parameter_decl |
+ parameter_list COMMA parameter_decl 
+;
+parameter_type_list : parameter_list 
+;
+array_declarator : direct_declarator LEFT_BRACKET constant_expr RIGHT_BRACKET |
+                   direct_declarator LEFT_BRACKET RIGHT_BRACKET 
+;
+constant_expr : conditional_expr 
+;
 initialized_declarator_list : initialized_declarator |
  initialized_declarator_list COMMA initialized_declarator 
+;
 expr : comma_expr 
 ;
 comma_expr : assignment_expr |
@@ -210,5 +285,3 @@ void_type_specifier : VOID
 main() {
 	return yyparse();
 }
-
-// %token IDENTIFIER CHAR_CONST STRING_CONST INTEGER_CONST LONG_CONST UNSIGNED_LONG_CONST

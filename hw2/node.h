@@ -16,6 +16,7 @@ typedef struct t_node {
 typedef struct n_number {
 	long int value;
 	int overflow;
+	int type;
 } number;
 
 typedef struct n_identifier {
