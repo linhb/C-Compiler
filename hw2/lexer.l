@@ -9,8 +9,10 @@
   #include <assert.h>
 	#include "node.h"
 
-// void create_num(char *yytext);
-// void create_value_string();
+void create_number_node(char *yytext);
+void create_string_node(char *yytext);
+void create_char_node(char *yytext);
+void create_identifier_node(char *yytext);
 
 %}
 comments		\/\*([^\*]|\*[^\/])*?\*\/
@@ -18,11 +20,12 @@ delimiter 	[ \t\n\v\f]
 whitespace	{delimiter}+
 identifier	[A-Za-z_][A-Za-z0-9_]*
 digit				[0-9]
-escape			\\({digit}{1,3}|[ntbrfv\\\'\"a\?])
+octal_digit	[0-7]
+escape			\\({octal_digit}{1,3}|[ntbrfv\\\'\"a\?])                          
 number    	{digit}+(E[+\-]{digit}+)?
 string    	\"((\\\")|[^\"\n])*\"
 char_const	\'({escape}|.)\'
-
+                                                                         
 %%
 {comments}	
 {whitespace}	
@@ -45,19 +48,20 @@ long    		 return LONG;
 while				 return WHILE;
 
 {identifier}	{
-	create_value_string();
+	create_identifier_node(yytext);
 	return IDENTIFIER;
 }
 {number} {
-	create_num(yytext);
-	return yylval->data->type;
+	create_number_node(yytext);
+	int type = yylval->data.number->type;
+	return type;
 }
 {string} {
-	create_value_string();
+	create_string_node(yytext);
 	return STRING_CONST;
 }
 {char_const}	{
-	create_value_string();
+	create_char_node(yytext);
 	return INTEGER_CONST;
 }
 
@@ -120,38 +124,60 @@ while				 return WHILE;
 
 */
 
-void create_num(char *yytext) {
-	struct node *num = malloc(sizeof(num));
+void create_number_node(char *yytext) {
+	node *num = malloc(sizeof(*num));
 	assert(num != NULL);                   
+	num->node_type = NUMBER_NODE;
 	num->data.number = malloc(sizeof(number));
-	assert(num->data.number);
-	num->data.value = strtoul(yytext, NULL, 10);
+	assert(num->data.number != NULL);
+	num->data.number->value = strtoul(yytext, NULL, 10);
 	unsigned long int ul_limit = 4294967295UL;
 	unsigned long int int_limit = 2147483647UL;
-	unsigned long int value = num->data.value;
+	unsigned long int value = num->data.number->value;
 	if (value <= int_limit)
-		num->data.type = INTEGER_CONST;    
+		num->data.number->type = INTEGER_CONST;    
  	else if (value <= ul_limit)
-		num->data.type = UNSIGNED_LONG_CONST;    
+		num->data.number->type = UNSIGNED_LONG_CONST;    
 	else { /* overflow */
-		num->data.value = ul_limit;
-		num->data.type = UNSIGNED_LONG_CONST;    
-		num->data.overflow = 1;
+		num->data.number->value = ul_limit;
+		num->data.number->type = UNSIGNED_LONG_CONST;    
+		num->data.number->overflow = 1;
 	}
 	yylval = num;
 }     
 
 /*
-	create_value_string: create a string containing the value of identifier, string and char tokens, then point yylval to the created string
+	create_string_node: create a string node containing the value of the string token, then point yylval to the created string node
 	Parameters: none
 	Return: none
-  Side effects: set global variable yylval to newly created string
+  Side effects: set global variable yylval to newly created string node
 */
 
-void create_value_string() {
-	yylval = strdup(yytext);
-	assert(yylval != NULL);
+void create_string_node(char *yytext) {
+	node *string = malloc(sizeof(*string));
+	assert(string != NULL);
+	string->node_type = STRING_NODE;
+	string->data.string = malloc(sizeof(*string->data.string));
+	string->data.string->value = strdup(yytext);
+	assert(string->data.string->value != NULL);
+	yylval = string;
 }
 
-// void 
+void create_char_node(char *yytext) { // yytext = "'\127'"
+	node *char_node = malloc(sizeof(*char_node));
+	assert(char_node != NULL);
+	char_node->node_type = NUMBER_NODE;
+	char_node->data.number = malloc(sizeof(*char_node->data.number));
+	char_node->data.number->value = (int)yytext[1];
+	yylval = char_node;
+}
 
+void create_identifier_node(char *yytext) {
+	node *identifier = malloc(sizeof(*identifier));
+	assert(identifier != NULL);
+	identifier->node_type = IDENTIFIER_NODE;
+	identifier->data.identifier = malloc(sizeof(*identifier->data.identifier));
+	identifier->data.identifier->name = strdup(yytext);
+	assert(identifier->data.identifier->name != NULL);
+	yylval = identifier;
+}

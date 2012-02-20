@@ -1,7 +1,8 @@
 all:
 	lex lexer.l
-	yacc parser.y
-	gcc y.tab.c -ly -lfl -o parser
+	yacc -t --report=state parser.y
+	gcc y.tab.c -c
+	gcc -Wall y.tab.o node.c parser_main.c -ly -lfl -o parser
 
 standalone:
 	lex lexer-standalone.lex
