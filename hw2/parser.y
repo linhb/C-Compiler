@@ -8,8 +8,7 @@
 	extern int yylineno;
   void yyerror(char const *s);
 	extern node *root;
-
-
+	
 %}
 %token DO FOR RETURN BREAK SHORT ELSE GOTO SIGNED UNSIGNED CHAR IF VOID INT CONTINUE LONG WHILE 
 %token IDENTIFIER STRING_CONST INTEGER_CONST LONG_CONST UNSIGNED_LONG_CONST
@@ -223,30 +222,30 @@ cast_expr : unary_expr
 type_name : // declaration_specifiers abstract_declarator
             declaration_specifiers
 ;
-declaration_specifiers : type_specifier    {printf("%s",$1);}
+declaration_specifiers : type_specifier
 ;
 type_specifier : integer_type_specifier 
- | void_type_specifier 
+// | void_type_specifier 
 ;
 integer_type_specifier : signed_type_specifier 
  | unsigned_type_specifier 
  | character_type_specifier 
 ;
-signed_type_specifier : SHORT         {$$ = create_integer_type_specifier_node(0, SHORT, 1);}
- | SHORT INT                          {$$ = create_integer_type_specifier_node(0, SHORT, 0);}
- | SIGNED SHORT                       {$$ = create_integer_type_specifier_node(SIGNED, SHORT, 1);}
- | SIGNED SHORT INT                   {$$ = create_integer_type_specifier_node(SIGNED, SHORT, 0);}
- | INT                                {$$ = create_integer_type_specifier_node(0, INT, 1);}
- | SIGNED INT                         {$$ = create_integer_type_specifier_node(SIGNED, INT, 1);}
- | SIGNED                             {$$ = create_integer_type_specifier_node(SIGNED, INT, 1);}
- | LONG                               {$$ = create_integer_type_specifier_node(0, LONG, 1);}
- | LONG INT                           {$$ = create_integer_type_specifier_node(0, LONG, 0);}
- | SIGNED LONG                        {$$ = create_integer_type_specifier_node(SIGNED, LONG, 1);}
- | SIGNED LONG INT                    {$$ = create_integer_type_specifier_node(SIGNED, LONG, 0);}
+signed_type_specifier : SHORT 
+ | SHORT INT 
+ | SIGNED SHORT 
+ | SIGNED SHORT INT 
+ | INT 
+ | SIGNED INT 
+ | SIGNED 
+ | LONG 
+ | LONG INT 
+ | SIGNED LONG 
+	| SIGNED LONG INT                  {create_reserved_word_list_node(create_reserved_word_list_node(create_reserved_word_list_node(NULL, $1), $2), $3);}
 ;
-character_type_specifier : CHAR       {$$ = create_integer_type_specifier_node(0, CHAR, 1);}
- | SIGNED CHAR                        {$$ = create_integer_type_specifier_node(SIGNED, CHAR, 1);}
- | UNSIGNED CHAR                      {$$ = create_integer_type_specifier_node(UNSIGNED, CHAR, 1);}
+character_type_specifier : CHAR 
+ | SIGNED CHAR 
+ | UNSIGNED CHAR 
 ;
 bitwise_or_expr : bitwise_xor_expr 
  | bitwise_or_expr BITWISE_OR bitwise_xor_expr 
@@ -266,26 +265,27 @@ unary_expr : postfix_expr
 ;
 postfix_expr : primary_expr 
  | subscript_expr 
- // | function_call 
- // | postincrement_expr 
- // | postdecrement_expr 
+ | function_call 
+ | postincrement_expr 
+ | postdecrement_expr 
 ;
 primary_expr : IDENTIFIER 
- // | constant 
- // | paranthesized_expr 
+ | STRING_CONST
+ | INTEGER_CONST 
+ | paranthesized_expr 
 ;
 subscript_expr : postfix_expr LEFT_BRACKET expr RIGHT_BRACKET 
 ;
-// function_call : postfix_expr LEFT_PAREN expression_list RIGHT_PAREN 
-//  | postfix_expr LEFT_PAREN RIGHT_PAREN 
-// ;
+function_call : postfix_expr LEFT_PAREN expression_list RIGHT_PAREN 
+ | postfix_expr LEFT_PAREN RIGHT_PAREN 
+;
 postdecrement_expr : postfix_expr DASH DASH
 ;
 postincrement_expr : postfix_expr PLUS PLUS 
 ;
-unsigned_type_specifier : UNSIGNED SHORT INT     {$$ = create_integer_type_specifier_node(UNSIGNED, INT, 0);}
- | UNSIGNED INT                                  {$$ = create_integer_type_specifier_node(UNSIGNED, INT, 0);}
- | UNSIGNED LONG INT                             {$$ = create_integer_type_specifier_node(UNSIGNED, INT, 0);}
+unsigned_type_specifier : UNSIGNED SHORT INT 
+ | UNSIGNED INT 
+ | UNSIGNED LONG INT     
 ;
 void_type_specifier : VOID 
 ;

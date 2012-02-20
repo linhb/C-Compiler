@@ -13,6 +13,7 @@ void create_number_node(char *yytext);
 void create_string_node(char *yytext);
 void create_char_node(char *yytext);
 void create_identifier_node(char *yytext);
+void create_reserved_word_node(char *yytext, int value);
 
 %}
 comments		\/\*([^\*]|\*[^\/])*?\*\/
@@ -30,22 +31,22 @@ char_const	\'({escape}|.)\'
 {comments}	
 {whitespace}	
 
-do 					 return DO;	
-for     		 return FOR;	
-return  		 return RETURN;	
-break   		 return BREAK;	
-short   		 return SHORT;	
-else    		 return ELSE;	
-goto    		 return GOTO;	
-signed  		 return SIGNED;	
-unsigned		 return UNSIGNED;	
-char    		 return CHAR;	
-if 					 return IF;	
-void    		 return VOID;	
-int     		 return INT;	
-continue		 	return CONTINUE;
-long    		 return LONG;	
-while				 return WHILE;
+do 					 create_reserved_word_node(yytext, DO); return DO;	
+for     		 create_reserved_word_node(yytext, FOR); return FOR;	
+return  		 create_reserved_word_node(yytext, RETURN); return RETURN;	
+break   		 create_reserved_word_node(yytext, BREAK); return BREAK;	
+short   		 create_reserved_word_node(yytext, SHORT); return SHORT;	
+else    		 create_reserved_word_node(yytext, ELSE); return ELSE;	
+goto    		 create_reserved_word_node(yytext, GOTO); return GOTO;	
+signed  		 create_reserved_word_node(yytext, SIGNED); return SIGNED;	
+unsigned		 create_reserved_word_node(yytext, UNSIGNED); return UNSIGNED;	
+char    		 create_reserved_word_node(yytext, CHAR); return CHAR;	
+if 					 create_reserved_word_node(yytext, IF); return IF;	
+void    		 create_reserved_word_node(yytext, VOID); return VOID;	
+int     		 create_reserved_word_node(yytext, INT); return INT;	
+continue		 create_reserved_word_node(yytext, CONTINUE); return CONTINUE;
+long    		 create_reserved_word_node(yytext, LONG); return LONG;	
+while				 create_reserved_word_node(yytext, WHILE); return WHILE;
 
 {identifier}	{
 	create_identifier_node(yytext);
@@ -169,6 +170,7 @@ void create_char_node(char *yytext) { // yytext = "'\127'"
 	char_node->node_type = NUMBER_NODE;
 	char_node->data.number = malloc(sizeof(*char_node->data.number));
 	char_node->data.number->value = (int)yytext[1];
+	char_node->data.number->type = INTEGER_CONST;
 	yylval = char_node;
 }
 
@@ -180,4 +182,14 @@ void create_identifier_node(char *yytext) {
 	identifier->data.identifier->name = strdup(yytext);
 	assert(identifier->data.identifier->name != NULL);
 	yylval = identifier;
+}
+void create_reserved_word_node(char *yytext, int value) {
+	node *reserved_word = malloc(sizeof(*reserved_word));
+	assert(reserved_word != NULL);
+	reserved_word->node_type = RESERVED_WORD_NODE;
+	reserved_word->data.reserved_word = malloc(sizeof(*reserved_word->data.reserved_word));
+	reserved_word->data.reserved_word->text = strdup(yytext);
+	assert(reserved_word->data.reserved_word->text != NULL);
+	reserved_word->data.reserved_word->value = value;
+	yylval = reserved_word;
 }

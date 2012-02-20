@@ -6,12 +6,12 @@
 #define boolean int
 
 	
-	#define SHORT 				1
-	#define LONG          2
-	#define INT           3
-	#define CHAR          4
-	#define SIGNED        5
-	#define UNSIGNED      6
+//	#define SHORT 				1
+//	#define LONG          2
+//	#define INT           3
+	// #define CHAR          4
+//	#define SIGNED        5
+//	#define UNSIGNED      6
 
 #define NUMBER_NODE            1
 #define STRING_NODE            7
@@ -21,9 +21,11 @@
 #define UNARY_EXPRESSION_NODE  5
 #define EXPRESSION_NODE        6
 #define DECL_NODE        8
-#define INITIALIZED_DECL_LIST_NODE        9
-#define INTEGER_TYPE_SPECIFIER_NODE        10
-#define VOID_TYPE_SPECIFIER_NODE        11
+#define INITIALIZED_DECLARATOR_LIST_NODE        9
+// #define INTEGER_TYPE_SPECIFIER_NODE        10
+// #define VOID_TYPE_SPECIFIER_NODE        11
+#define RESERVED_WORD_NODE        12
+#define RESERVED_WORD_LIST_NODE        13
 
 
 typedef struct t_node {
@@ -38,9 +40,11 @@ typedef struct t_node {
 		struct n_binary_expression *binary_expression;
 		struct n_unary_expression *unary_expression;
 		struct n_decl *decl;
-		struct n_initialized_decl_list *initialized_decl_list;
-		struct n_integer_type_specifier *integer_type_specifier;
-		struct n_void_type_specifier *void_type_specifier;
+		struct n_initialized_declarator_list *initialized_declarator_list;
+		// struct n_integer_type_specifier *integer_type_specifier;
+		// struct n_void_type_specifier *void_type_specifier;
+		struct n_reserved_word *reserved_word;
+		struct n_reserved_word_list *reserved_word_list;
 	} data;
 } node;
 
@@ -83,27 +87,37 @@ typedef struct n_decl {
 	node *initialized_declarator_list;
 } decl;
 
-typedef struct n_initialized_decl_list {
+typedef struct n_initialized_declarator_list {
 	node *initialized_declarator_list;
 	node *initialized_declarator;
-} initialized_decl_list;
+} initialized_declarator_list;
 
-typedef struct n_integer_type_specifier {
-	int sign;
-	int number_type;
-	/* if false, print INT after printing SIGNED/UNSIGNED and number_type. Should only be set to false if you want an extra INT */
-	boolean shorthand;
-} integer_type_specifier;
-typedef struct n_void_type_specifier {} void_type_specifier;
+// typedef struct n_integer_type_specifier {
+// 	int sign;
+// 	int number_type;
+// 	/* if false, print INT after printing SIGNED/UNSIGNED and number_type. Should only be set to false if you want an extra INT */
+// 	boolean shorthand;
+// } integer_type_specifier;
+// typedef struct n_void_type_specifier {} void_type_specifier;
+typedef struct n_reserved_word {
+	char *text;
+	int value;
+} reserved_word;
+
+typedef struct n_reserved_word_list {
+	node *reserved_word_list;
+	node *reserved_word;
+} reserved_word_list;
 
 /* macro to print tokens that have the same value as their name */
 #define TO_STR(TOKEN) #TOKEN 
 
 node *create_node(int node_type);
-node *create_decl_node(node *decl_spec, node *ini_decl_list);
+node *create_decl_node(node *declaration_specifier, node *initialized_declarator_list);
 node *create_initialized_declarator_list_node(node *list, node *decl);
-node *create_integer_type_specifier_node(int sign, int number_type, boolean shorthand);
-node *create_void_type_specifier_node();
+// node *create_integer_type_specifier_node(int sign, int number_type, boolean shorthand);
+// node *create_void_type_specifier_node();
+node *create_reserved_word_list_node(node *reserved_word_list, node *reserved_word);
 
 /***************************** PRETTY PRINTER FUNCTIONS *******************************/
 
@@ -115,7 +129,9 @@ void print_list_node(FILE *output, node *n);
 // void print_binary_expression_node(FILE *output, node *n);
 void print_unary_expression_node(FILE *output, node *n);
 void print_decl_node(FILE *output, node *n);
-void print_initialized_decl_list_node(FILE *output, node *n);
-void print_integer_type_specifier_node(FILE *output, node *n);
-void print_void_type_specifier_node(FILE *output, node *n);
+void print_initialized_declarator_list_node(FILE *output, node *n);
+// void print_integer_type_specifier_node(FILE *output, node *n);
+// void print_void_type_specifier_node(FILE *output, node *n);
+void print_reserved_word_node(FILE *output, node *n);
+void print_reserved_word_list_node(FILE *output, node *n);
 #endif
