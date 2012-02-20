@@ -20,7 +20,7 @@
 #define RESERVED_WORD_LIST_NODE        13
 #define OPERATOR_NODE        14
 #define INCREMENT_DECREMENT_EXPR_NODE 15
-
+#define TRANSLATION_UNIT 16
 
 typedef struct t_node {
 	int node_type;
@@ -41,6 +41,7 @@ typedef struct t_node {
 		struct n_reserved_word_list *reserved_word_list;
 		struct n_operator *operator;
 		struct n_increment_decrement_expr *increment_decrement_expr;
+		struct n_translation_unit *translation_unit;
 	} data;
 } node;
 
@@ -111,7 +112,10 @@ typedef struct n_increment_decrement_expr {
 	node *operand;
 	node *operator;
 } increment_decrement_expr;
-
+typedef st translation_unit {
+	node *translation_unit;
+	node *top_level_decl;
+};
 /* macro to print tokens that have the same value as their name */
 #define TO_STR(TOKEN) #TOKEN 
 
@@ -122,6 +126,7 @@ node *create_initialized_declarator_list_node(node *list, node *decl);
 // node *create_void_type_specifier_node();
 node *create_reserved_word_list_node(node *reserved_words[]);
 node *create_increment_decrement_expr_node(node *operand, node *operator);
+node *create_translation_unit_node(node *translation_unit, node *top_level_decl);
 
 /***************************** PRETTY PRINTER FUNCTIONS *******************************/
 
@@ -140,4 +145,5 @@ void print_reserved_word_node(FILE *output, node *n);
 void print_reserved_word_list_node(FILE *output, node *n);
 void print_operator_node(FILE *output, node *n);
 void print_increment_decrement_expr_node(FILE *output, node *n);
+void print_translation_unit_node(FILE *output, node *n);
 #endif

@@ -34,31 +34,31 @@
 %start root
 
 %%
-root : decl {root = $1; assert (root != NULL);}
+root : translation_unit {root = $1; assert (root != NULL);}
 ;
-// translation_unit : top_level_decl 
-//  | translation_unit top_level_decl      
-// ;
-// top_level_decl : decl 
-//  | function_definition 
-// ;
+translation_unit : top_level_decl        
+ | translation_unit top_level_decl       {create_translation_unit_node($1, $2);}
+;
+top_level_decl : decl 
+ | function_definition 
+;
 decl : declaration_specifiers initialized_declarator_list SEMICOLON {$$ = create_decl_node($1, $2);}
  | error ';' {printf("error!\n");yyerrok;yyclearin;}
 ;
-// function_definition : function_def_specifier compound_statement 
-// ;
-// compound_statement : LEFT_CURLY_BRACE declaration_or_statement_list RIGHT_CURLY_BRACE 
-//  | LEFT_CURLY_BRACE RIGHT_CURLY_BRACE
-// ;
-// declaration_or_statement_list : declaration_or_statement 
-//  | declaration_or_statement_list declaration_or_statement 
-// ;
-// declaration_or_statement : decl 
-//  | statement 
-// ;
+function_definition : function_def_specifier compound_statement 
+;
+compound_statement : LEFT_CURLY_BRACE declaration_or_statement_list RIGHT_CURLY_BRACE 
+ | LEFT_CURLY_BRACE RIGHT_CURLY_BRACE
+;
+declaration_or_statement_list : declaration_or_statement 
+ | declaration_or_statement_list declaration_or_statement 
+;
+declaration_or_statement : decl 
+ | statement 
+;
 statement : expression_statement
 //  | labeled_statement 
-//  | compound_statement 
+  | compound_statement 
 //  | conditional_statement 
 //  | iterative_statement 
 //  | break_statement 
@@ -115,9 +115,9 @@ expression_statement : expr SEMICOLON
 // initial_clause : expr 
 //  | decl 
 // ;
-// function_def_specifier : declaration_specifiers declarator 
-//  | declarator
-// ;
+function_def_specifier : declaration_specifiers declarator 
+ | declarator
+;
 initialized_declarator : declarator 
 ;
 declarator : pointer_decl 
@@ -293,3 +293,8 @@ void_type_specifier : VOID
 
 #include <stdio.h>
 #include "lex.yy.c"
+
+void yyerror(char const *s) {
+  fprintf(stderr, "ERROR at line %d: %s\n", yylineno, s);
+}
+
