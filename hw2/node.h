@@ -5,14 +5,6 @@
 
 #define boolean int
 
-	
-//	#define SHORT 				1
-//	#define LONG          2
-//	#define INT           3
-	// #define CHAR          4
-//	#define SIGNED        5
-//	#define UNSIGNED      6
-
 #define NUMBER_NODE            1
 #define STRING_NODE            7
 #define IDENTIFIER_NODE        2
@@ -26,6 +18,8 @@
 // #define VOID_TYPE_SPECIFIER_NODE        11
 #define RESERVED_WORD_NODE        12
 #define RESERVED_WORD_LIST_NODE        13
+#define OPERATOR_NODE        14
+#define INCREMENT_DECREMENT_EXPR_NODE 15
 
 
 typedef struct t_node {
@@ -45,6 +39,8 @@ typedef struct t_node {
 		// struct n_void_type_specifier *void_type_specifier;
 		struct n_reserved_word *reserved_word;
 		struct n_reserved_word_list *reserved_word_list;
+		struct n_operator *operator;
+		struct n_increment_decrement_expr *increment_decrement_expr;
 	} data;
 } node;
 
@@ -105,9 +101,16 @@ typedef struct n_reserved_word {
 } reserved_word;
 
 typedef struct n_reserved_word_list {
-	node *reserved_word_list;
-	node *reserved_word;
+	node *reserved_words[3];
 } reserved_word_list;
+typedef struct n_operator {
+	char *text;
+	int value;	
+} operator;
+typedef struct n_increment_decrement_expr {
+	node *operand;
+	node *operator;
+} increment_decrement_expr;
 
 /* macro to print tokens that have the same value as their name */
 #define TO_STR(TOKEN) #TOKEN 
@@ -117,7 +120,8 @@ node *create_decl_node(node *declaration_specifier, node *initialized_declarator
 node *create_initialized_declarator_list_node(node *list, node *decl);
 // node *create_integer_type_specifier_node(int sign, int number_type, boolean shorthand);
 // node *create_void_type_specifier_node();
-node *create_reserved_word_list_node(node *reserved_word_list, node *reserved_word);
+node *create_reserved_word_list_node(node *reserved_words[]);
+node *create_increment_decrement_expr_node(node *operand, node *operator);
 
 /***************************** PRETTY PRINTER FUNCTIONS *******************************/
 
@@ -134,4 +138,6 @@ void print_initialized_declarator_list_node(FILE *output, node *n);
 // void print_void_type_specifier_node(FILE *output, node *n);
 void print_reserved_word_node(FILE *output, node *n);
 void print_reserved_word_list_node(FILE *output, node *n);
+void print_operator_node(FILE *output, node *n);
+void print_increment_decrement_expr_node(FILE *output, node *n);
 #endif

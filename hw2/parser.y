@@ -164,7 +164,7 @@ simple_declarator : IDENTIFIER
 // constant_expr : conditional_expr 
 // ;
 initialized_declarator_list : initialized_declarator             {$$ = create_initialized_declarator_list_node(NULL, $1);}
-	| initialized_declarator_list COMMA initialized_declarator     {$$ = create_initialized_declarator_list_node($1, $2);}
+	| initialized_declarator_list COMMA initialized_declarator     {$$ = create_initialized_declarator_list_node($1, $3);}
 ;                                
 expr : comma_expr 
 ;
@@ -231,21 +231,21 @@ integer_type_specifier : signed_type_specifier
  | unsigned_type_specifier 
  | character_type_specifier 
 ;
-signed_type_specifier : SHORT 
- | SHORT INT 
- | SIGNED SHORT 
- | SIGNED SHORT INT 
- | INT 
- | SIGNED INT 
- | SIGNED 
- | LONG 
- | LONG INT 
- | SIGNED LONG 
-	| SIGNED LONG INT                  {create_reserved_word_list_node(create_reserved_word_list_node(create_reserved_word_list_node(NULL, $1), $2), $3);}
+signed_type_specifier : SHORT      {node *words[] = {$1, NULL, NULL}; $$ = create_reserved_word_list_node(words);}
+ | SHORT INT                       {node *words[] = {$1, $2, NULL}; $$ = create_reserved_word_list_node(words);}
+ | SIGNED SHORT                    {node *words[] = {$1, $2, NULL}; $$ = create_reserved_word_list_node(words);}
+ | SIGNED SHORT INT                {node *words[] = {$1, $2, $3}; $$ = create_reserved_word_list_node(words);}
+ | INT                             {node *words[] = {$1, NULL, NULL}; $$ = create_reserved_word_list_node(words);}
+ | SIGNED INT                      {node *words[] = {$1, $2, NULL}; $$ = create_reserved_word_list_node(words);}
+ | SIGNED                          {node *words[] = {$1, NULL, NULL}; $$ = create_reserved_word_list_node(words);}
+ | LONG                            {node *words[] = {$1, NULL, NULL}; $$ = create_reserved_word_list_node(words);}
+ | LONG INT                        {node *words[] = {$1, $2, NULL}; $$ = create_reserved_word_list_node(words);}
+ | SIGNED LONG                     {node *words[] = {$1, $2, NULL}; $$ = create_reserved_word_list_node(words);}
+| SIGNED LONG INT                  {node *words[] = {$1, $2, $3}; $$ = create_reserved_word_list_node(words);}
 ;
-character_type_specifier : CHAR 
- | SIGNED CHAR 
- | UNSIGNED CHAR 
+character_type_specifier : CHAR    {node *words[] = {$1, NULL, NULL}; $$ = create_reserved_word_list_node(words);}
+ | SIGNED CHAR                     {node *words[] = {$1, $2, NULL}; $$ = create_reserved_word_list_node(words);}
+ | UNSIGNED CHAR                   {node *words[] = {$1, $2, NULL}; $$ = create_reserved_word_list_node(words);}
 ;
 bitwise_or_expr : bitwise_xor_expr 
  | bitwise_or_expr BITWISE_OR bitwise_xor_expr 
@@ -265,27 +265,27 @@ unary_expr : postfix_expr
 ;
 postfix_expr : primary_expr 
  | subscript_expr 
- | function_call 
+ // | function_call 
  | postincrement_expr 
  | postdecrement_expr 
 ;
 primary_expr : IDENTIFIER 
  | STRING_CONST
  | INTEGER_CONST 
- | paranthesized_expr 
+ // | paranthesized_expr 
 ;
 subscript_expr : postfix_expr LEFT_BRACKET expr RIGHT_BRACKET 
 ;
-function_call : postfix_expr LEFT_PAREN expression_list RIGHT_PAREN 
- | postfix_expr LEFT_PAREN RIGHT_PAREN 
+// function_call : postfix_expr LEFT_PAREN expression_list RIGHT_PAREN 
+//  | postfix_expr LEFT_PAREN RIGHT_PAREN 
+// ;
+postdecrement_expr : postfix_expr DASH DASH      {$$ = create_increment_decrement_expr_node($1, $2);}
 ;
-postdecrement_expr : postfix_expr DASH DASH
+postincrement_expr : postfix_expr PLUS PLUS      {$$ = create_increment_decrement_expr_node($1, $2);}
 ;
-postincrement_expr : postfix_expr PLUS PLUS 
-;
-unsigned_type_specifier : UNSIGNED SHORT INT 
- | UNSIGNED INT 
- | UNSIGNED LONG INT     
+unsigned_type_specifier : UNSIGNED SHORT INT     {node *words[] = {$1, $2, $3}; $$ = create_reserved_word_list_node(words);}
+ | UNSIGNED INT                                   {node *words[] = {$1, $2, NULL}; $$ = create_reserved_word_list_node(words);}
+ | UNSIGNED LONG INT                              {node *words[] = {$1, $2, $3}; $$ = create_reserved_word_list_node(words);}
 ;
 void_type_specifier : VOID 
 ;

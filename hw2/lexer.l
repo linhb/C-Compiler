@@ -14,6 +14,7 @@ void create_string_node(char *yytext);
 void create_char_node(char *yytext);
 void create_identifier_node(char *yytext);
 void create_reserved_word_node(char *yytext, int value);
+void create_operator_node(char *yytext, int value);
 
 %}
 comments		\/\*([^\*]|\*[^\/])*?\*\/
@@ -66,40 +67,40 @@ while				 create_reserved_word_node(yytext, WHILE); return WHILE;
 	return INTEGER_CONST;
 }
 
-"!"                    	 return	LOGICAL_NOT;
-"\|\|"                    	 return	LOGICAL_OR;
-"&&"                   	 return	LOGICAL_AND;
-"^"                    	 return	BITWISE_XOR;
-"&"                    	 return	AMPERSAND;
-"\|"                     	 return	BITWISE_OR;
-"~"             	 return	BITWISE_COMPLEMENT;
-"=="                      	 return	IS_EQUAL;
-"!="                  	 return	IS_NOT_EQUAL;
-"<"                      	 return	LESS_THAN;
-">"                   	 return	GREATER_THAN;
-"<="            	 return	LESS_THAN_OR_EQUAL;
-">="         	 return	GREATER_THAN_OR_EQUAL;
-"="                         	 return	ASSIGN;
-"+="                	 return	ADD_AND_ASSIGN;
-"-="           	 return	SUBTRACT_AND_ASSIGN;
-"*="           	 return	MULTIPLY_AND_ASSIGN;
-"/="             	 return	DIVIDE_AND_ASSIGN;
-"%="          	 return	REMAINDER_AND_ASSIGN;
-"&="        	 return	BITWISE_AND_AND_ASSIGN;
-"|="         	return	BITWISE_OR_AND_ASSIGN;
-"^="        	return	BITWISE_XOR_AND_ASSIGN;
-">>="     	 return	BITSHIFT_LEFT_AND_ASSIGN;
-"<<="    return	BITSHIFT_RIGHT_AND_ASSIGN;
-"+"                           	 return	PLUS;
-"-"                          	 return	DASH;
-"*"                       	 return	STAR;
-"/"                         	 return	SLASH;
-"%"                      	 return	REMAINDER;
-"++"                  	 return	INCREMENT;
-"--"                  	 return	DECREMENT;
-">>"                 	 return	BITSHIFT_LEFT;
-"<<"                	 return	BITSHIFT_RIGHT;
-"?"	                	 return	QUESTION_MARK;
+"!"                    	 create_operator_node(yytext, LOGICAL_NOT); return	LOGICAL_NOT;
+"\|\|" create_operator_node(yytext, LOGICAL_OR); return LOGICAL_OR;
+"&&" create_operator_node(yytext, LOGICAL_AND); return LOGICAL_AND;
+"^" create_operator_node(yytext, BITWISE_XOR); return BITWISE_XOR;
+"&" create_operator_node(yytext, AMPERSAND); return AMPERSAND;
+"\|" create_operator_node(yytext, BITWISE_OR); return BITWISE_OR;
+"~" create_operator_node(yytext, BITWISE_COMPLEMENT); return BITWISE_COMPLEMENT;
+"==" create_operator_node(yytext, IS_EQUAL); return IS_EQUAL;
+"!=" create_operator_node(yytext, IS_NOT_EQUAL); return IS_NOT_EQUAL;
+"<" create_operator_node(yytext, LESS_THAN); return LESS_THAN;
+">" create_operator_node(yytext, GREATER_THAN); return GREATER_THAN;
+"<=" create_operator_node(yytext, LESS_THAN_OR_EQUAL); return LESS_THAN_OR_EQUAL;
+">=" create_operator_node(yytext, GREATER_THAN_OR_EQUAL); return GREATER_THAN_OR_EQUAL;
+"=" create_operator_node(yytext, ASSIGN); return ASSIGN;
+"+=" create_operator_node(yytext, ADD_AND_ASSIGN); return ADD_AND_ASSIGN;
+"-=" create_operator_node(yytext, SUBTRACT_AND_ASSIGN); return SUBTRACT_AND_ASSIGN;
+"*=" create_operator_node(yytext, MULTIPLY_AND_ASSIGN); return MULTIPLY_AND_ASSIGN;
+"/=" create_operator_node(yytext, DIVIDE_AND_ASSIGN); return DIVIDE_AND_ASSIGN;
+"%=" create_operator_node(yytext, REMAINDER_AND_ASSIGN); return REMAINDER_AND_ASSIGN;
+"&=" create_operator_node(yytext, BITWISE_AND_AND_ASSIGN); return BITWISE_AND_AND_ASSIGN;
+"|=" create_operator_node(yytext, BITWISE_OR_AND_ASSIGN); return BITWISE_OR_AND_ASSIGN;
+"^=" create_operator_node(yytext, BITWISE_XOR_AND_ASSIGN); return BITWISE_XOR_AND_ASSIGN;
+">>=" create_operator_node(yytext, BITSHIFT_LEFT_AND_ASSIGN); return BITSHIFT_LEFT_AND_ASSIGN;
+"<<=" create_operator_node(yytext, BITSHIFT_RIGHT_AND_ASSIGN); return BITSHIFT_RIGHT_AND_ASSIGN;
+"+" create_operator_node(yytext, PLUS); return PLUS;
+"-" create_operator_node(yytext, DASH); return DASH;
+"*" create_operator_node(yytext, STAR); return STAR;
+"/" create_operator_node(yytext, SLASH); return SLASH;
+"%" create_operator_node(yytext, REMAINDER); return REMAINDER;
+"++" create_operator_node(yytext, INCREMENT); return INCREMENT;
+"--" create_operator_node(yytext, DECREMENT); return DECREMENT;
+">>" create_operator_node(yytext, BITSHIFT_LEFT); return BITSHIFT_LEFT;
+"<<" create_operator_node(yytext, BITSHIFT_RIGHT); return BITSHIFT_RIGHT;
+"?" create_operator_node(yytext, QUESTION_MARK); return QUESTION_MARK;
 
 "("                          return LEFT_PAREN;
 ")"                         return RIGHT_PAREN;
@@ -192,4 +193,14 @@ void create_reserved_word_node(char *yytext, int value) {
 	assert(reserved_word->data.reserved_word->text != NULL);
 	reserved_word->data.reserved_word->value = value;
 	yylval = reserved_word;
+}
+void create_operator_node(char *yytext, int value) {
+	node *operator = malloc(sizeof(*operator));
+	assert(operator != NULL);
+	operator->node_type = OPERATOR_NODE;
+	operator->data.operator = malloc(sizeof(*operator->data.operator));
+	operator->data.operator->text = strdup(yytext);
+	assert(operator->data.operator->text != NULL);
+	operator->data.operator->value = value;
+	yylval = operator;
 }

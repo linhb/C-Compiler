@@ -1,6 +1,6 @@
 all:
 	lex lexer.l
-	yacc -t --report=state parser.y
+	yacc -t --report=state --debug parser.y
 	gcc y.tab.c -c
 	gcc -Wall y.tab.o node.c parser_main.c -ly -lfl -o parser
 
