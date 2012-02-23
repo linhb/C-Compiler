@@ -104,7 +104,7 @@ if_statement : IF LEFT_PAREN expr RIGHT_PAREN statement          {$$ = create_if
 ;
 while_statement : WHILE LEFT_PAREN expr RIGHT_PAREN statement                        {$$ = create_while_statement_node($3, $5);}
 ;
-do_statement : DO statement WHILE LEFT_PAREN expr RIGHT_PAREN SEMICOLON              //action here
+do_statement : DO statement WHILE LEFT_PAREN expr RIGHT_PAREN SEMICOLON              {$$ = create_do_statement_node($2, $5);}
 ;
 for_statement : FOR for_expr statement                                                //action here
 ;
