@@ -106,7 +106,7 @@ while_statement : WHILE LEFT_PAREN expr RIGHT_PAREN statement                   
 ;
 do_statement : DO statement WHILE LEFT_PAREN expr RIGHT_PAREN SEMICOLON              {$$ = create_do_statement_node($2, $5);}
 ;
-for_statement : FOR for_expr statement                                                //action here
+for_statement : FOR for_expr statement                                                {$$ = create_for_statement_node($2, $3);}
 ;
 for_expr : LEFT_PAREN initial_clause SEMICOLON expr SEMICOLON expr RIGHT_PAREN        //action here
  | LEFT_PAREN SEMICOLON expr SEMICOLON expr RIGHT_PAREN 

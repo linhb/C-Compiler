@@ -31,6 +31,7 @@
 #define IF_ELSE_STATEMENT_NODE 29
 #define WHILE_STATEMENT_NODE 30
 #define DO_STATEMENT_NODE 31
+#define FOR_STATEMENT_NODE 32
 
 
 typedef struct t_node {
@@ -67,6 +68,7 @@ typedef struct t_node {
 		struct n_if_else_statement *if_else_statement;
 		struct n_while_statement *while_statement;
 		struct n_do_statement *do_statement;
+		struct n_for_statement *for_statement;
 	} data;
 } node;
 
@@ -208,6 +210,11 @@ typedef struct n_do_statement
 	node *statement;
 	node *expr;
 } do_statement;
+typedef struct n_for_statement
+{
+	node *for_expr;
+	node *statement;
+} for_statement;
 
 node *create_node(int node_type);
 node *create_decl_node(node *declaration_specifier, node *initialized_declarator_list);
@@ -233,6 +240,7 @@ node *create_reserved_word_statement_node(node *reserved_word, node *expr);
 node *create_if_else_statement_node(node *expr, node *if_statement, node *else_statement);
 node *create_while_statement_node(node *expr, node *statement);
 node *create_do_statement_node(node *statement, node *expr);
+node *create_for_statement_node(node *for_expr, node *statement);
 
 /***************************** PRETTY PRINTER FUNCTIONS *******************************/
 
@@ -266,4 +274,5 @@ void print_reserved_word_statement_node(FILE *output, node *n);
 void print_if_else_statement_node(FILE *output, node *n);
 void print_while_statement_node(FILE *output, node *n);
 void print_do_statement_node(FILE *output, node *n);
+void print_for_statement_node(FILE *output, node *n);
 #endif
