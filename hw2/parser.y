@@ -243,8 +243,8 @@ mult_op :  STAR
 cast_expr : unary_expr                                        
  | LEFT_PAREN type_name RIGHT_PAREN cast_expr                 //action here
 ;
-type_name : declaration_specifiers abstract_declarator        //action here
-            declaration_specifiers
+type_name : declaration_specifiers abstract_declarator        {$$ = create_type_name_node($1, $2);}
+ |           declaration_specifiers                           {$$ = create_type_name_node($1, NULL);}
 ;
 declaration_specifiers : type_specifier
 ;
@@ -310,7 +310,7 @@ primary_expr : IDENTIFIER
  | INTEGER_CONST 
  | parenthesized_expr 
 ;
-parenthesized_expr : LEFT_PAREN expr RIGHT_PAREN               //action here
+parenthesized_expr : LEFT_PAREN expr RIGHT_PAREN               {$$ = create_direct_declarator_node($2);}
 ;
 subscript_expr : postfix_expr LEFT_BRACKET expr RIGHT_BRACKET           {$$ = create_subscript_expr_node($1, $3);}
 ;
