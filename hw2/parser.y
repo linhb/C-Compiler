@@ -144,7 +144,7 @@ simple_declarator : IDENTIFIER
 function_declarator : direct_declarator LEFT_PAREN parameter_type_list RIGHT_PAREN   {$$ = create_function_declarator_node($1, $3);}
 ;
 parameter_decl : declaration_specifiers declarator       {$$ = create_parameter_decl_node($1, $2);}
- // | declaration_specifiers abstract_declarator 
+ | declaration_specifiers abstract_declarator  //action here
  | declaration_specifiers
 ;
 abstract_declarator : pointer 
@@ -318,8 +318,8 @@ predecrement_expr : DECREMENT unary_expr                      {$$ = create_unary
 ;
 preincrement_expr : INCREMENT unary_expr                      {$$ = create_unary_expr_node($1, $2, 1);}
 ;
-function_call : postfix_expr LEFT_PAREN expression_list RIGHT_PAREN      //action here
- | postfix_expr LEFT_PAREN RIGHT_PAREN                                   //action here
+function_call : postfix_expr LEFT_PAREN expression_list RIGHT_PAREN      {$$ = create_function_call_node($1, $3);}
+ | postfix_expr LEFT_PAREN RIGHT_PAREN                                   {$$ = create_function_call_node($1, NULL);}
 ;
 postdecrement_expr : postfix_expr DECREMENT      {$$ = create_increment_decrement_expr_node($1, $2);}
 ;
