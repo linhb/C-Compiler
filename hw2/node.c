@@ -266,7 +266,16 @@ node *create_expression_list_node(node *expression_list, node *assignment_expr) 
 	n->data.expression_list->assignment_expr = assignment_expr;
 	return n;			
 }
-
+node *create_direct_abstract_declarator_node(node *n1, node *n2, node *n3, node *n4) {
+	node *n = create_node(DIRECT_ABSTRACT_DECLARATOR_NODE);
+	n->data.direct_abstract_declarator = malloc(sizeof(*n->data.direct_abstract_declarator)); 
+	assert(n->data.direct_abstract_declarator != NULL);
+	n->data.direct_abstract_declarator->n1 = n1;
+	n->data.direct_abstract_declarator->n2 = n2;
+	n->data.direct_abstract_declarator->n3 = n3;
+	n->data.direct_abstract_declarator->n4 = n4;
+	return n;			
+}
 
 /***************************** PRETTY PRINTER FUNCTIONS *******************************/
 
@@ -377,6 +386,9 @@ void print_node(FILE *output, node *n) {
 		break;
 	case EXPRESSION_LIST_NODE:
 		print_expression_list_node(output, n);
+		break;
+	case DIRECT_ABSTRACT_DECLARATOR_NODE:
+		print_direct_abstract_declarator_node(output, n);
 		break;
 	default:
 		fprintf(stderr, "Can't print current node of type %d", n->node_type);
@@ -502,6 +514,7 @@ void print_subscript_expr_node(FILE *output, node *n) {
 	fputs("]", output);
 }
 void print_unary_expr_node(FILE *output, node *n){
+	fputs("(", output);
 	if (n->data.unary_expression->op_first) {
 		print_node(output, n->data.unary_expression->operator);
 		print_node(output, n->data.unary_expression->operand);
@@ -510,6 +523,7 @@ void print_unary_expr_node(FILE *output, node *n){
 		print_node(output, n->data.unary_expression->operand);
 		print_node(output, n->data.unary_expression->operator);		
 	}
+	fputs(")", output);
 }
 void print_statement_node(FILE *output, node *n){
 	print_node(output, n->data.statement->statement);
@@ -596,4 +610,11 @@ void print_expression_list_node(FILE *output, node *n){
 	print_node(output, n->data.expression_list->expression_list);
 	fputs(", ", output);
 	print_node(output, n->data.expression_list->assignment_expr);
+}
+void print_direct_abstract_declarator_node(FILE *output, node *n){
+	print_node(output, n->data.direct_abstract_declarator->n1);
+	print_node(output, n->data.direct_abstract_declarator->n2);
+	print_node(output, n->data.direct_abstract_declarator->n3);
+	if (n->data.direct_abstract_declarator->n4 != NULL)
+		print_node(output, n->data.direct_abstract_declarator->n4);
 }

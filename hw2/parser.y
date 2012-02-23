@@ -144,20 +144,20 @@ simple_declarator : IDENTIFIER
 function_declarator : direct_declarator LEFT_PAREN parameter_type_list RIGHT_PAREN   {$$ = create_function_declarator_node($1, $3);}
 ;
 parameter_decl : declaration_specifiers declarator       {$$ = create_parameter_decl_node($1, $2);}
- | declaration_specifiers abstract_declarator  //action here
+ | declaration_specifiers abstract_declarator  {$$ = create_parameter_decl_node($1, $2);}
  | declaration_specifiers
 ;
 abstract_declarator : pointer 
- | pointer direct_abstract_declarator                                           //action here
+	| pointer direct_abstract_declarator       {$$ = create_declaration_or_statement_list_node($1, $2);}
  | direct_abstract_declarator
 ;
-direct_abstract_declarator : LEFT_PAREN abstract_declarator RIGHT_PAREN         //action here
- | direct_abstract_declarator LEFT_BRACKET constant_expr RIGHT_BRACKET 
- | LEFT_BRACKET constant_expr RIGHT_BRACKET 
- | direct_abstract_declarator LEFT_BRACKET RIGHT_BRACKET 
- | direct_abstract_declarator LEFT_PAREN parameter_type_list RIGHT_PAREN 
- | LEFT_PAREN parameter_type_list RIGHT_PAREN 
- | direct_abstract_declarator LEFT_PAREN RIGHT_PAREN 
+direct_abstract_declarator : LEFT_PAREN abstract_declarator RIGHT_PAREN      {$$ = create_direct_abstract_declarator_node($1, $2, $3, NULL);}
+ | direct_abstract_declarator LEFT_BRACKET constant_expr RIGHT_BRACKET {$$ = create_direct_abstract_declarator_node($1, $2, $3, $4);}
+ | LEFT_BRACKET constant_expr RIGHT_BRACKET {$$ = create_direct_abstract_declarator_node($1, $2, $3, NULL);}
+ | direct_abstract_declarator LEFT_BRACKET RIGHT_BRACKET {$$ = create_direct_abstract_declarator_node($1, $2, $3, NULL);}
+ | direct_abstract_declarator LEFT_PAREN parameter_type_list RIGHT_PAREN {$$ = create_direct_abstract_declarator_node($1, $2, $3, $4);}
+ | LEFT_PAREN parameter_type_list RIGHT_PAREN {$$ = create_direct_abstract_declarator_node($1, $2, $3, NULL);}
+ | direct_abstract_declarator LEFT_PAREN RIGHT_PAREN {$$ = create_direct_abstract_declarator_node($1, $2, $3, NULL);}
 ;
 constant_expr : conditional_expr
 ;
