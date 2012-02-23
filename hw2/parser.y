@@ -87,10 +87,10 @@ break_statement : BREAK SEMICOLON
 ;
 continue_statement : CONTINUE SEMICOLON 
 ;
-return_statement : RETURN expr SEMICOLON                     {$$ = create_return_statement_node($1);}
- | RETURN SEMICOLON                                          {$$ = create_return_statement_node(NULL);}
+return_statement : RETURN expr SEMICOLON                     {$$ = create_reserved_word_statement_node($1, $2);}
+ | RETURN SEMICOLON                                          {$$ = create_reserved_word_statement_node($1, NULL);}
 ;
-goto_statement : GOTO named_label SEMICOLON                  //action here
+goto_statement : GOTO named_label SEMICOLON                  {$$ = create_reserved_word_statement_node($1, $2);}
 ;
 named_label : IDENTIFIER 
 ;
