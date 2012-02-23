@@ -74,7 +74,7 @@ statement : expression_statement                           {$$ = create_statemen
 ;
 labeled_statement : label COLON statement                  {$$ = create_labeled_statement_node($1, $3);}
 ;
-expression_statement : expr SEMICOLON                     //action here
+expression_statement : expr SEMICOLON                     
 ;
 conditional_statement : if_statement 
  | if_else_statement 
@@ -87,8 +87,8 @@ break_statement : BREAK SEMICOLON
 ;
 continue_statement : CONTINUE SEMICOLON 
 ;
-return_statement : RETURN expr SEMICOLON                     //action here
- | RETURN SEMICOLON
+return_statement : RETURN expr SEMICOLON                     {$$ = create_return_statement_node($1);}
+ | RETURN SEMICOLON                                          {$$ = create_return_statement_node(NULL);}
 ;
 goto_statement : GOTO named_label SEMICOLON                  //action here
 ;
@@ -98,9 +98,9 @@ null_statement : SEMICOLON
 ;
 label : named_label 
 ;
-if_else_statement : IF LEFT_PAREN expr RIGHT_PAREN statement ELSE statement          //action here
+if_else_statement : IF LEFT_PAREN expr RIGHT_PAREN statement ELSE statement          {$$ = create_if_else_statement_node($3, $5, $7);}
 ;
-if_statement : IF LEFT_PAREN expr RIGHT_PAREN statement                              //action here
+if_statement : IF LEFT_PAREN expr RIGHT_PAREN statement          {$$ = create_if_else_statement_node($3, $5, NULL);}
 ;
 while_statement : WHILE LEFT_PAREN expr RIGHT_PAREN statement                        //action here
 ;

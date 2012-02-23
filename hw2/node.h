@@ -27,6 +27,8 @@
 #define SUBSCRIPT_EXPR_NODE 25  
 #define STATEMENT_NODE 26          
 #define LABELED_STATEMENT_NODE 27
+#define RETURN_STATEMENT_NODE 28 
+#define IF_ELSE_STATEMENT_NODE 29
 
 
 typedef struct t_node {
@@ -59,6 +61,8 @@ typedef struct t_node {
 		struct n_subscript_expr *subscript_expr; 
 		struct n_statement *statement;
 		struct n_labeled_statement *labeled_statement;
+		struct n_return_statement *return_statement;
+		struct n_if_else_statement *if_else_statement;
 	} data;
 } node;
 
@@ -179,6 +183,16 @@ typedef struct n_labeled_statement
 	node *label;
 	node *statement;
 } labeled_statement;
+typedef struct n_return_statement
+{
+	node *expr;
+} return_statement;
+typedef struct n_if_else_statement
+{
+	node *expr;
+	node *if_statement;
+	node *else_statement;
+} if_else_statement;
 
 node *create_node(int node_type);
 node *create_decl_node(node *declaration_specifier, node *initialized_declarator_list);
@@ -200,6 +214,8 @@ node *create_unary_expr_node(node *left, node *right, int op_first);
 node *create_subscript_expr_node(node *postfix_expr, node *expr);
 node *create_statement_node(node *statement);
 node *create_labeled_statement_node(node *label, node *statement);
+node *create_return_statement_node(node *expr);
+node *create_if_else_statement_node(node *expr, node *if_statement, node *else_statement);
 
 /***************************** PRETTY PRINTER FUNCTIONS *******************************/
 
@@ -229,4 +245,6 @@ void print_binary_expr_node(FILE *output, node *n);
 void print_subscript_expr_node(FILE *output, node *n);
 void print_statement_node(FILE *output, node *n);
 void print_labeled_statement_node(FILE *output, node *n);
+void print_return_statement_node(FILE *output, node *n);
+void print_if_else_statement_node(FILE *output, node *n);
 #endif
