@@ -37,6 +37,7 @@
 #define FUNCTION_CALL_NODE 35
 #define TYPE_NAME_NODE 36
 #define CAST_EXPR_NODE 37
+#define EXPRESSION_LIST_NODE 38
 
 typedef struct t_node {
 	int node_type;
@@ -78,6 +79,7 @@ typedef struct t_node {
 		struct n_function_call *function_call;
 		struct n_type_name *type_name;
 		struct n_cast_expr *cast_expr;
+		struct n_expression_list *expression_list;
 	} data;
 } node;
 
@@ -250,6 +252,11 @@ typedef struct n_cast_expr
 	node *type_name;
 	node *cast_expr;
 } cast_expr;
+typedef struct n_expression_list
+{
+	node *expression_list;
+	node *assignment_expr;
+} expression_list;
 
 node *create_node(int node_type);
 node *create_decl_node(node *declaration_specifier, node *initialized_declarator_list);
@@ -281,6 +288,7 @@ node *create_pointer_decl_node(node *pointer, node *direct_declarator);
 node *create_function_call_node(node *postfix_expr, node *expression_list);
 node *create_type_name_node(node *declaration_specifiers, node *abstract_declarator);
 node *create_cast_expr_node(node *type_name, node *cast_expr);
+node *create_expression_list_node(node *expression_list, node *assignment_expr);
 
 /***************************** PRETTY PRINTER FUNCTIONS *******************************/
 
@@ -320,4 +328,5 @@ void print_pointer_decl_node(FILE *output, node *n);
 void print_function_call_node(FILE *output, node *n);
 void print_type_name_node(FILE *output, node *n);
 void print_cast_expr_node(FILE *output, node *n);
+void print_expression_list_node(FILE *output, node *n);
 #endif

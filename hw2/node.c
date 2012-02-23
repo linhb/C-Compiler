@@ -258,6 +258,14 @@ node *create_cast_expr_node(node *type_name, node *cast_expr) {
 	n->data.cast_expr->cast_expr = cast_expr;
 	return n;			
 }
+node *create_expression_list_node(node *expression_list, node *assignment_expr) {
+	node *n = create_node(EXPRESSION_LIST_NODE);
+	n->data.expression_list = malloc(sizeof(*n->data.expression_list)); 
+	assert(n->data.expression_list != NULL);
+	n->data.expression_list->expression_list = expression_list;
+	n->data.expression_list->assignment_expr = assignment_expr;
+	return n;			
+}
 
 
 /***************************** PRETTY PRINTER FUNCTIONS *******************************/
@@ -366,6 +374,9 @@ void print_node(FILE *output, node *n) {
 		break;
 	case CAST_EXPR_NODE:
 		print_cast_expr_node(output, n);
+		break;
+	case EXPRESSION_LIST_NODE:
+		print_expression_list_node(output, n);
 		break;
 	default:
 		fprintf(stderr, "Can't print current node of type %d", n->node_type);
@@ -580,4 +591,9 @@ void print_cast_expr_node(FILE *output, node *n){
 	print_node(output, n->data.cast_expr->type_name);
 	fputs(")", output);
 	print_node(output, n->data.cast_expr->cast_expr);
+}
+void print_expression_list_node(FILE *output, node *n){
+	print_node(output, n->data.expression_list->expression_list);
+	fputs(", ", output);
+	print_node(output, n->data.expression_list->assignment_expr);
 }

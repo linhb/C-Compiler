@@ -173,7 +173,7 @@ initialized_declarator_list : initialized_declarator             {$$ = create_in
 	| initialized_declarator_list COMMA initialized_declarator     {$$ = create_initialized_declarator_list_node($1, $3);}
 ;                                
 expression_list : assignment_expr |
- expression_list COMMA assignment_expr                                      //action here
+	expression_list COMMA assignment_expr          {$$ = create_expression_list_node($1, $3);}
 ;
 expr : comma_expr 
 ;
