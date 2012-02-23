@@ -132,7 +132,7 @@ declarator : pointer_decl
 pointer : STAR 
  | STAR pointer                                                                     {$$ = create_unary_expr_node($1, $2, 1);}
 ;
-pointer_decl : pointer direct_declarator                                            //action here
+pointer_decl : pointer direct_declarator                       {$$ = create_pointer_decl_node($1, $2);}
 ;
 direct_declarator : simple_declarator 
 	| LEFT_PAREN declarator RIGHT_PAREN     {$$ = create_direct_declarator_node($2);}

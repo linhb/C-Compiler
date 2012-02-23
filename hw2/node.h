@@ -33,6 +33,7 @@
 #define DO_STATEMENT_NODE 31
 #define FOR_STATEMENT_NODE 32
 #define FOR_EXPR_NODE 33
+#define POINTER_DECL_NODE 34
 
 typedef struct t_node {
 	int node_type;
@@ -70,6 +71,7 @@ typedef struct t_node {
 		struct n_do_statement *do_statement;
 		struct n_for_statement *for_statement;
 		struct n_for_expr *for_expr;
+		struct n_pointer_decl *pointer_decl;
 	} data;
 } node;
 
@@ -222,6 +224,11 @@ typedef struct n_for_expr
 	node *goal_expr;
 	node *advance_expr;
 } for_expr;
+typedef struct n_pointer_decl
+{
+	node *pointer;
+	node *direct_declarator;
+} pointer_decl;
 
 node *create_node(int node_type);
 node *create_decl_node(node *declaration_specifier, node *initialized_declarator_list);
@@ -249,6 +256,7 @@ node *create_while_statement_node(node *expr, node *statement);
 node *create_do_statement_node(node *statement, node *expr);
 node *create_for_statement_node(node *for_expr, node *statement);
 node *create_for_expr_node(node *initial_clause, node *goal_expr, node *advance_expr);
+node *create_pointer_decl_node(node *pointer, node *direct_declarator);
 
 /***************************** PRETTY PRINTER FUNCTIONS *******************************/
 
@@ -284,4 +292,5 @@ void print_while_statement_node(FILE *output, node *n);
 void print_do_statement_node(FILE *output, node *n);
 void print_for_statement_node(FILE *output, node *n);
 void print_for_expr_node(FILE *output, node *n);
+void print_pointer_decl_node(FILE *output, node *n);
 #endif
