@@ -241,7 +241,7 @@ mult_op :  STAR
  | REMAINDER 
 ;
 cast_expr : unary_expr                                        
- | LEFT_PAREN type_name RIGHT_PAREN cast_expr                 //action here
+	| LEFT_PAREN type_name RIGHT_PAREN cast_expr                 {$$ = create_cast_expr_node($2, $4);}
 ;
 type_name : declaration_specifiers abstract_declarator        {$$ = create_type_name_node($1, $2);}
  |           declaration_specifiers                           {$$ = create_type_name_node($1, NULL);}

@@ -250,6 +250,15 @@ node *create_type_name_node(node *declaration_specifiers, node *abstract_declara
 	n->data.type_name->abstract_declarator = abstract_declarator;
 	return n;		
 }
+node *create_cast_expr_node(node *type_name, node *cast_expr) {
+	node *n = create_node(CAST_EXPR_NODE);
+	n->data.cast_expr = malloc(sizeof(*n->data.cast_expr)); 
+	assert(n->data.cast_expr != NULL);
+	n->data.cast_expr->type_name = type_name;
+	n->data.cast_expr->cast_expr = cast_expr;
+	return n;			
+}
+
 
 /***************************** PRETTY PRINTER FUNCTIONS *******************************/
 
@@ -354,6 +363,9 @@ void print_node(FILE *output, node *n) {
 		break;
 	case TYPE_NAME_NODE:
 		print_type_name_node(output, n);
+		break;
+	case CAST_EXPR_NODE:
+		print_cast_expr_node(output, n);
 		break;
 	default:
 		fprintf(stderr, "Can't print current node of type %d", n->node_type);
@@ -562,4 +574,10 @@ void print_type_name_node(FILE *output, node *n) {
 	print_node(output, n->data.type_name->declaration_specifiers);
 	if (n->data.type_name->abstract_declarator != NULL)
 		print_node(output, n->data.type_name->abstract_declarator);
+}
+void print_cast_expr_node(FILE *output, node *n){
+	fputs("(", output);
+	print_node(output, n->data.cast_expr->type_name);
+	fputs(")", output);
+	print_node(output, n->data.cast_expr->cast_expr);
 }
