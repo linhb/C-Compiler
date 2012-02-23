@@ -106,16 +106,16 @@ while_statement : WHILE LEFT_PAREN expr RIGHT_PAREN statement                   
 ;
 do_statement : DO statement WHILE LEFT_PAREN expr RIGHT_PAREN SEMICOLON              {$$ = create_do_statement_node($2, $5);}
 ;
-for_statement : FOR for_expr statement                                                {$$ = create_for_statement_node($2, $3);}
+for_statement : FOR for_expr statement            {$$ = create_for_statement_node($2, $3);}
 ;
-for_expr : LEFT_PAREN initial_clause SEMICOLON expr SEMICOLON expr RIGHT_PAREN        //action here
- | LEFT_PAREN SEMICOLON expr SEMICOLON expr RIGHT_PAREN 
- | LEFT_PAREN initial_clause SEMICOLON SEMICOLON expr RIGHT_PAREN 
- | LEFT_PAREN initial_clause SEMICOLON expr SEMICOLON RIGHT_PAREN 
- | LEFT_PAREN initial_clause SEMICOLON SEMICOLON RIGHT_PAREN 
- | LEFT_PAREN SEMICOLON expr SEMICOLON RIGHT_PAREN 
- | LEFT_PAREN SEMICOLON SEMICOLON expr RIGHT_PAREN 
- | LEFT_PAREN SEMICOLON SEMICOLON RIGHT_PAREN
+for_expr : LEFT_PAREN initial_clause SEMICOLON expr SEMICOLON expr RIGHT_PAREN   {$$ = create_for_expr_node($2, $4, $6);}
+ | LEFT_PAREN SEMICOLON expr SEMICOLON expr RIGHT_PAREN    {$$ = create_for_expr_node(NULL, $3, $5);}
+ | LEFT_PAREN initial_clause SEMICOLON SEMICOLON expr RIGHT_PAREN    {$$ = create_for_expr_node($2, NULL, $5);}
+ | LEFT_PAREN initial_clause SEMICOLON expr SEMICOLON RIGHT_PAREN    {$$ = create_for_expr_node($2, $4, NULL);}
+ | LEFT_PAREN initial_clause SEMICOLON SEMICOLON RIGHT_PAREN    {$$ = create_for_expr_node($2, NULL, NULL);}
+ | LEFT_PAREN SEMICOLON expr SEMICOLON RIGHT_PAREN    {$$ = create_for_expr_node($3, NULL, NULL);}
+ | LEFT_PAREN SEMICOLON SEMICOLON expr RIGHT_PAREN    {$$ = create_for_expr_node(NULL, NULL, $4);}
+ | LEFT_PAREN SEMICOLON SEMICOLON RIGHT_PAREN   {$$ = create_for_expr_node(NULL, NULL, NULL);}
 ;
 initial_clause : expr 
  | decl 
