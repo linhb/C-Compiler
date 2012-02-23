@@ -533,3 +533,108 @@ Now we can automatically construct a recursive descent parser:
 		            E$                            T'->eps
 		            $                             E'->eps
 		
+2/21/12
+
+TA section:
+
+can declare error at the statement level
+
+How to escape strings:
+input "hello\n"
+should convert into char array {'h', 'e', 'l', 'l', 'o', 10, 0} where 10 is the ASCII code for \n
+
+Lecture:
+
+Types:
+	generate a symbol table for each scope
+	All identifiers in the parse tree must be replaced with the right pointer into the symbol table
+	A C type can be integral, floating-point, pointer, array, structure, union, function or void type.
+	Integral and FP are arithmetic and scalar. Pointer is scalar.
+	Array and structure are aggregate
+	Symbol table:
+		type		variable
+		int			i
+		int			j
+	int pointers will have a type of pointer that points to the base type int
+	& creates a pointer variable
+	Pointers can be object, function or void pointers
+	void * is a generic pointer which can't be dereferenced unless it's cast
+	null pointer is equiv. to the integer constant 0
+	Array type representation: number of elements field, base type field
+	Note: arrays are really a pointer of the type of its elements, so if you say int p = A p actually gets the memory address of A's first element.
+	Exception: sizeof(A) gives the actual array size. So you can get the size of A by sizeof(A) / sizeof(A.length)
+	&A is the same as A
+	Arrays can be any type except void, incomplete type (not done defining), function type
+	always have 0 origin
+	Multidimensional arrays are stored in row-major order (adjacent elements in memory differ by 1 in their LAST subscript) 
+		eg: int A[2][3]: the whole thing, all 6 ints, have to be stored contiguously
+		A is stored as 2 arrays of 3 ints each
+		Memory layout of A:
+			k			A[0][0]
+			k+4		A[0][1]
+			k+8		A[0][2]
+			k+12	A[1][0]
+			k+16	A[1][1]
+			k+20	A[1][2]
+	The subscript operator has the highest precedence
+	A[k] is the same as *(A+k)
+	Conversion of array to pointer happens for multidimensional arrays as for singly dimensioned arrays, but only for hte top level array-ness
+	A = T[i][j][k] is converted to a pointer to T[j][k]
+	
+	enum types: integer values represented by identifiers
+		type int
+		ex: enum boats {power, sail, finghy} boat1, boat2;
+	struct
+		We can refer to struct node within struct node because pointers are allowed to refer to incomplete types 
+		ints in structs have to be on addresses that are multiples of 4, etc, (aka alignment), so structs may contain holes in their storage allocations.
+		components are laid out in the order they're specified
+		bit fields may be specified for components in structs:
+			structs DiskReg {
+				int ready:1; // now ready can only occupy 1 bit so it can only be 0 or 1
+				int error:1;
+				int track:9; // track can be between 1 and 511
+			}
+	union
+		storage is allocated for all components starting at the beginning of the union, so all components have the same address as the union
+		If you define a field then access another field, there's no telling what you'll get back?
+		vs casting:
+			myStruct.f = 3.14;
+			i = myStruct.i; // gets 4 bytes from the address of myStruct.f and make it an int, equiv to *(int *)&f
+			i = (int) myStruct.f; // this will truncate the value so you'll get 3
+	function
+		can't return arrays or functions, but can return pointers to arrays and functions
+	minimum precisions:
+		char: 8 bits, etc
+	integral number representation:
+		integers:
+			unsigned: 
+			4 ways to represent sign:
+				sign and magnitude: if having 16 bits
+					1st bit: sign, 0 = pos, 1 = neg
+					other 15 bits: 0 to 2^15 - 1
+					value = -1^sign bit * 15 bits
+					problem: 
+						2 representations for 0, eg 0000 and 1000 for 4 bits
+						numbers don't go in counting order: 1111 is -7, 0111 is 7, which means adding 1 is tricky: 
+							1001 is -1, 1010 is -2, so to go from -1 to -2 you have to add 1
+				one's complement
+					the negative version of a number is its bitwise complement
+					eg 0111 is 7, 1000 is -7
+					can now add numbers the same way for + and - numbers
+					problem: 
+						still 2 values for 0: 0000 and 1111
+				two's complement
+					to get the negative version, complement the number then add 1
+					thus the most significant bit is 1 for negative, = for positive
+					eg: 1 is 0001, -1 is 1110+1 = 1111. This works both ways: ~(1111)+1 = 0001
+					now the negative of 0 is ~(0000)+1 = 0000
+				excess notation
+					if you want a lot of positive numbers, pick a bias, eg with 4 bits, pick a bias of 4. Now 0 is represented as -4, 1 as -3, etc. This way you can have numbers from 4 to 15 while the representation is 0 to 11.
+		floating point numbers
+			s	sign bit (0 for positive, 1 for negative)
+			b	base/radix
+			e	exponent value: excess notation number
+			p	number of base-b digits in the significand
+			f(k): significand digits
+			x = 
+			eg: 
