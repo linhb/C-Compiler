@@ -34,6 +34,8 @@ int main(int argc, char **argv) {
 	yyin = input;
  
 	result = yyparse();
+	if (yynerrs > 0)
+		result = 1;
 	assert(root != NULL);
 	switch (result) {
 	case 0:

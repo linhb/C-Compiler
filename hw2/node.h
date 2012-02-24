@@ -38,7 +38,8 @@
 #define TYPE_NAME_NODE 36
 #define CAST_EXPR_NODE 37
 #define EXPRESSION_LIST_NODE 38
-#define DIRECT_ABSTRACT_DECLARATOR_NODE 39
+#define DIRECT_ABSTRACT_DECLARATOR_NODE 39 
+#define POINTER_NODE 40
 
 typedef struct t_node {
 	int node_type;
@@ -82,6 +83,7 @@ typedef struct t_node {
 		struct n_cast_expr *cast_expr;
 		struct n_expression_list *expression_list;
 		struct n_direct_abstract_declarator *direct_abstract_declarator;
+		struct n_pointer *pointer;
 	} data;
 } node;
 
@@ -265,7 +267,11 @@ typedef struct n_direct_abstract_declarator
 	node *n2;
 	node *n3;
 	node *n4;
-} direct_abstract_declarator;
+} direct_abstract_declarator;               
+typedef struct n_pointer
+{
+	node *pointer;
+} pointer;
 
 node *create_node(int node_type);
 node *create_decl_node(node *declaration_specifier, node *initialized_declarator_list);
@@ -299,6 +305,7 @@ node *create_type_name_node(node *declaration_specifiers, node *abstract_declara
 node *create_cast_expr_node(node *type_name, node *cast_expr);
 node *create_expression_list_node(node *expression_list, node *assignment_expr);
 node *create_direct_abstract_declarator_node(node *n1, node *n2, node *n3, node *n4);
+node *create_pointer_node(node *pointer);
 
 /***************************** PRETTY PRINTER FUNCTIONS *******************************/
 
@@ -340,4 +347,5 @@ void print_type_name_node(FILE *output, node *n);
 void print_cast_expr_node(FILE *output, node *n);
 void print_expression_list_node(FILE *output, node *n);
 void print_direct_abstract_declarator_node(FILE *output, node *n);
+void print_pointer_node(FILE *output, node *n);
 #endif

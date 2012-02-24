@@ -129,8 +129,8 @@ initialized_declarator : declarator
 declarator : pointer_decl 
  | direct_declarator 
 ;
-pointer : STAR 
- | STAR pointer                                                                     {$$ = create_unary_expr_node($1, $2, 1);}
+pointer : STAR                   
+ | STAR pointer                  {$$ = create_pointer_node($2);}
 ;
 pointer_decl : pointer direct_declarator                       {$$ = create_pointer_decl_node($1, $2);}
 ;
@@ -321,9 +321,9 @@ preincrement_expr : INCREMENT unary_expr                      {$$ = create_unary
 function_call : postfix_expr LEFT_PAREN expression_list RIGHT_PAREN      {$$ = create_function_call_node($1, $3);}
  | postfix_expr LEFT_PAREN RIGHT_PAREN                                   {$$ = create_function_call_node($1, NULL);}
 ;
-postdecrement_expr : postfix_expr DECREMENT      {$$ = create_increment_decrement_expr_node($1, $2);}
+postdecrement_expr : postfix_expr DECREMENT      {$$ = create_unary_expr_node($1, $2, 0);}
 ;
-postincrement_expr : postfix_expr INCREMENT      {$$ = create_increment_decrement_expr_node($1, $2);}
+postincrement_expr : postfix_expr INCREMENT      {$$ = create_unary_expr_node($1, $2, 0);}
 ;
 unsigned_type_specifier : UNSIGNED SHORT INT     {node *words[] = {$1, $2, $3}; $$ = create_reserved_word_list_node(words);}
  | UNSIGNED INT                                   {node *words[] = {$1, $2, NULL}; $$ = create_reserved_word_list_node(words);}

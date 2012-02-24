@@ -7,6 +7,8 @@
 #include "node.h"
 
 extern int yylineno;  
+int indent;
+void print_indentation(FILE *output);
 
 node *create_node(int node_type) {
 	node *n = malloc(sizeof(*n));
@@ -275,6 +277,13 @@ node *create_direct_abstract_declarator_node(node *n1, node *n2, node *n3, node 
 	n->data.direct_abstract_declarator->n3 = n3;
 	n->data.direct_abstract_declarator->n4 = n4;
 	return n;			
+}                      
+node *create_pointer_node(node *pointer) {
+	node *n = create_node(POINTER_NODE);
+	n->data.pointer = malloc(sizeof(*n->data.pointer)); 
+	assert(n->data.pointer != NULL);
+	n->data.pointer->pointer = pointer;
+	return n;			
 }
 
 /***************************** PRETTY PRINTER FUNCTIONS *******************************/
@@ -390,6 +399,9 @@ void print_node(FILE *output, node *n) {
 	case DIRECT_ABSTRACT_DECLARATOR_NODE:
 		print_direct_abstract_declarator_node(output, n);
 		break;
+	case POINTER_NODE:
+		print_pointer_node(output, n);
+		break;
 	default:
 		fprintf(stderr, "Can't print current node of type %d", n->node_type);
 	}	
@@ -464,12 +476,15 @@ void print_declaration_or_statement_list_node(FILE *output, node *n){
 	print_node(output, n->data.declaration_or_statement_list->declaration_or_statement);
 }
 void print_compound_statement_node(FILE *output, node *n){
-	fputs("\n{\n", output);
+	indent++;
+	fputs("{\n", output);
 	if(n->data.compound_statement->declaration_or_statement_list != NULL)	
 	{
+		print_indentation(output);
 		print_node(output, n->data.compound_statement->declaration_or_statement_list);
 	}
-	fputs("\n}\n", output);
+	indent--;
+	fputs("}", output);
 }
 void print_direct_declarator_node(FILE *output, node *n){  
 	fputs("(", output);
@@ -554,13 +569,13 @@ void print_if_else_statement_node(FILE *output, node *n) {
 void print_while_statement_node(FILE *output, node *n){
 	fputs("while (", output);
 	print_node(output, n->data.while_statement->expr);
-	fputs(")\n", output);
+	fputs(")", output);
 	print_node(output, n->data.while_statement->statement);
 }
 void print_do_statement_node(FILE *output, node *n){
 	fputs("do", output);
 	print_node(output, n->data.do_statement->statement);
-	fputs("\nwhile (", output);
+	fputs("while (", output);
 	print_node(output, n->data.do_statement->expr);
 	fputs(")", output);
 }
@@ -617,4 +632,14 @@ void print_direct_abstract_declarator_node(FILE *output, node *n){
 	print_node(output, n->data.direct_abstract_declarator->n3);
 	if (n->data.direct_abstract_declarator->n4 != NULL)
 		print_node(output, n->data.direct_abstract_declarator->n4);
+}
+void print_pointer_node(FILE *output, node *n){
+	fputs("*", output);
+	print_node(output, n->data.pointer->pointer);
+}
+void print_indentation(FILE *output) {
+	int i;
+	for (i = 0; i <= indent; i++) {
+		fputs("  ", output);
+	}
 }
