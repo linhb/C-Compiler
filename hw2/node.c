@@ -1,3 +1,7 @@
+/*
+Definitions of functions that create and print different kinds of nodes
+*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -54,7 +58,7 @@ node *create_increment_decrement_expr_node(node *operand, node *operator) {
 	return n;
 }
 node *create_translation_unit_node(node *translation_unit, node *top_level_decl) {
-	node *n = create_node(INITIALIZED_DECLARATOR_LIST_NODE);
+	node *n = create_node(TRANSLATION_UNIT_NODE);
 	n->data.translation_unit = malloc(sizeof(*n->data.translation_unit));
 	assert(n->data.translation_unit != NULL);
 	n->data.translation_unit->translation_unit = translation_unit;
@@ -408,7 +412,10 @@ void print_node(FILE *output, node *n) {
 }
 
 void print_number_node(FILE *output, node *n) {
-	fprintf(output, "%lu", n->data.number->value);
+	if (n->data.number->is_char)
+		fprintf(output, "'%c'", (char)n->data.number->value);
+	else
+		fprintf(output, "%lu", n->data.number->value);
 }
 
 void print_string_node(FILE *output, node *n) {
@@ -418,6 +425,7 @@ void print_identifier_node(FILE *output, node *n) {
 	fprintf(output, "%s", n->data.identifier->name);
 }
 void print_decl_node(FILE *output, node *n) {
+	print_indentation(output);
 	print_node(output, n->data.decl->declaration_specifier);
 	print_node(output, n->data.decl->initialized_declarator_list);
 	fputs(";\n", output);
@@ -476,15 +484,17 @@ void print_declaration_or_statement_list_node(FILE *output, node *n){
 	print_node(output, n->data.declaration_or_statement_list->declaration_or_statement);
 }
 void print_compound_statement_node(FILE *output, node *n){
-	indent++;
+	fputs("\n", output);
+	print_indentation(output);
 	fputs("{\n", output);
+	indent++;
 	if(n->data.compound_statement->declaration_or_statement_list != NULL)	
 	{
-		print_indentation(output);
 		print_node(output, n->data.compound_statement->declaration_or_statement_list);
 	}
 	indent--;
-	fputs("}", output);
+	print_indentation(output);
+	fputs("}\n", output);
 }
 void print_direct_declarator_node(FILE *output, node *n){  
 	fputs("(", output);
@@ -541,10 +551,12 @@ void print_unary_expr_node(FILE *output, node *n){
 	fputs(")", output);
 }
 void print_statement_node(FILE *output, node *n){
+	print_indentation(output);
 	print_node(output, n->data.statement->statement);
 	fputs(";\n", output);
 }
 void print_labeled_statement_node(FILE *output, node *n) {
+	print_indentation(output);
 	print_node(output, n->data.labeled_statement->label);
 	fputs(" : ", output);
 	print_node(output, n->data.labeled_statement->statement);	
@@ -554,32 +566,36 @@ void print_reserved_word_statement_node(FILE *output, node *n) {
 	print_node(output, n->data.reserved_word_statement->reserved_word);
 	if (n->data.reserved_word_statement->expr)
 		print_node(output, n->data.reserved_word_statement->expr);
-	fputs(";\n", output);	
 }
 void print_if_else_statement_node(FILE *output, node *n) {
-	fputs("if (", output);	
+	print_indentation(output);
+	fputs("if ", output);	
 	print_node(output, n->data.if_else_statement->expr);
-	fputs(")", output);	
 	print_node(output, n->data.if_else_statement->if_statement);
 	if (n->data.if_else_statement->else_statement != NULL) {
-		fputs("\nelse\n", output);	
+		print_indentation(output);
+		fputs("else\n", output);	
 		print_node(output, n->data.if_else_statement->else_statement);
 	}
 }
 void print_while_statement_node(FILE *output, node *n){
+	print_indentation(output);
 	fputs("while (", output);
 	print_node(output, n->data.while_statement->expr);
 	fputs(")", output);
 	print_node(output, n->data.while_statement->statement);
 }
 void print_do_statement_node(FILE *output, node *n){
+	print_indentation(output);
 	fputs("do", output);
 	print_node(output, n->data.do_statement->statement);
+	print_indentation(output);
 	fputs("while (", output);
 	print_node(output, n->data.do_statement->expr);
-	fputs(")", output);
+	fputs(");\n", output);
 }
 void print_for_statement_node(FILE *output, node *n){
+	print_indentation(output);
 	fputs("for", output);
 	print_node(output, n->data.for_statement->for_expr);
 	fputs("\n", output);
@@ -639,7 +655,7 @@ void print_pointer_node(FILE *output, node *n){
 }
 void print_indentation(FILE *output) {
 	int i;
-	for (i = 0; i <= indent; i++) {
+	for (i = 1; i <= indent; i++) {
 		fputs("  ", output);
 	}
 }

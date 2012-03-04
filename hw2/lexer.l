@@ -15,6 +15,7 @@ void create_char_node(char *yytext);
 void create_identifier_node(char *yytext);
 void create_reserved_word_node(char *yytext, int value);
 void create_operator_node(char *yytext, int value);
+char *escape_string(char *yytext);
 
 %}
 comments		\/\*([^\*]|\*[^\/])*?\*\/
@@ -160,7 +161,7 @@ void create_string_node(char *yytext) {
 	assert(string != NULL);
 	string->node_type = STRING_NODE;
 	string->data.string = malloc(sizeof(*string->data.string));
-	string->data.string->value = strdup(yytext);
+	string->data.string->value = escape_string(yytext);
 	assert(string->data.string->value != NULL);
 	yylval = string;
 }
@@ -170,8 +171,10 @@ void create_char_node(char *yytext) { // yytext = "'\127'"
 	assert(char_node != NULL);
 	char_node->node_type = NUMBER_NODE;
 	char_node->data.number = malloc(sizeof(*char_node->data.number));
-	char_node->data.number->value = (int)yytext[1];
+	// extract the escape sequence from yytext by lopping off the single quotes, then let escape_string escape it, then extract the integer value and assign it to value
+	char_node->data.number->value = escape_string(strndup(yytext + 1, strlen(yytext) - 2))[0];
 	char_node->data.number->type = INTEGER_CONST;
+	char_node->data.number->is_char = 1;
 	yylval = char_node;
 }
 
@@ -203,4 +206,72 @@ void create_operator_node(char *yytext, int value) {
 	assert(operator->data.operator->text != NULL);
 	operator->data.operator->value = value;
 	yylval = operator;
+}
+char *escape_string(char *yytext) {
+	int yytext_size = strlen(yytext) + 1;
+	/* this will end up malloc'ing more memory than needed if yytext contains escape sequences, because something like \n that takes up 2 chars in yytext will only take up 1 char in string */
+	char *string = malloc(yytext_size);
+	int i;  // index of current char in yytext
+	int j = 0; // index of char being written to in string
+	for (i = 0; i < yytext_size; j++) {
+		if (yytext[i] == '\\') {
+			if (yytext[i+1] == 'n') {
+				string[j] = '\n';
+				// advance current char by 2 because two chars in yytext have just been processed at once
+				i = i + 2;
+			}
+			else if (yytext[i+1] == 't') {
+				string[j] = '\t';
+				i = i + 2;
+			}			
+			else if (yytext[i+1] == 'b') {
+				string[j] = '\b';
+				i = i + 2;
+			}
+			else if (yytext[i+1] == 'r') {
+				string[j] = '\r';
+				i = i + 2;
+			}
+			else if (yytext[i+1] == 'f') {
+				string[j] = '\f';
+				i = i + 2;
+			}
+			else if (yytext[i+1] == 'v') {
+				string[j] = '\v';
+				i = i + 2;
+			}
+			else if (yytext[i+1] == '\\') {
+				string[j] = '\\';
+				i = i + 2;
+			}
+			else if (yytext[i+1] == '\'') {
+				string[j] = '\'';
+				i = i + 2;
+			}
+			else if (yytext[i+1] == '\"') {
+				string[j] = '\"';
+				i = i + 2;
+			}
+			else if (yytext[i+1] == '?') {
+				string[j] = '?';
+				i = i + 2;
+			}
+			else if (yytext[i+1] >= '0' && yytext[i+1] <= '7') {
+				int value = strtoul(&yytext[i+1], NULL, 8);
+				string[j] = value;
+				if (value <= 7)
+					i = i + 2;
+					// values from 8 (010) to 63 (077) take up 3 chars, so advance by 3
+				else if (value <= 63)
+					i = i + 3;
+				else
+					i = i + 4;
+			}
+		}
+		else {
+			string[j] = yytext[i];
+			i++;
+		}
+	}
+	return string;
 }

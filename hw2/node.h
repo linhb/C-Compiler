@@ -1,3 +1,7 @@
+/*
+Header file containing integer constants that stand for different types of nodes, as well as prototypes for node creating and node printing functions
+*/
+
 #ifndef _NODE_H
 #define _NODE_H
 
@@ -91,6 +95,7 @@ typedef struct n_number {
 	long int value;
 	int overflow;
 	int type;
+	int is_char;
 } number;
 
 typedef struct n_string {

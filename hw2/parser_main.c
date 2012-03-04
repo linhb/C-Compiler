@@ -36,10 +36,11 @@ int main(int argc, char **argv) {
 	result = yyparse();
 	if (yynerrs > 0)
 		result = 1;
-	assert(root != NULL);
+	// assert(root != NULL);
 	switch (result) {
 	case 0:
 		fputs("\n", output);
+		printf("%d\n", root->node_type);
 		print_node(output, root);
 		fputs("\n", output);
 		break;

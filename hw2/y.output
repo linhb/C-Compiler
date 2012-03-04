@@ -4,6 +4,9 @@ Terminals which are not used
    UNSIGNED_LONG_CONST
 
 
+State 289 conflicts: 1 shift/reduce
+
+
 Grammar
 
     0 $accept: root $end
@@ -5189,8 +5192,9 @@ state 289
    40 if_else_statement: IF LEFT_PAREN expr RIGHT_PAREN statement . ELSE statement
    41 if_statement: IF LEFT_PAREN expr RIGHT_PAREN statement .
 
-    ELSE  error (nonassociative)
+    ELSE  shift, and go to state 302
 
+    ELSE      [reduce using rule 41 (if_statement)]
     $default  reduce using rule 41 (if_statement)
 
 

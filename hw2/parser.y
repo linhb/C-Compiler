@@ -35,14 +35,15 @@
 %token LOGICAL_OR        
 %token QUESTION_MARK
 %token ASSIGN ADD_AND_ASSIGN SUBTRACT_AND_ASSIGN MULTIPLY_AND_ASSIGN DIVIDE_AND_ASSIGN REMAINDER_AND_ASSIGN BITWISE_AND_AND_ASSIGN BITWISE_OR_AND_ASSIGN BITWISE_XOR_AND_ASSIGN BITSHIFT_LEFT_AND_ASSIGN BITSHIFT_RIGHT_AND_ASSIGN       
-%nonassoc RIGHT_PAREN ELSE
+%expect 1
+// %nonassoc RIGHT_PAREN ELSE
 %start root
 
 %%
 root : translation_unit {root = $1; assert (root != NULL);}
 ;
 translation_unit : top_level_decl        
- | translation_unit top_level_decl       {create_translation_unit_node($1, $2);}
+ | translation_unit top_level_decl       {$$ = create_translation_unit_node($1, $2);}
 ;
 top_level_decl : decl 
  | function_definition 
@@ -62,7 +63,7 @@ declaration_or_statement : decl
 ;
 statement : expression_statement                           {$$ = create_statement_node($1);}
  | labeled_statement                                       
-  | compound_statement                                     {$$ = create_statement_node($1);}
+ | compound_statement                                     
  | conditional_statement                                   
  | iterative_statement 
  | break_statement                                         {$$ = create_statement_node($1);}
@@ -92,7 +93,7 @@ return_statement : RETURN expr SEMICOLON                     {$$ = create_reserv
 ;
 goto_statement : GOTO named_label SEMICOLON                  {$$ = create_reserved_word_statement_node($1, $2);}
 ;
-named_label : IDENTIFIER 
+named_label : IDENTIFIER      // do something
 ;
 null_statement : SEMICOLON 
 ;
@@ -139,7 +140,7 @@ direct_declarator : simple_declarator
  | function_declarator 
  | array_declarator                 
 ;
-simple_declarator : IDENTIFIER 
+simple_declarator : IDENTIFIER       // do something
 ;
 function_declarator : direct_declarator LEFT_PAREN parameter_type_list RIGHT_PAREN   {$$ = create_function_declarator_node($1, $3);}
 ;
@@ -248,7 +249,7 @@ type_name : declaration_specifiers abstract_declarator        {$$ = create_type_
 ;
 declaration_specifiers : type_specifier
 ;
-type_specifier : integer_type_specifier 
+type_specifier : integer_type_specifier    {create_symbol_table_entry($1);}
 | void_type_specifier 
 ;
 integer_type_specifier : signed_type_specifier 
@@ -305,7 +306,7 @@ postfix_expr : primary_expr
  | postincrement_expr 
  | postdecrement_expr 
 ;
-primary_expr : IDENTIFIER 
+primary_expr : IDENTIFIER        // do something
  | STRING_CONST
  | INTEGER_CONST 
  | parenthesized_expr 

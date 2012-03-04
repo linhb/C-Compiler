@@ -638,3 +638,93 @@ Types:
 			f(k): significand digits
 			x = 
 			eg: 
+			
+2/28/12
+
+TA section
+
+% expect 1 tells the parser to expect 1 shift/reduce conflict so the error will be suppressed
+
+Ex 4.6.2 (p258)
+First(S) = {a}
+Follow(S) = {a, +, *, $}
+I0: closure of starting symbol
+	S' -> .S
+	S -> .SS+
+	S -> .SS*
+	S -> .a
+	| a (on input a)            |
+	v                           v
+I2:                        I1:
+	S -> a.                    S' -> S.          $
+                     <--     S -> S.S+         -> accept
+                      a      S -> S.S*
+                              | S
+                              v
+												I3   S -> SS.+                +
+				                     S -> SS.*  <__           -> I4: S -> SS+.
+														 S -> S.S+    |  S        *
+				                     S -> S.S*  ---           -> I5: S -> SS*.
+														 S -> .SS+
+				                     S -> .SS*                               
+
+Fig 6 (small notebook)
+
+Type tree for functions: Fig 7 
+
+Must be able to indicate the declared type is different from the real type.
+
+Lecture
+
+if same identifier with different names, can print memory address or anything to show they're the same.
+
+Can print the original declaration with comments showing its row in the symbol table
+
+int glob_i; // symbol table here, must have glob_i and f
+void f(int param) {  // symbol table here, must have 2 entries, for the function and the int. basically block scope with the function
+	int func_i;
+	{
+		int block_i; // symbol table here with only 1 entry
+	}
+}
+
+The data structure can be anything that lets you access all the info you need.  
+No need to make sure subsequent entries are at higher memory addresses.
+
+Type tree example: Fig 8
+                                                                            
+You can remove all terminals.                                                        
+There'll be only 1 int and 1 void that all instances in the tables point to.
+
+PS4: add casts
+	int i;
+	char c;
+	i = c;
+	in PS3, pretty print that as (i = c);
+	in PS4, (i = ((int)c));  May need more than 1 cast 
+
+Errors must now ?
+Must catch duplicate declaration.
+Must show which symbol table the identifier is bound to.
+
+By PS4 all errors must have come out.
+
+How to represent numbers:
+	13
+		-1^0 * 1.101 * 2^3
+		010000010101...0(20 zeros)
+	1.625
+		-1^0 * 1.101 * 2^0
+		0011111111010..0(20 zeros)
+
+Another shift-reduce example: Fig 9                    
+
+Unary conversion: keep them signed if possible (if the values are small enough) (according to HS p197)
+	unsigned short us;
+	us = 0;
+	if (us < -7) {} // us will be converted to int
+
+int * const p1;
+const int *p2; 
+p1 = p2 //no
+p2 = p1 //yes
