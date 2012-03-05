@@ -5,14 +5,16 @@
 	#include <stdio.h>
 	#include <assert.h>
 	#include "node.h"
+	#include "symbol_table.h"
 	
 	#define YYSTYPE node *
 	int yylex();
 	extern int yylineno;
   void yyerror(char const *s);
 	extern node *root;
-	int yydebug = 1;
-	
+	int yydebug = 1;   
+		
+	extern int scope;                                         
 %}
 %token DO FOR RETURN BREAK SHORT ELSE GOTO SIGNED UNSIGNED CHAR IF VOID INT CONTINUE LONG WHILE 
 %token IDENTIFIER STRING_CONST INTEGER_CONST LONG_CONST UNSIGNED_LONG_CONST
@@ -48,7 +50,11 @@ translation_unit : top_level_decl
 top_level_decl : decl 
  | function_definition 
 ;
-decl : declaration_specifiers initialized_declarator_list SEMICOLON {$$ = create_decl_node($1, $2);}
+decl : declaration_specifiers initialized_declarator_list SEMICOLON 
+	{
+		symbol_table_entry *s = create_symbol_table_entry($1, $2);
+		$$ = create_decl_node($1, $2, s);
+  }
 ;
 function_definition : function_def_specifier compound_statement    {$$ = create_function_definition_node($1, $2);}
 ;
@@ -249,7 +255,7 @@ type_name : declaration_specifiers abstract_declarator        {$$ = create_type_
 ;
 declaration_specifiers : type_specifier
 ;
-type_specifier : integer_type_specifier    {create_symbol_table_entry($1);}
+type_specifier : integer_type_specifier    
 | void_type_specifier 
 ;
 integer_type_specifier : signed_type_specifier 

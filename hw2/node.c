@@ -22,12 +22,13 @@ node *create_node(int node_type) {
 	return n;
 }
 
-node *create_decl_node(node *decl_spec, node *ini_decl_list) {
+node *create_decl_node(node *decl_spec, node *ini_decl_list, symbol_table_entry *s) {
 	node *n = create_node(DECL_NODE);
 	n->data.decl = malloc(sizeof(*n->data.decl));
 	assert(n->data.decl != NULL);
 	n->data.decl->declaration_specifier = decl_spec;
 	n->data.decl->initialized_declarator_list = ini_decl_list;
+	n->data.decl->symbol_table_entry = s;
 	return n;
 }
 
@@ -294,6 +295,7 @@ node *create_pointer_node(node *pointer) {
 
 void print_node(FILE *output, node *n) {
 	assert(n != NULL);
+	printf("HI I AM A NODE %d\n", n->node_type);
 	switch (n->node_type) {
 	case NUMBER_NODE:
 		print_number_node(output, n);
@@ -426,6 +428,7 @@ void print_identifier_node(FILE *output, node *n) {
 }
 void print_decl_node(FILE *output, node *n) {
 	print_indentation(output);
+	print_symbol_table_entry(output, n->data.symbol_table_entry);
 	print_node(output, n->data.decl->declaration_specifier);
 	print_node(output, n->data.decl->initialized_declarator_list);
 	fputs(";\n", output);

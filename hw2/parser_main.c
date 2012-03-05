@@ -8,7 +8,8 @@ int yyparse();
 FILE *yyin;
 extern int yynerrs;
 node *root;
-                                         
+extern int scope;                                         
+
 /*
  	main: interface to the parser. Reads input from stdin or a file, writes output to stdout or a file. 
 	Argument:
@@ -33,14 +34,13 @@ int main(int argc, char **argv) {
 	int result;
 	yyin = input;
  
+	scope = 1;
 	result = yyparse();
 	if (yynerrs > 0)
 		result = 1;
-	// assert(root != NULL);
 	switch (result) {
 	case 0:
 		fputs("\n", output);
-		printf("%d\n", root->node_type);
 		print_node(output, root);
 		fputs("\n", output);
 		break;

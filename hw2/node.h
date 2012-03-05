@@ -130,6 +130,7 @@ typedef struct n_expression {
 typedef struct n_decl {
 	node *declaration_specifier;
 	node *initialized_declarator_list;
+	struct t_symbol_table_entry *symbol_table_entry;
 } decl;
 
 typedef struct n_initialized_declarator_list {
@@ -279,7 +280,7 @@ typedef struct n_pointer
 } pointer;
 
 node *create_node(int node_type);
-node *create_decl_node(node *declaration_specifier, node *initialized_declarator_list);
+node *create_decl_node(node *declaration_specifier, node *initialized_declarator_list, struct t_symbol_table_entry *s);
 node *create_initialized_declarator_list_node(node *list, node *decl);
 node *create_reserved_word_list_node(node *reserved_words[]);
 node *create_increment_decrement_expr_node(node *operand, node *operator);
