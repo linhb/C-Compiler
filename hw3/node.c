@@ -22,13 +22,12 @@ node *create_node(int node_type) {
 	return n;
 }
 
-node *create_decl_node(node *decl_spec, node *ini_decl_list, symbol_table_entry *s) {
+node *create_decl_node(node *decl_spec, node *ini_decl_list) {
 	node *n = create_node(DECL_NODE);
 	n->data.decl = malloc(sizeof(*n->data.decl));
 	assert(n->data.decl != NULL);
 	n->data.decl->declaration_specifier = decl_spec;
 	n->data.decl->initialized_declarator_list = ini_decl_list;
-	n->data.decl->symbol_table_entry = s;
 	return n;
 }
 
@@ -295,7 +294,6 @@ node *create_pointer_node(node *pointer) {
 
 void print_node(FILE *output, node *n) {
 	assert(n != NULL);
-	printf("HI I AM A NODE %d\n", n->node_type);
 	switch (n->node_type) {
 	case NUMBER_NODE:
 		print_number_node(output, n);
@@ -421,14 +419,26 @@ void print_number_node(FILE *output, node *n) {
 }
 
 void print_string_node(FILE *output, node *n) {
-	fprintf(output, "%s", n->data.string->value);
+/*
+	prints individual char values for debugging
+	int i;
+	for (i = 0; i < strlen(n->data.string->value); i++) {
+		fprintf(output, "%d\n", n->data.string->value[i]);
+	}
+*/
+	// fprintf(output, "\"%s\"", n->data.string->value);
+	fputs("\"", output);
+	int j;
+	for (j = 0; j < n->data.string->length; j++) {
+		fprintf(output, "%c", n->data.string->value[j]);
+	}
+	fputs("\"", output);
 }
 void print_identifier_node(FILE *output, node *n) {
 	fprintf(output, "%s", n->data.identifier->name);
 }
 void print_decl_node(FILE *output, node *n) {
 	print_indentation(output);
-	print_symbol_table_entry(output, n->data.decl->symbol_table_entry);
 	print_node(output, n->data.decl->declaration_specifier);
 	print_node(output, n->data.decl->initialized_declarator_list);
 	fputs(";\n", output);
@@ -665,30 +675,32 @@ void print_indentation(FILE *output) {
 
 /***********SYMBOL TABLE DEFINITIONS****************/                                       
 
-symbol_table_entry *create_symbol_table_entry(node *declaration_specifiers, node *initialized_declarator_list){  
-	symbol_table_entry *entry = malloc(sizeof(*entry));
-	entry->name = initialized_declarator_list->data.identifier->name;
-	entry->scope_id = scope;	
-	switch (declaration_specifiers->node_type) {
-	case RESERVED_WORD_NODE: /* can only be int, short, long, char */
-		switch (declaration_specifiers->data.reserved_word->value) {
-		case INT:
-		case LONG:
-		case SHORT:
-		case CHAR:
-			assert(entry != NULL);
-			entry->type = ARITHMETIC_TYPE;
-			entry->data.arithmetic_type_entry = malloc(sizeof(*entry->data.arithmetic_type_entry));
-			entry->data.arithmetic_type_entry->arithmetic_type = declaration_specifiers;
-			break;
-		}
-	}
-}
-void print_symbol_table_entry(FILE *output, symbol_table_entry *entry) {
-	switch (entry->type) {
-	case ARITHMETIC_TYPE:
-		fputs(entry->data.arithmetic_type_entry->arithmetic_type, output);
-		break;
-	}
-	fputs(entry->name, output);
-}
+// symbol_table_entry *create_symbol_table_entry(node *declaration_specifiers, node *initialized_declarator_list){  
+// 	symbol_table_entry *entry = malloc(sizeof(*entry));
+// 	entry->name = initialized_declarator_list->data.identifier->name;
+// 	entry->scope_id = scope;	
+// 	switch (declaration_specifiers->node_type) {
+// 	case RESERVED_WORD_NODE: /* can only be int, short, long, char */
+// 		// switch (declaration_specifiers->data.reserved_word->value) {
+// 		// case INT:
+// 		// case LONG:
+// 		// case SHORT:
+// 		// case CHAR:
+// 			assert(entry != NULL);
+// 			entry->type = ARITHMETIC_TYPE;
+// 			entry->data.arithmetic_type_entry = malloc(sizeof(*entry->data.arithmetic_type_entry));
+// 			entry->data.arithmetic_type_entry->arithmetic_type = declaration_specifiers;
+// 		// 	break;
+// 		// }
+// 		break;
+// 	}
+// 	return entry;
+// }
+// void print_symbol_table_entry(FILE *output, symbol_table_entry *entry) {
+// 	switch (entry->type) {
+// 	case ARITHMETIC_TYPE:
+// 		print_node(output, entry->data.arithmetic_type_entry->arithmetic_type);
+// 		break;
+// 	}
+// 	fputs(entry->name, output);
+// }

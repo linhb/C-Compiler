@@ -99,6 +99,7 @@ typedef struct n_number {
 } number;
 
 typedef struct n_string {
+	int length;
 	char *value;
 } string;
 
@@ -280,7 +281,7 @@ typedef struct n_pointer
 } pointer;
 
 node *create_node(int node_type);
-node *create_decl_node(node *declaration_specifier, node *initialized_declarator_list, struct t_symbol_table_entry *s);
+node *create_decl_node(node *declaration_specifier, node *initialized_declarator_list);
 node *create_initialized_declarator_list_node(node *list, node *decl);
 node *create_reserved_word_list_node(node *reserved_words[]);
 node *create_increment_decrement_expr_node(node *operand, node *operator);
@@ -357,32 +358,32 @@ void print_pointer_node(FILE *output, node *n);
 
 /***********SYMBOL TABLE DEFINITIONS AND HEADERS****************/
 
-#define ARITHMETIC_TYPE 1
-
+// #define ARITHMETIC_TYPE 1
+// 
 int scope;
-
-typedef struct t_symbol_table
-{
-	
-} symbol_table;
-typedef struct t_symbol_table_entry
-{ 
-	int scope_id;
-	int type;
-	char *name;
-	struct t_arithmetic_type_entry *next;
-	union {
-		struct t_arithmetic_type_entry *arithmetic_type_entry;
-	} data;
-} symbol_table_entry;
-
-typedef struct t_arithmetic_type_entry
-{
-	node *arithmetic_type;     /* will point to reserved_word nodes for INT, LONG, etc */
-} arithmetic_type_entry;
-
-symbol_table_entry *create_symbol_table_entry(node *declaration_specifiers, node *initialized_declarator_list);
-void print_symbol_table_entry(FILE *output, symbol_table_entry s);
+// 
+// typedef struct t_symbol_table
+// {
+// 	
+// } symbol_table;
+// typedef struct t_symbol_table_entry
+// { 
+// 	int scope_id;
+// 	int type;
+// 	char *name;
+// 	struct t_arithmetic_type_entry *next;
+// 	union {
+// 		struct t_arithmetic_type_entry *arithmetic_type_entry;
+// 	} data;
+// } symbol_table_entry;
+// 
+// typedef struct t_arithmetic_type_entry
+// {
+// 	node *arithmetic_type;     /* will point to reserved_word nodes for INT, LONG, etc */
+// } arithmetic_type_entry;
+// 
+// symbol_table_entry *create_symbol_table_entry(node *declaration_specifiers, node *initialized_declarator_list);
+// void print_symbol_table_entry(FILE *output, symbol_table_entry *s);
 
 #endif
 

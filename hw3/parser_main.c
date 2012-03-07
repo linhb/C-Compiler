@@ -36,13 +36,16 @@ int main(int argc, char **argv) {
  
 	scope = 1;
 	result = yyparse();
+	//traverse result here, replace relevant nodes with ST entries
 	if (yynerrs > 0)
 		result = 1;
 	switch (result) {
 	case 0:
-		fputs("\n", output);
+		fputs("\n****** PARSE TREE ********\n", output);
 		print_node(output, root);
 		fputs("\n", output);
+		fputs("\n****** SYMBOL TABLES ********\n", output);
+		// print_symbol_table(create_symbol_table(result));
 		break;
 	case 1:
 		fprintf(stderr, "Number of errors: %d", yynerrs);

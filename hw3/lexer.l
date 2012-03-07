@@ -163,6 +163,7 @@ void create_string_node(char *yytext) {
 	string->data.string = malloc(sizeof(*string->data.string));
 	string->data.string->value = escape_string(yytext);
 	assert(string->data.string->value != NULL);
+	string->data.string->length = strlen(string->data.string->value);
 	yylval = string;
 }
 
@@ -171,8 +172,8 @@ void create_char_node(char *yytext) { // yytext = "'\127'"
 	assert(char_node != NULL);
 	char_node->node_type = NUMBER_NODE;
 	char_node->data.number = malloc(sizeof(*char_node->data.number));
-	// extract the escape sequence from yytext by lopping off the single quotes, then let escape_string escape it, then extract the integer value and assign it to value
-	char_node->data.number->value = escape_string(strndup(yytext + 1, strlen(yytext) - 2))[0];
+	// extract the escape sequence from yytext with escape_string, then extract the integer value and assign it to value
+	char_node->data.number->value = escape_string(yytext)[0];
 	char_node->data.number->type = INTEGER_CONST;
 	char_node->data.number->is_char = 1;
 	yylval = char_node;
@@ -208,12 +209,12 @@ void create_operator_node(char *yytext, int value) {
 	yylval = operator;
 }
 char *escape_string(char *yytext) {
-	int yytext_size = strlen(yytext) + 1;
+	int yytext_size = strlen(yytext);
 	/* this will end up malloc'ing more memory than needed if yytext contains escape sequences, because something like \n that takes up 2 chars in yytext will only take up 1 char in string */
 	char *string = malloc(yytext_size);
 	int i;  // index of current char in yytext
 	int j = 0; // index of char being written to in string
-	for (i = 0; i < yytext_size; j++) {
+	for (i = 1; i < yytext_size - 1; j++) {  // start at 1 and end 1 char short of the actual end to get rid of the single/double quotes
 		if (yytext[i] == '\\') {
 			if (yytext[i+1] == 'n') {
 				string[j] = '\n';
@@ -240,6 +241,10 @@ char *escape_string(char *yytext) {
 				string[j] = '\v';
 				i = i + 2;
 			}
+			else if (yytext[i+1] == 'a') {
+				string[j] = '\a';
+				i = i + 2;
+			}
 			else if (yytext[i+1] == '\\') {
 				string[j] = '\\';
 				i = i + 2;
@@ -252,21 +257,34 @@ char *escape_string(char *yytext) {
 				string[j] = '\"';
 				i = i + 2;
 			}
+			else if (yytext[i+1] == '0') {
+				string[j] = '\0';
+				i = i + 2;
+			}
 			else if (yytext[i+1] == '?') {
 				string[j] = '?';
 				i = i + 2;
 			}
 			else if (yytext[i+1] >= '0' && yytext[i+1] <= '7') {
 				int value = strtoul(&yytext[i+1], NULL, 8);
-				string[j] = value;
-				if (value <= 7)
+				if (value <= 7) {
+					string[j] = value;
 					i = i + 2;
+				}
 					// values from 8 (010) to 63 (077) take up 3 chars, so advance by 3
-				else if (value <= 63)
+				else if (value <= 63) {
+					string[j] = value;
 					i = i + 3;
-				else
+				}
+				else if (value <= 255) {
+					string[j] = value;
 					i = i + 4;
+				}
+				else
+					i = i + 4;					
 			}
+			else // invalid escape code, ignore the \ and the character that follows, move on
+				i = i + 2;
 		}
 		else {
 			string[j] = yytext[i];

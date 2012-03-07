@@ -51,8 +51,7 @@ top_level_decl : decl
 ;
 decl : declaration_specifiers initialized_declarator_list SEMICOLON 
 	{
-		symbol_table_entry *s = create_symbol_table_entry($1, $2);
-		$$ = create_decl_node($1, $2, s);
+		$$ = create_decl_node($1, $2);
   }
 ;
 function_definition : function_def_specifier compound_statement    {$$ = create_function_definition_node($1, $2);}

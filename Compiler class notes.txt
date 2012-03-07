@@ -728,3 +728,149 @@ int * const p1;
 const int *p2; 
 p1 = p2 //no
 p2 = p1 //yes
+
+3/6/12
+
+Note: labels can have the same name as another variable in the same function, so must create a separate ST at function level for labels
+
+Should add field in identifier struct that contains pointer to ST entry
+
+Create child ST whenever sees compound statement   
+
+Children must have pointer to parent so you can access global vars from blocks
+
+Input:
+	int a;
+	char *b;
+	long z[5];
+	int main(int argc, char *argv[]);
+	void c(void) {
+		char a;
+		for (a = 0; a < 5; a++) {
+			long c;
+			c = z[a];
+		}
+	}
+
+	Create global ST: global
+		map from names to symbols, which have name, type
+		list of child symbol tables
+		
+		Sample output:
+		
+		global
+			symbols
+				a -> {a, 1, int}
+				b -> {b, 2, pointer(char)}
+				z -> {z, 3, array(5, long)}
+				main -> {main, 4, func(int, 2, [int, array(?, pointer(char))])}
+				f -> {f, 5, func(void, 0, [])}
+			children
+				f
+					symbols
+						a -> {a, 6, char}
+					labels
+						inside -> {inside, 8, b = 0 (basically pointer to the statement, print as "line 10")}
+					children
+						block1
+							symbols
+								c -> {c, 7, long}
+		Also, when printing parse tree, instead of printing 'int a', print:
+			int a /* symbol 1 */
+			int b /* symbol 2 */
+			c /* symbol 7 */ = z /* symbol 3 */[a /* symbol 6 */]
+			
+Errors I have to declare: 
+	undeclared variable: must go all the way up to global ST, then declare error, then keep walking the tree, BUT DON'T PRINT IT			
+	don't have to check if prototype doesn't match function signature
+	something like int f(void, int argc);
+	void x (but void *x is ok!)
+
+If function has arguments, have to enter them in ST too
+
+Lecture
+
+Midterm: up to chapter 7, more emphasis on earlier stuff, no chapter 6
+
+Memory management:
+	Allocate memory at function entry, deallocate at function exit -> there is shared memory
+		int glob_i, glob_j;
+		int f(float param_f) {
+			int i;
+			{
+				int j;
+			}
+			{
+				int k;  // k shares the same memory as j, which is ok because their lifetimes don't overlap
+			}
+		}
+		void g(long l) {
+		
+		}
+Stacks:
+	'top of stack' is actually the lower memory
+	the lowest memory  memory is for the program, aka 'text' as opposed to data
+	next level is static/data segment: global variables
+	next is heap storage eg malloc, new, etc
+	
+Stack frame:
+	void main(void) {
+		f(3.14f);
+	}
+	
+	When main is running and about to call f, first evaluate the parameters, which is 3.14. 
+	
+	low			
+	        callee saved registers
+					temporaries                                                                              <-- stack frame
+	        local vars
+	        return address, which is a pointer into the program
+	        link to old frame pointer (FP) which contains the address of the frame that current function is called from (so main's FP is null)
+	        saved registers by caller
+	        return int
+	        3.14f
+	high		
+
+How to know how much memory to allocate: look at all the symbol tables for that level and down. If >=2 blocks at same level, take the max
+The FP is offset 0. If local vars take up eg 12 bytes, they'll be eg offset -8 to -15.
+If language allows functions inside functions, the stack frame can be adjusted:
+	add a pointer called 'access link' into the bottom level function stack frame that points to the FP of the parent function
+	
+Heap management
+	Heap:
+		heap and stack grow toward each other: heap grow higher, stack grows lower
+		allocation is arbitrary
+		static
+			eg addr = malloc(bytes)
+			free(addr) // doesn't guarantee memory is actually freed
+			You can have alternating spaces that are allocated and free which means no space for big objects
+			can't just compress by moving everything to lower addresses b/c the memory chunks may contain their own address 
+			To allocate, can look through free chunks to find lowest size chunk that fits (best fit) but this is bad b/c ?
+			worst fit (largest chunk left over) is better b/c another big allocation can be made from the leftovers
+			first fit: first chunk that fits
+			next fit: next chunk from last allocation
+Automatic allocation:
+	Reference count model: every time you create a pointer, it counts how many things point to it. When count == 0, system frees it
+	Garbage collection: recursively 'reach' every object. anything not reached is cleaned up.
+	Compaction: move stuff to lower spaces
+Assembly language:
+	32 registers, 0 to 31
+	register 0 is the constant 0 (can't save to it)
+	uses three-address code -> can save to R0 if don't need to save result of operation
+	some instructions are pseudo (not hardware) instructions eg 'neg'
+	v0, v1 can store results of functions where they fit in 2 registers
+	a0-a3: arguments
+	t1-t7: temporary (saved by callee), reserved across calls
+	s0-s7: saved temporary (saved by caller), not reserved across calls
+	stack pointer
+	frame pointer
+	return address
+	Format of the add operation:
+	add rd, rs, rt
+		000000 rs rt rd 00000 100000 (ADD)
+		  6    5   5  5   5     6
+		31                         0
+	addi
+		001000 rs rt immed
+	lw rt, off(base)
+		100011 base rt offset
