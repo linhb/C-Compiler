@@ -131,7 +131,7 @@ typedef struct n_expression {
 typedef struct n_decl {
 	node *declaration_specifier;
 	node *initialized_declarator_list;
-	struct t_symbol_table_entry *symbol_table_entry;
+	// struct t_symbol_table_entry *symbol_table_entry;
 } decl;
 
 typedef struct n_initialized_declarator_list {
@@ -358,30 +358,32 @@ void print_pointer_node(FILE *output, node *n);
 
 /***********SYMBOL TABLE DEFINITIONS AND HEADERS****************/
 
-// #define ARITHMETIC_TYPE 1
-// 
-int scope;
-// 
-// typedef struct t_symbol_table
-// {
-// 	
-// } symbol_table;
-// typedef struct t_symbol_table_entry
-// { 
-// 	int scope_id;
-// 	int type;
-// 	char *name;
-// 	struct t_arithmetic_type_entry *next;
-// 	union {
-// 		struct t_arithmetic_type_entry *arithmetic_type_entry;
-// 	} data;
-// } symbol_table_entry;
-// 
-// typedef struct t_arithmetic_type_entry
-// {
-// 	node *arithmetic_type;     /* will point to reserved_word nodes for INT, LONG, etc */
-// } arithmetic_type_entry;
-// 
+#define ARITHMETIC_TYPE 1
+
+typedef struct t_symbol_table
+{
+	struct t_identifier *identifier;        // both identifiers and symbol_tables are linked lists
+	struct t_symbol_table *symbol_table;
+} symbol_table;                       
+
+typedef struct t_identifier
+{ 
+	int type;
+	char *name;
+	struct t_identifier *next;
+	union {
+		struct t_arithmetic_identifier *arithmetic_identifier;
+	} data;
+} symbol_table_identifier;
+
+typedef struct t_arithmetic_identifier
+{
+	int is_signed;
+	int number_type;     
+} arithmetic_identifier;
+
+int exists_in_identifier_list(symbol_table_identifier *identifier, char *name);
+
 // symbol_table_entry *create_symbol_table_entry(node *declaration_specifiers, node *initialized_declarator_list);
 // void print_symbol_table_entry(FILE *output, symbol_table_entry *s);
 

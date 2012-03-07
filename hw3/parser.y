@@ -12,8 +12,7 @@
   void yyerror(char const *s);
 	extern node *root;
 	int yydebug = 1;   
-		
-	extern int scope;                                         
+
 %}
 %token DO FOR RETURN BREAK SHORT ELSE GOTO SIGNED UNSIGNED CHAR IF VOID INT CONTINUE LONG WHILE 
 %token IDENTIFIER STRING_CONST INTEGER_CONST LONG_CONST UNSIGNED_LONG_CONST
