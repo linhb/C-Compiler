@@ -384,8 +384,12 @@ typedef struct t_arithmetic_identifier
 } arithmetic_identifier;
 
 // returns pointer to updated ST
-symbol_table *add_to_symbol_table_list(symbol_table *list, symbol_table *new);
+void add_after_symbol_table(symbol_table *old, symbol_table *new);
 void add_after_symbol_table_identifier(symbol_table_identifier *old, symbol_table_identifier *new);
+
+symbol_table *create_symbol_table(node *result);
+
+void print_symbol_table(FILE *output, symbol_table *s);
 
 #endif
 

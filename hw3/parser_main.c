@@ -43,7 +43,7 @@ int main(int argc, char **argv) {
 		print_node(output, root);
 		fputs("\n", output);
 		fputs("\n****** SYMBOL TABLES ********\n", output);
-		// print_symbol_table(create_symbol_table(result));
+		print_symbol_table(output, create_symbol_table(root));
 		break;
 	case 1:
 		fprintf(stderr, "Number of errors: %d", yynerrs);

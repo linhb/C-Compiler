@@ -710,3 +710,36 @@ void add_after_symbol_table_identifier(symbol_table_identifier *old, symbol_tabl
 	new->next = old->next;
 	old->next = new;
 }
+
+symbol_table *create_symbol_table(node *result) {
+	symbol_table *file_scope_symbol_table = malloc(sizeof(*file_scope_symbol_table));
+	assert(file_scope_symbol_table != NULL);
+	file_scope_symbol_table->identifiers = malloc(sizeof(*file_scope_symbol_table->identifiers));
+	symbol_table_identifier *i = file_scope_symbol_table->identifiers;
+	assert(i != NULL);
+	node *decl_spec = result->data.decl->declaration_specifier;
+	switch (result->node_type) {
+	case DECL_NODE:
+		if (decl_spec->data.reserved_word_list != NULL || decl_spec->data.reserved_word != NULL) {
+			i->type = ARITHMETIC_TYPE;
+			i->data.arithmetic_identifier = malloc(sizeof(arithmetic_identifier));
+			arithmetic_identifier *ai = i->data.arithmetic_identifier;
+			assert(ai != NULL);
+			node *word_list = decl_spec->data.reserved_word_list->reserved_words[0];
+			printf("***OHAI******%x*******\n", (decl_spec->data.reserved_word_list->reserved_words[0]->node_type));
+			char *text = "unsigned";
+			int unsign = !strcmp(word_list->data.reserved_word->text, text);
+			// ai->is_signed = ((word_list != NULL && unsign) ? 1 : 0);
+		}
+		if (decl_spec->data.pointer_decl != NULL) {
+			
+		}
+	default:
+		break;
+	}
+	return file_scope_symbol_table;
+}
+
+void print_symbol_table(FILE *output, symbol_table *s) {
+	
+}
