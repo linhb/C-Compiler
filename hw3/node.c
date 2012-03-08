@@ -704,3 +704,9 @@ void print_indentation(FILE *output) {
 // 	}
 // 	fputs(entry->name, output);
 // }
+
+
+void add_after_symbol_table_identifier(symbol_table_identifier *old, symbol_table_identifier *new) {
+	new->next = old->next;
+	old->next = new;
+}

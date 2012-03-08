@@ -362,19 +362,20 @@ void print_pointer_node(FILE *output, node *n);
 
 typedef struct t_symbol_table
 {
-	struct t_identifier *identifier;        // both identifiers and symbol_tables are linked lists
-	struct t_symbol_table *symbol_table;
+	struct t_symbol_table_identifier *identifiers;        // both identifiers and children are linked lists
+	struct t_symbol_table *children;
+	struct t_symbol_table *next;
 } symbol_table;                       
 
-typedef struct t_identifier
+typedef struct t_symbol_table_identifier
 { 
 	int type;
 	char *name;
-	struct t_identifier *next;
+	struct t_symbol_table_identifier *next;
 	union {
 		struct t_arithmetic_identifier *arithmetic_identifier;
 	} data;
-} symbol_table_identifier;
+} symbol_table_identifier;  // calling it symbol_table_identifier as opposed to plain identifier which is a node
 
 typedef struct t_arithmetic_identifier
 {
@@ -382,10 +383,9 @@ typedef struct t_arithmetic_identifier
 	int number_type;     
 } arithmetic_identifier;
 
-int exists_in_identifier_list(symbol_table_identifier *identifier, char *name);
-
-// symbol_table_entry *create_symbol_table_entry(node *declaration_specifiers, node *initialized_declarator_list);
-// void print_symbol_table_entry(FILE *output, symbol_table_entry *s);
+// returns pointer to updated ST
+symbol_table *add_to_symbol_table_list(symbol_table *list, symbol_table *new);
+void add_after_symbol_table_identifier(symbol_table_identifier *old, symbol_table_identifier *new);
 
 #endif
 
