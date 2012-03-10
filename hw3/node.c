@@ -55,6 +55,9 @@ node *create_compound_number_type_specifier_node(node *reserved_words[]) {
 	}
 	if (is_type(n, 0, "long") || is_type(n, 1, "long")) {
 		n->data.compound_number_type_specifier->number_type = NUMBER_TYPE_LONG;
+	}	
+	if (is_type(n, 0, "char") || is_type(n, 1, "char")) {
+		n->data.compound_number_type_specifier->number_type = NUMBER_TYPE_CHAR;
 	}
 	else {
 		n->data.compound_number_type_specifier->number_type = NUMBER_TYPE_INT;
@@ -743,46 +746,45 @@ void add_after_symbol_table_identifier(symbol_table_identifier *old, symbol_tabl
 	old->next = new;
 }
 
-symbol_table *file_scope_symbol_table;
-int id_number = 1;
-
-symbol_table *create_symbol_table(node *result) {
-	file_scope_symbol_table = malloc(sizeof(symbol_table));
-	assert(file_scope_symbol_table != NULL);
-	file_scope_symbol_table->identifiers = malloc(sizeof(*file_scope_symbol_table->identifiers));
-	symbol_table_identifier *i = file_scope_symbol_table->identifiers;
-	assert(i != NULL);
-	node *decl_spec = result->data.decl->declaration_specifier;
-	node *initialized_declarator_list = result->data.decl->initialized_declarator_list;
-	switch (result->node_type) {
+symbol_table *create_symbol_table(node *n, symbol_table *st) {
+	switch (n->node_type) {
 	case DECL_NODE:
-		if (decl_spec->node_type == COMPOUND_NUMBER_TYPE_SPECIFIER_NODE) {
-			i->id_number = id_number;
-			id_number++;
-			i->type = ARITHMETIC_TYPE;
-			i->name = initialized_declarator_list->data.initialized_declarator_list->initialized_declarator->data.identifier->name;
-			i->data.arithmetic_identifier = malloc(sizeof(arithmetic_identifier));
-			arithmetic_identifier *ai = i->data.arithmetic_identifier;
-			assert(ai != NULL);
-			ai->is_unsigned = decl_spec->data.compound_number_type_specifier->is_unsigned;
-			ai->number_type = decl_spec->data.compound_number_type_specifier->number_type;
-		}
-		if (initialized_declarator_list->node_type == INITIALIZED_DECLARATOR_LIST_NODE) {
-			if (initialized_declarator_list->data.initialized_declarator_list->initialized_declarator->node_type == POINTER_DECL_NODE) {
-				printf("i has a pointer\n");
-				i->type = POINTER_TYPE;     
-				// i->data.pointer_identifier->base_type = ;
-			}
-		}
-		if (decl_spec->node_type == ARRAY_DECLARATOR_NODE) {
-			printf("i has an array\n");			
-		}
+		st = create_decl_node_symbol_table(n, st);
 	case TRANSLATION_UNIT_NODE: // can be compound statement or function def
 	
 	default:
 		break;
 	}
-	return file_scope_symbol_table;
+	return st;
+}
+
+symbol_table *create_decl_node_symbol_table(node *n, symbol_table *st) {
+	st->identifiers = malloc(sizeof(*st->identifiers));
+	symbol_table_identifier *i = st->identifiers;
+	node *decl_spec = n->data.decl->declaration_specifier;
+	node *initialized_declarator_list = n->data.decl->initialized_declarator_list;
+	if (decl_spec->node_type == COMPOUND_NUMBER_TYPE_SPECIFIER_NODE) {
+		i->id_number = id_number;
+		id_number++;
+		i->type = ARITHMETIC_TYPE;
+		i->name = initialized_declarator_list->data.initialized_declarator_list->initialized_declarator->data.identifier->name;
+		i->data.arithmetic_identifier = malloc(sizeof(arithmetic_identifier));
+		arithmetic_identifier *ai = i->data.arithmetic_identifier;
+		assert(ai != NULL);
+		ai->is_unsigned = decl_spec->data.compound_number_type_specifier->is_unsigned;
+		ai->number_type = decl_spec->data.compound_number_type_specifier->number_type;
+	}
+	if (initialized_declarator_list->node_type == INITIALIZED_DECLARATOR_LIST_NODE) {
+		if (initialized_declarator_list->data.initialized_declarator_list->initialized_declarator->node_type == POINTER_DECL_NODE) {
+			printf("i has a pointer\n");
+			i->type = POINTER_TYPE;     
+			// i->data.pointer_identifier->base_type = ;
+		}
+	}
+	if (decl_spec->node_type == ARRAY_DECLARATOR_NODE) {
+		printf("i has an array\n");			
+	}
+	return st;
 }
 
 void print_symbol_table(FILE *output, symbol_table *s) {
@@ -815,7 +817,22 @@ void print_symbol_table_identifier(FILE *output, symbol_table_identifier *i) {
 }
 
 void print_arithmetic_identifier(FILE *output, symbol_table_identifier *i) {
-	fprintf(output, "%s -> %s, %d, %s\n", i->name, i->name, i->id_number, types[i->type]);
+	char *type;
+	switch (i->data.arithmetic_identifier->number_type) {
+	case NUMBER_TYPE_INT:
+		type = "int";
+		break;
+	case NUMBER_TYPE_LONG:
+		type = "long int";
+		break;
+	case NUMBER_TYPE_SHORT:
+		type = "short int";
+		break;
+	case NUMBER_TYPE_CHAR:
+		type = "char";
+		break;
+	}
+	fprintf(output, "%s -> %s, %d, %s\n", i->name, i->name, i->id_number, type);
 }
 void print_pointer_identifier(FILE *output, symbol_table_identifier *i) {
 	

@@ -44,7 +44,10 @@ int main(int argc, char **argv) {
 		fputs("\n", output);
 		fputs("\n****** SYMBOL TABLES ********\n", output);
 		add_types();
-		print_symbol_table(output, create_symbol_table(root));
+		file_scope_symbol_table = malloc(sizeof(symbol_table));
+		assert(file_scope_symbol_table != NULL);
+		id_number = 1;
+		print_symbol_table(output, create_symbol_table(root, file_scope_symbol_table));
 		break;
 	case 1:
 		fprintf(stderr, "Number of errors: %d", yynerrs);

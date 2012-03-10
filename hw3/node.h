@@ -412,7 +412,8 @@ typedef struct t_pointer_identifier
 void add_after_symbol_table(symbol_table *old, symbol_table *new);
 void add_after_symbol_table_identifier(symbol_table_identifier *old, symbol_table_identifier *new);
 
-symbol_table *create_symbol_table(node *result);
+symbol_table *create_symbol_table(node *result, symbol_table *st);
+symbol_table *create_decl_node_symbol_table(node *n, symbol_table *st);
 
 void print_symbol_table(FILE *output, symbol_table *s);
 void print_symbol_table_identifier(FILE *output, symbol_table_identifier *i);
@@ -421,5 +422,7 @@ void print_pointer_identifier(FILE *output, symbol_table_identifier *i);
 void print_array_identifier(FILE *output, symbol_table_identifier *i);
 void print_function_identifier(FILE *output, symbol_table_identifier *i);
 void add_types();
+symbol_table *file_scope_symbol_table;
+int id_number;
 #endif
 

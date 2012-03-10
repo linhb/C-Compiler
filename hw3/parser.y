@@ -74,7 +74,6 @@ statement : expression_statement                           {$$ = create_statemen
  | return_statement                                        {$$ = create_statement_node($1);}
  | goto_statement                                          {$$ = create_statement_node($1);}
  | null_statement                                          {$$ = create_null_statement_node();}
-| error SEMICOLON                                         {yyerrok;yyclearin; }
 ;
 labeled_statement : label COLON statement                  {$$ = create_labeled_statement_node($1, $3);}
 ;
@@ -127,6 +126,7 @@ initial_clause : expr
 function_def_specifier : declaration_specifiers declarator         {$$ = create_function_def_specifier_node($1, $2);
 	}
  | declarator
+ // | error SEMICOLON                                         {yyerrok; yyclearin; }
 ;
 initialized_declarator : declarator 
 ;
@@ -250,7 +250,8 @@ cast_expr : unary_expr
 type_name : declaration_specifiers abstract_declarator        {$$ = create_type_name_node($1, $2);}
  |           declaration_specifiers                           {$$ = create_type_name_node($1, NULL);}
 ;
-declaration_specifiers : type_specifier
+declaration_specifiers : type_specifier     
+	| error SEMICOLON                  {yyerrok; yyclearin; }
 ;
 type_specifier : integer_type_specifier    
 | void_type_specifier 
