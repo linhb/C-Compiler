@@ -73,8 +73,8 @@ statement : expression_statement                           {$$ = create_statemen
  | continue_statement                                      {$$ = create_statement_node($1);}
  | return_statement                                        {$$ = create_statement_node($1);}
  | goto_statement                                          {$$ = create_statement_node($1);}
- | null_statement                                          {$$ = create_statement_node($1);}
- | error SEMICOLON
+ | null_statement                                          {$$ = create_null_statement_node();}
+| error SEMICOLON                                         {yyerrok;yyclearin; }
 ;
 labeled_statement : label COLON statement                  {$$ = create_labeled_statement_node($1, $3);}
 ;
@@ -259,21 +259,21 @@ integer_type_specifier : signed_type_specifier
  | unsigned_type_specifier 
  | character_type_specifier 
 ;
-signed_type_specifier : SHORT      
- | SHORT INT                       {node *words[] = {$1, $2, NULL}; $$ = create_reserved_word_list_node(words);}
- | SIGNED SHORT                    {node *words[] = {$1, $2, NULL}; $$ = create_reserved_word_list_node(words);}
- | SIGNED SHORT INT                {node *words[] = {$1, $2, $3}; $$ = create_reserved_word_list_node(words);}
- | INT                             
- | SIGNED INT                      {node *words[] = {$1, $2, NULL}; $$ = create_reserved_word_list_node(words);}
- | SIGNED                          {node *words[] = {$1, NULL, NULL}; $$ = create_reserved_word_list_node(words);}
- | LONG                            
- | LONG INT                        {node *words[] = {$1, $2, NULL}; $$ = create_reserved_word_list_node(words);}
- | SIGNED LONG                     {node *words[] = {$1, $2, NULL}; $$ = create_reserved_word_list_node(words);}
-| SIGNED LONG INT                  {node *words[] = {$1, $2, $3}; $$ = create_reserved_word_list_node(words);}
+signed_type_specifier : SHORT      {node *words[] = {$1, NULL, NULL}; $$ = create_compound_number_type_specifier_node(words);}
+ | SHORT INT                       {node *words[] = {$1, $2, NULL}; $$ = create_compound_number_type_specifier_node(words);}
+ | SIGNED SHORT                    {node *words[] = {$1, $2, NULL}; $$ = create_compound_number_type_specifier_node(words);}
+ | SIGNED SHORT INT                {node *words[] = {$1, $2, $3}; $$ = create_compound_number_type_specifier_node(words);}
+ | INT                             {node *words[] = {$1, NULL, NULL}; $$ = create_compound_number_type_specifier_node(words);}
+ | SIGNED INT                      {node *words[] = {$1, $2, NULL}; $$ = create_compound_number_type_specifier_node(words);}
+ | SIGNED                          {node *words[] = {$1, NULL, NULL}; $$ = create_compound_number_type_specifier_node(words);}
+ | LONG                            {node *words[] = {$1, NULL, NULL}; $$ = create_compound_number_type_specifier_node(words);}
+ | LONG INT                        {node *words[] = {$1, $2, NULL}; $$ = create_compound_number_type_specifier_node(words);}
+ | SIGNED LONG                     {node *words[] = {$1, $2, NULL}; $$ = create_compound_number_type_specifier_node(words);}
+| SIGNED LONG INT                  {node *words[] = {$1, $2, $3}; $$ = create_compound_number_type_specifier_node(words);}
 ;
-character_type_specifier : CHAR    
- | SIGNED CHAR                     {node *words[] = {$1, $2, NULL}; $$ = create_reserved_word_list_node(words);}
- | UNSIGNED CHAR                   {node *words[] = {$1, $2, NULL}; $$ = create_reserved_word_list_node(words);}
+character_type_specifier : CHAR    {node *words[] = {$1, NULL, NULL}; $$ = create_compound_number_type_specifier_node(words);}
+ | SIGNED CHAR                     {node *words[] = {$1, $2, NULL}; $$ = create_compound_number_type_specifier_node(words);}
+ | UNSIGNED CHAR                   {node *words[] = {$1, $2, NULL}; $$ = create_compound_number_type_specifier_node(words);}
 ;
 bitwise_or_expr : bitwise_xor_expr 
  | bitwise_or_expr BITWISE_OR bitwise_xor_expr              {$$ = create_binary_expr_node($1, $2, $3);}
@@ -329,9 +329,12 @@ postdecrement_expr : postfix_expr DECREMENT      {$$ = create_unary_expr_node($1
 ;
 postincrement_expr : postfix_expr INCREMENT      {$$ = create_unary_expr_node($1, $2, 0);}
 ;
-unsigned_type_specifier : UNSIGNED SHORT INT     {node *words[] = {$1, $2, $3}; $$ = create_reserved_word_list_node(words);}
- | UNSIGNED INT                                   {node *words[] = {$1, $2, NULL}; $$ = create_reserved_word_list_node(words);}
- | UNSIGNED LONG INT                              {node *words[] = {$1, $2, $3}; $$ = create_reserved_word_list_node(words);}
+unsigned_type_specifier : UNSIGNED SHORT INT     {node *words[] = {$1, $2, $3}; $$ = create_compound_number_type_specifier_node(words);}
+	| UNSIGNED SHORT     {node *words[] = {$1, $2, NULL}; $$ = create_compound_number_type_specifier_node(words);}
+	 | UNSIGNED      {node *words[] = {$1, NULL, NULL}; $$ = create_compound_number_type_specifier_node(words);}
+	| UNSIGNED LONG     {node *words[] = {$1, $2, NULL}; $$ = create_compound_number_type_specifier_node(words);}
+ | UNSIGNED INT                                   {node *words[] = {$1, $2, NULL}; $$ = create_compound_number_type_specifier_node(words);}
+ | UNSIGNED LONG INT                              {node *words[] = {$1, $2, $3}; $$ = create_compound_number_type_specifier_node(words);}
 ;
 void_type_specifier : VOID 
 ;

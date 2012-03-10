@@ -39,15 +39,35 @@ node *create_initialized_declarator_list_node(node *list, node *decl) {
 	n->data.initialized_declarator_list->initialized_declarator = decl;
 	return n;
 }
-node *create_reserved_word_list_node(node *reserved_words[]) {
-	node *n = create_node(RESERVED_WORD_LIST_NODE);
-	n->data.reserved_word_list = malloc(sizeof(*n->data.reserved_word_list));
-	assert(n->data.reserved_word_list != NULL);
+node *create_compound_number_type_specifier_node(node *reserved_words[]) {
+	node *n = create_node(COMPOUND_NUMBER_TYPE_SPECIFIER_NODE);
+	n->data.compound_number_type_specifier = malloc(sizeof(*n->data.compound_number_type_specifier));
+	assert(n->data.compound_number_type_specifier != NULL);
 	int i;
 	for (i = 0; i< 3; i++) {
-		n->data.reserved_word_list->reserved_words[i] = reserved_words[i];
+		n->data.compound_number_type_specifier->reserved_words[i] = reserved_words[i];
+	}
+	if (is_type(n, 0, "unsigned")) {
+		n->data.compound_number_type_specifier->is_unsigned = 1;
+	}
+	if (is_type(n, 0, "short") || is_type(n, 1, "short")) {
+		n->data.compound_number_type_specifier->number_type = NUMBER_TYPE_SHORT;
+	}
+	if (is_type(n, 0, "long") || is_type(n, 1, "long")) {
+		n->data.compound_number_type_specifier->number_type = NUMBER_TYPE_LONG;
+	}
+	else {
+		n->data.compound_number_type_specifier->number_type = NUMBER_TYPE_INT;
 	}
 	return n;
+}
+int is_type(node *n, int index, char *type) {
+	if (n->data.compound_number_type_specifier->reserved_words[index] != NULL){
+		return !strcmp(n->data.compound_number_type_specifier->reserved_words[index]->data.reserved_word->text, type);
+	}
+	else {
+		return 0;
+	}
 }
 node *create_increment_decrement_expr_node(node *operand, node *operator) {
 	node *n = create_node(INCREMENT_DECREMENT_EXPR_NODE);
@@ -290,6 +310,11 @@ node *create_pointer_node(node *pointer) {
 	return n;			
 }
 
+node *create_null_statement_node() {
+	node *n = create_node(NULL_STATEMENT_NODE);
+	return n;
+}
+
 /***************************** PRETTY PRINTER FUNCTIONS *******************************/
 
 void print_node(FILE *output, node *n) {
@@ -316,8 +341,8 @@ void print_node(FILE *output, node *n) {
 	case RESERVED_WORD_NODE:
 		print_reserved_word_node(output, n);
 		break;
-	case RESERVED_WORD_LIST_NODE:
-		print_reserved_word_list_node(output, n);
+	case COMPOUND_NUMBER_TYPE_SPECIFIER_NODE:
+		print_compound_number_type_specifier_node(output, n);
 		break;
 	case OPERATOR_NODE:
 		print_operator_node(output, n);
@@ -406,6 +431,9 @@ void print_node(FILE *output, node *n) {
 	case POINTER_NODE:
 		print_pointer_node(output, n);
 		break;
+	case NULL_STATEMENT_NODE:
+		print_null_statement_node(output, n);
+		break;
 	default:
 		fprintf(stderr, "Can't print current node of type %d", n->node_type);
 	}	
@@ -453,11 +481,11 @@ void print_initialized_declarator_list_node(FILE *output, node *n) {
 void print_reserved_word_node(FILE *output, node *n) {
 	fprintf(output, "%s ", n->data.reserved_word->text);
 }
-void print_reserved_word_list_node(FILE *output, node *n) {
+void print_compound_number_type_specifier_node(FILE *output, node *n) {
 	int i;
 	for (i = 0; i < 3; i++) {
-		if (n->data.reserved_word_list->reserved_words[i] != NULL)
-			print_node(output, n->data.reserved_word_list->reserved_words[i]);
+		if (n->data.compound_number_type_specifier->reserved_words[i] != NULL)
+			print_node(output, n->data.compound_number_type_specifier->reserved_words[i]);
 	}
 }
 void print_operator_node(FILE *output, node *n) {
@@ -666,6 +694,10 @@ void print_pointer_node(FILE *output, node *n){
 	fputs("*", output);
 	print_node(output, n->data.pointer->pointer);
 }
+void print_null_statement_node(FILE *output, node *n) {
+	print_indentation(output);
+	fputs(";\n", output);
+}
 void print_indentation(FILE *output) {
 	int i;
 	for (i = 1; i <= indent; i++) {
@@ -711,29 +743,42 @@ void add_after_symbol_table_identifier(symbol_table_identifier *old, symbol_tabl
 	old->next = new;
 }
 
+symbol_table *file_scope_symbol_table;
+int id_number = 1;
+
 symbol_table *create_symbol_table(node *result) {
-	symbol_table *file_scope_symbol_table = malloc(sizeof(*file_scope_symbol_table));
+	file_scope_symbol_table = malloc(sizeof(symbol_table));
 	assert(file_scope_symbol_table != NULL);
 	file_scope_symbol_table->identifiers = malloc(sizeof(*file_scope_symbol_table->identifiers));
 	symbol_table_identifier *i = file_scope_symbol_table->identifiers;
 	assert(i != NULL);
 	node *decl_spec = result->data.decl->declaration_specifier;
+	node *initialized_declarator_list = result->data.decl->initialized_declarator_list;
 	switch (result->node_type) {
 	case DECL_NODE:
-		if (decl_spec->data.reserved_word_list != NULL || decl_spec->data.reserved_word != NULL) {
+		if (decl_spec->node_type == COMPOUND_NUMBER_TYPE_SPECIFIER_NODE) {
+			i->id_number = id_number;
+			id_number++;
 			i->type = ARITHMETIC_TYPE;
+			i->name = initialized_declarator_list->data.initialized_declarator_list->initialized_declarator->data.identifier->name;
 			i->data.arithmetic_identifier = malloc(sizeof(arithmetic_identifier));
 			arithmetic_identifier *ai = i->data.arithmetic_identifier;
 			assert(ai != NULL);
-			node *word_list = decl_spec->data.reserved_word_list->reserved_words[0];
-			printf("***OHAI******%x*******\n", (decl_spec->data.reserved_word_list->reserved_words[0]->node_type));
-			char *text = "unsigned";
-			int unsign = !strcmp(word_list->data.reserved_word->text, text);
-			// ai->is_signed = ((word_list != NULL && unsign) ? 1 : 0);
+			ai->is_unsigned = decl_spec->data.compound_number_type_specifier->is_unsigned;
+			ai->number_type = decl_spec->data.compound_number_type_specifier->number_type;
 		}
-		if (decl_spec->data.pointer_decl != NULL) {
-			
+		if (initialized_declarator_list->node_type == INITIALIZED_DECLARATOR_LIST_NODE) {
+			if (initialized_declarator_list->data.initialized_declarator_list->initialized_declarator->node_type == POINTER_DECL_NODE) {
+				printf("i has a pointer\n");
+				i->type = POINTER_TYPE;     
+				// i->data.pointer_identifier->base_type = ;
+			}
 		}
+		if (decl_spec->node_type == ARRAY_DECLARATOR_NODE) {
+			printf("i has an array\n");			
+		}
+	case TRANSLATION_UNIT_NODE: // can be compound statement or function def
+	
 	default:
 		break;
 	}
@@ -741,5 +786,50 @@ symbol_table *create_symbol_table(node *result) {
 }
 
 void print_symbol_table(FILE *output, symbol_table *s) {
+	// print identifiers
+	fputs("Identifiers:\n", output);
+	symbol_table_identifier *i = s->identifiers;
+	while (i != NULL) {
+		print_symbol_table_identifier(output, i);
+		i = i->next;
+	}
+	// print children
+	// print next ST                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       
 	
+}
+void print_symbol_table_identifier(FILE *output, symbol_table_identifier *i) {
+	switch (i->type) {
+	case ARITHMETIC_TYPE:
+		print_arithmetic_identifier(output, i);
+		break;
+	case POINTER_TYPE:
+		print_pointer_identifier(output, i);
+		break;
+	case ARRAY_TYPE:
+		print_array_identifier(output, i);
+		break;
+	case FUNCTION_TYPE:
+		print_function_identifier(output, i);
+		break;
+	}
+}
+
+void print_arithmetic_identifier(FILE *output, symbol_table_identifier *i) {
+	fprintf(output, "%s -> %s, %d, %s\n", i->name, i->name, i->id_number, types[i->type]);
+}
+void print_pointer_identifier(FILE *output, symbol_table_identifier *i) {
+	
+}
+void print_array_identifier(FILE *output, symbol_table_identifier *i) {
+	
+}
+void print_function_identifier(FILE *output, symbol_table_identifier *i) {
+	
+}
+
+void add_types() {
+	ADD_TYPE(types, ARITHMETIC_TYPE);
+	ADD_TYPE(types, POINTER_TYPE);
+	ADD_TYPE(types, ARRAY_TYPE);
+	ADD_TYPE(types, FUNCTION_TYPE);
 }

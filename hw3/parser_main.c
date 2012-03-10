@@ -43,6 +43,7 @@ int main(int argc, char **argv) {
 		print_node(output, root);
 		fputs("\n", output);
 		fputs("\n****** SYMBOL TABLES ********\n", output);
+		add_types();
 		print_symbol_table(output, create_symbol_table(root));
 		break;
 	case 1:

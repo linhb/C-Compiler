@@ -16,7 +16,7 @@ Header file containing integer constants that stand for different types of nodes
 #define DECL_NODE        8
 #define INITIALIZED_DECLARATOR_LIST_NODE        9
 #define RESERVED_WORD_NODE        12
-#define RESERVED_WORD_LIST_NODE        13
+#define COMPOUND_NUMBER_TYPE_SPECIFIER_NODE        13
 #define OPERATOR_NODE        14
 #define INCREMENT_DECREMENT_EXPR_NODE 15
 #define TRANSLATION_UNIT_NODE 16
@@ -44,6 +44,7 @@ Header file containing integer constants that stand for different types of nodes
 #define EXPRESSION_LIST_NODE 38
 #define DIRECT_ABSTRACT_DECLARATOR_NODE 39 
 #define POINTER_NODE 40
+#define NULL_STATEMENT_NODE 41
 
 typedef struct t_node {
 	int node_type;
@@ -59,7 +60,7 @@ typedef struct t_node {
 		struct n_decl *decl;
 		struct n_initialized_declarator_list *initialized_declarator_list;
 		struct n_reserved_word *reserved_word;
-		struct n_reserved_word_list *reserved_word_list;
+		struct n_compound_number_type_specifier *compound_number_type_specifier;
 		struct n_operator *operator;
 		struct n_increment_decrement_expr *increment_decrement_expr;
 		struct n_translation_unit *translation_unit;
@@ -142,9 +143,11 @@ typedef struct n_reserved_word {
 	char *text;
 	int value;
 } reserved_word;
-typedef struct n_reserved_word_list {
+typedef struct n_compound_number_type_specifier {
 	node *reserved_words[3];
-} reserved_word_list;
+	int number_type; // reserved word list is only used to store compound type specifiers like "unsigned long int"
+	int is_unsigned;
+} compound_number_type_specifier;
 typedef struct n_operator {
 	char *text;
 	int value;	
@@ -283,7 +286,7 @@ typedef struct n_pointer
 node *create_node(int node_type);
 node *create_decl_node(node *declaration_specifier, node *initialized_declarator_list);
 node *create_initialized_declarator_list_node(node *list, node *decl);
-node *create_reserved_word_list_node(node *reserved_words[]);
+node *create_compound_number_type_specifier_node(node *reserved_words[]);
 node *create_increment_decrement_expr_node(node *operand, node *operator);
 node *create_translation_unit_node(node *translation_unit, node *top_level_decl);
 node *create_function_def_specifier_node(node *declaration_specifiers, node *declarator);
@@ -313,6 +316,8 @@ node *create_cast_expr_node(node *type_name, node *cast_expr);
 node *create_expression_list_node(node *expression_list, node *assignment_expr);
 node *create_direct_abstract_declarator_node(node *n1, node *n2, node *n3, node *n4);
 node *create_pointer_node(node *pointer);
+node *create_null_statement_node();  
+int is_type(node *n, int index, char *type);
 
 /***************************** PRETTY PRINTER FUNCTIONS *******************************/
 
@@ -325,7 +330,7 @@ void print_unary_expr_node(FILE *output, node *n);
 void print_decl_node(FILE *output, node *n);
 void print_initialized_declarator_list_node(FILE *output, node *n);
 void print_reserved_word_node(FILE *output, node *n);
-void print_reserved_word_list_node(FILE *output, node *n);
+void print_compound_number_type_specifier_node(FILE *output, node *n);
 void print_operator_node(FILE *output, node *n);
 void print_increment_decrement_expr_node(FILE *output, node *n);
 void print_translation_unit_node(FILE *output, node *n);
@@ -355,33 +360,53 @@ void print_cast_expr_node(FILE *output, node *n);
 void print_expression_list_node(FILE *output, node *n);
 void print_direct_abstract_declarator_node(FILE *output, node *n);
 void print_pointer_node(FILE *output, node *n);
+void print_null_statement_node(FILE *output, node *n);
 
 /***********SYMBOL TABLE DEFINITIONS AND HEADERS****************/
 
-#define ARITHMETIC_TYPE 1
+#define ARITHMETIC_TYPE 1 
+#define POINTER_TYPE 2 
+#define ARRAY_TYPE 3
+#define FUNCTION_TYPE 4
+
+const char *types[4];
+#define ADD_TYPE(TYPES, TYPE) TYPES[TYPE] = #TYPE
 
 typedef struct t_symbol_table
 {
 	struct t_symbol_table_identifier *identifiers;        // both identifiers and children are linked lists
 	struct t_symbol_table *children;
 	struct t_symbol_table *next;
+	struct t_symbol_table *parent;
 } symbol_table;                       
 
 typedef struct t_symbol_table_identifier
 { 
 	int type;
 	char *name;
+	int id_number;
 	struct t_symbol_table_identifier *next;
 	union {
 		struct t_arithmetic_identifier *arithmetic_identifier;
+		struct t_pointer_identifier *pointer_identifier;
 	} data;
 } symbol_table_identifier;  // calling it symbol_table_identifier as opposed to plain identifier which is a node
 
 typedef struct t_arithmetic_identifier
 {
-	int is_signed;
+	int is_unsigned;
 	int number_type;     
 } arithmetic_identifier;
+
+#define NUMBER_TYPE_INT 1
+#define NUMBER_TYPE_SHORT 2
+#define NUMBER_TYPE_LONG 3
+#define NUMBER_TYPE_CHAR 4
+
+typedef struct t_pointer_identifier
+{
+	symbol_table_identifier *base_type;
+} pointer_identifier;
 
 // returns pointer to updated ST
 void add_after_symbol_table(symbol_table *old, symbol_table *new);
@@ -390,6 +415,11 @@ void add_after_symbol_table_identifier(symbol_table_identifier *old, symbol_tabl
 symbol_table *create_symbol_table(node *result);
 
 void print_symbol_table(FILE *output, symbol_table *s);
-
+void print_symbol_table_identifier(FILE *output, symbol_table_identifier *i);
+void print_arithmetic_identifier(FILE *output, symbol_table_identifier *i);
+void print_pointer_identifier(FILE *output, symbol_table_identifier *i);
+void print_array_identifier(FILE *output, symbol_table_identifier *i);
+void print_function_identifier(FILE *output, symbol_table_identifier *i);
+void add_types();
 #endif
 
