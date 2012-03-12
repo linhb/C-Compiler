@@ -881,10 +881,12 @@ void create_decl_node_symbol_table(node *n, symbol_table *st) {
 symbol_table_identifier *create_decl_identifier(node *decl_spec, node *declarator, symbol_table_identifier *current) {
 	int declarator_node_type =  declarator->node_type;
 	if (declarator_node_type == POINTER_DECL_NODE) {
-		printf("i has a pointer\n");
 		current->type = POINTER_TYPE;     
-		// current->name = 
-		// i->data.pointer_identifier->base = ;
+		current->name = declarator->data.pointer_decl->direct_declarator->data.identifier->name;
+		current->data.pointer_identifier = malloc(sizeof(*current->data.pointer_identifier));
+		if (decl_spec->node_type == COMPOUND_NUMBER_TYPE_SPECIFIER_NODE) {
+			current->data.pointer_identifier->base = decl_spec->data.compound_number_type_specifier->number_type;
+		}
 	}
 	else if (declarator_node_type == ARRAY_DECLARATOR_NODE) {
 		current->type = ARRAY_TYPE;
@@ -1068,7 +1070,7 @@ void print_arithmetic_identifier(FILE *output, symbol_table_identifier *i) {
 	fprintf(output, "%s %s", sign, types[i->data.arithmetic_identifier->number_type]);
 }
 void print_pointer_identifier(FILE *output, symbol_table_identifier *i) {
-	
+	fprintf(output, "pointer (%s)", types[i->data.pointer_identifier->base]);
 }
 void print_array_identifier(FILE *output, symbol_table_identifier *i) {
 	fprintf(output, "array (%d, %s)", i->data.array_identifier->size, types[i->data.array_identifier->element_type]);

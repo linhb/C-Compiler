@@ -426,7 +426,7 @@ void add_types();
 
 typedef struct t_pointer_identifier
 {
-	symbol_table_identifier *base;
+	int base;
 } pointer_identifier;
 
 typedef struct t_function_identifier
