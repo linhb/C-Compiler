@@ -44,7 +44,11 @@ int main(int argc, char **argv) {
 		file_scope_symbol_table = malloc(sizeof(symbol_table));
 		assert(file_scope_symbol_table != NULL);
 		file_scope_symbol_table->identifiers = malloc(sizeof(*file_scope_symbol_table->identifiers));
-		id_number = 1;
+		identifier_id = 1;
+		current_scope_level = 1;
+		st_id = 1;
+		file_scope_symbol_table->scope_level = current_scope_level;
+		file_scope_symbol_table->st_id = st_id;
 		create_symbol_table(root, file_scope_symbol_table);
 		print_symbol_table(output, file_scope_symbol_table);
 		fputs("\n****** PARSE TREE ********\n", output);

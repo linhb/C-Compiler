@@ -390,13 +390,21 @@ typedef struct t_symbol_table
 	struct t_symbol_table *children;
 	struct t_symbol_table *next;
 	struct t_symbol_table *parent;
+	int scope_level;
+	int st_id;
+	/*scope level goes up and down as you enter and exit blocks, but st_id only goes up 
+		rules for searching for ids:
+		search in scopes that are same or higher in scope level. if same level, must also be same id
+	*/
 } symbol_table;                       
+int current_scope_level;
+int st_id;
 
 typedef struct t_symbol_table_identifier
 { 
 	int type;
 	char *name;
-	int id_number;
+	int identifier_id;
 	struct t_symbol_table_identifier *next;
 	union {
 		struct t_arithmetic_identifier *arithmetic_identifier;
@@ -461,7 +469,7 @@ void print_pointer_identifier(FILE *output, symbol_table_identifier *i);
 void print_array_identifier(FILE *output, symbol_table_identifier *i);
 void print_function_identifier(FILE *output, symbol_table_identifier *i);
 symbol_table *file_scope_symbol_table;
-int id_number;
+int identifier_id;
 // symbol_table_identifier *current;
 
 char *children_identifier_to_string(symbol_table_identifier *i);

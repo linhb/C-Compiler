@@ -491,7 +491,7 @@ void print_string_node(FILE *output, node *n) {
 void print_identifier_node(FILE *output, node *n) {
 	fprintf(output, "%s", n->data.identifier->name);
 	if (n->data.identifier->symbol_table_identifier != NULL) {
-		fprintf(output, "\t/* symbol %d */\t", n->data.identifier->symbol_table_identifier->id_number);
+		fprintf(output, "\t/* symbol %d */\t", n->data.identifier->symbol_table_identifier->identifier_id);
 	}
 }
 void print_decl_node(FILE *output, node *n) {
@@ -603,7 +603,12 @@ void print_binary_expr_node(FILE *output, node *n) {
 	fputs(")", output);	
 }
 void print_subscript_expr_node(FILE *output, node *n) {  
-	print_node(output, n->data.subscript_expr->postfix_expr);
+	node *postfix_expr = n->data.subscript_expr->postfix_expr
+	if (postfix_expr->node_type == IDENTIFIER_NODE) {
+		// update this identifier node to point to the right ST entry, then print it normally
+		postfix_expr->data.identifier->symbol_table_identifier = find_identifier_in_symbol_table(file_scope_symbol_table, postfix_expr->data.identifier->name);
+		print_node(output, postfix_expr);
+	}
 	fputs("[", output);
 	print_node(output, n->data.subscript_expr->expr);
 	fputs("]", output);
@@ -843,7 +848,9 @@ void create_symbol_table(node *n, symbol_table *st) {
 		create_function_def_specifier_node_symbol_table(n->data.function_definition->function_def_specifier, st, n->data.function_definition->compound_statement);
 		break;
 	case COMPOUND_STATEMENT_NODE:
+		current_scope_level++;
 		create_compound_statement_node_symbol_table(n, st, 1);
+		current_scope_level--;
 		break;
 	case DECLARATION_OR_STATEMENT_LIST_NODE:
 		create_declaration_or_statement_list_node_symbol_table(n, st);
@@ -947,14 +954,24 @@ void create_function_def_specifier_node_symbol_table(node *n, symbol_table *st, 
 	if (st->children == NULL) {
 		st->children = malloc(sizeof(*st->children));
 		assert(st->children != NULL);
+		current_scope_level++;
+		st->children->scope_level = current_scope_level;
+		st_id++;
+		st->children->st_id = st_id;
 		create_compound_statement_node_symbol_table(compound_statement, st->children, 0);
+		current_scope_level--;
 		create_symbol_table(parameter_type_list, st->children);
 	}
 	else {
 		symbol_table *new = malloc(sizeof(symbol_table));
 		assert(new != NULL);
+		current_scope_level++;
+		new->scope_level = current_scope_level;
+		st_id++;
+		new->st_id = st_id;
 		add_to_symbol_table_list(st->children, new);
 		create_compound_statement_node_symbol_table(compound_statement, new, 0);
+		current_scope_level--;
 		create_symbol_table(parameter_type_list, new);
 	}
 }
@@ -966,14 +983,23 @@ void create_compound_statement_node_symbol_table(node *n, symbol_table *st, int 
 			if (st->children == NULL) {
 				st->children = malloc(sizeof(*st->children));
 				assert(st->children != NULL);
+				current_scope_level++;
+				st->children->scope_level = current_scope_level;
+				st_id++;
+				st->children->st_id = st_id;
 				create_symbol_table(n->data.compound_statement->declaration_or_statement_list, st->children);
 			}
 			else {
 				symbol_table *new = malloc(sizeof(symbol_table));
 				assert(new != NULL);
+				current_scope_level++;
+				new->scope_level = current_scope_level;
+				st_id++;
+				new->st_id = st_id;
 				add_to_symbol_table_list(st->children, new);
 				create_symbol_table(n->data.compound_statement->declaration_or_statement_list, new);
 			}
+			current_scope_level--;
 		}
 		else {
 			create_symbol_table(n->data.compound_statement->declaration_or_statement_list, st);
@@ -988,7 +1014,6 @@ void create_declaration_or_statement_list_node_symbol_table(node *n, symbol_tabl
 	create_symbol_table(n->data.declaration_or_statement_list->declaration_or_statement, st);
 }
 void create_parameter_list_node_symbol_table(node *n, symbol_table *st) {
-	printf("HAI %d\n", n->data.parameter_list->parameter_decl->node_type);
 	create_symbol_table(n->data.parameter_list->parameter_list, st);
 	create_symbol_table(n->data.parameter_list->parameter_decl, st);
 }
@@ -1005,19 +1030,23 @@ void create_parameter_decl_node_symbol_table(node *n, symbol_table *st)  {
 void advance_current_identifier(symbol_table_identifier *current) {
 	// // when first node, just start modifying current right away and don't set current->next
 	// // otherwise, create current->next and set current to it, then proceed
-	// if (id_number > 1) {
+	// if (identifier_id > 1) {
 	// 	symbol_table_identifier *next = malloc(sizeof(*next));
 	// 	current->next = next;
 	// 	current = next;
 	// }
-	current->id_number = id_number;
-	id_number++;
+	current->identifier_id = identifier_id;
+	identifier_id++;
 }
 
 /************** SYMBOL TABLE PRINTING FUNCTIONS *******************/
 
 void print_symbol_table(FILE *output, symbol_table *s) {
 	// print identifiers
+	print_indentation(output);
+	fprintf(output, "Scope %d:\n", s->scope_level);
+	print_indentation(output);
+	fprintf(output, "Symbol table #%d:\n", s->st_id);
 	print_indentation(output);
 	fputs("Identifiers:\n", output);
 	symbol_table_identifier *i = s->identifiers;
@@ -1043,7 +1072,7 @@ void print_symbol_table(FILE *output, symbol_table *s) {
 void print_symbol_table_identifier(FILE *output, symbol_table_identifier *i) {
 	if (i != NULL) {
 		print_indentation(output);
-		fprintf(output, "%s -> %s, %d, ", i->name, i->name, i->id_number);
+		fprintf(output, "%s -> %s, %d, ", i->name, i->name, i->identifier_id);
 		switch (i->type) {
 		case ARITHMETIC_TYPE:
 			print_arithmetic_identifier(output, i);
