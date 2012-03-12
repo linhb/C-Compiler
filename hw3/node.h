@@ -45,6 +45,7 @@ Header file containing integer constants that stand for different types of nodes
 #define DIRECT_ABSTRACT_DECLARATOR_NODE 39 
 #define POINTER_NODE 40
 #define NULL_STATEMENT_NODE 41
+#define TERNARY_EXPR_NODE 42
 
 typedef struct t_node {
 	int node_type;
@@ -89,6 +90,7 @@ typedef struct t_node {
 		struct n_expression_list *expression_list;
 		struct n_direct_abstract_declarator *direct_abstract_declarator;
 		struct n_pointer *pointer;
+		struct n_ternary_expr *ternary_expr;
 	} data;
 } node;
 
@@ -106,6 +108,7 @@ typedef struct n_string {
 
 typedef struct n_identifier {
 	char *name;
+	struct t_symbol_table_identifier *symbol_table_identifier;
 } identifier;
 
 typedef struct n_list {
@@ -190,6 +193,7 @@ typedef struct n_function_declarator
 typedef struct n_parameter_list {
 	node *parameter_list;
 	node *parameter_decl;
+	int number_of_params;
 } parameter_list; 
 typedef struct n_parameter_decl  {
 	node *declaration_specifiers;
@@ -282,6 +286,12 @@ typedef struct n_pointer
 {
 	node *pointer;
 } pointer;
+typedef struct n_ternary_expr
+{
+	node *logical_or_expr;
+	node *expr;
+	node *conditional_expr;
+} ternary_expr;
 
 node *create_node(int node_type);
 node *create_decl_node(node *declaration_specifier, node *initialized_declarator_list);
@@ -317,6 +327,7 @@ node *create_expression_list_node(node *expression_list, node *assignment_expr);
 node *create_direct_abstract_declarator_node(node *n1, node *n2, node *n3, node *n4);
 node *create_pointer_node(node *pointer);
 node *create_null_statement_node();  
+node *create_ternary_expr(node *logical_or_expr, node *expr, node *conditional_expr);
 int is_type(node *n, int index, char *type);
 
 /***************************** PRETTY PRINTER FUNCTIONS *******************************/
@@ -361,6 +372,7 @@ void print_expression_list_node(FILE *output, node *n);
 void print_direct_abstract_declarator_node(FILE *output, node *n);
 void print_pointer_node(FILE *output, node *n);
 void print_null_statement_node(FILE *output, node *n);
+void print_ternary_expr_node(FILE *output, node *n);
 
 /***********SYMBOL TABLE DEFINITIONS AND HEADERS****************/
 
@@ -368,9 +380,9 @@ void print_null_statement_node(FILE *output, node *n);
 #define POINTER_TYPE 2 
 #define ARRAY_TYPE 3
 #define FUNCTION_TYPE 4
+#define VOID_TYPE 5
 
-const char *types[4];
-#define ADD_TYPE(TYPES, TYPE) TYPES[TYPE] = #TYPE
+const char *types[20];
 
 typedef struct t_symbol_table
 {
@@ -389,6 +401,8 @@ typedef struct t_symbol_table_identifier
 	union {
 		struct t_arithmetic_identifier *arithmetic_identifier;
 		struct t_pointer_identifier *pointer_identifier;
+		struct t_array_identifier *array_identifier;
+		struct t_function_identifier *function_identifier;
 	} data;
 } symbol_table_identifier;  // calling it symbol_table_identifier as opposed to plain identifier which is a node
 
@@ -397,23 +411,45 @@ typedef struct t_arithmetic_identifier
 	int is_unsigned;
 	int number_type;     
 } arithmetic_identifier;
+typedef struct t_array_identifier
+{
+	int element_type;
+	int size; // can be null if size isn't specified or can't be determined at compile time
+} array_identifier;
 
-#define NUMBER_TYPE_INT 1
-#define NUMBER_TYPE_SHORT 2
-#define NUMBER_TYPE_LONG 3
-#define NUMBER_TYPE_CHAR 4
+#define NUMBER_TYPE_INT 6
+#define NUMBER_TYPE_SHORT 7
+#define NUMBER_TYPE_LONG 8
+#define NUMBER_TYPE_CHAR 9
+
+void add_types();
 
 typedef struct t_pointer_identifier
 {
-	symbol_table_identifier *base_type;
+	symbol_table_identifier *base;
 } pointer_identifier;
 
-// returns pointer to updated ST
-void add_after_symbol_table(symbol_table *old, symbol_table *new);
-void add_after_symbol_table_identifier(symbol_table_identifier *old, symbol_table_identifier *new);
+typedef struct t_function_identifier
+{
+	int return_type;
+	int argc;
+	symbol_table_identifier *argv;
+} function_identifier;
 
-symbol_table *create_symbol_table(node *result, symbol_table *st);
-symbol_table *create_decl_node_symbol_table(node *n, symbol_table *st);
+// returns pointer to updated ST
+void add_to_symbol_table_list(symbol_table *list, symbol_table *new);
+void add_to_symbol_table_identifier_list(symbol_table_identifier *list, symbol_table_identifier *new);
+symbol_table *get_last_symbol_table_list_element(symbol_table *list);
+symbol_table_identifier *get_last_symbol_table_identifier_list_element(symbol_table_identifier *list);
+
+void create_symbol_table(node *result, symbol_table *st);
+void create_decl_node_symbol_table(node *n, symbol_table *st);
+void create_function_def_specifier_node_symbol_table(node *n, symbol_table *st, node *compound_statement);
+void create_compound_statement_node_symbol_table(node *n, symbol_table *st, int create_new_symbol_table);
+void create_declaration_or_statement_list_node_symbol_table(node *n, symbol_table *st);
+
+symbol_table_identifier *create_identifier(symbol_table *st);
+void advance_current_identifier();
 
 void print_symbol_table(FILE *output, symbol_table *s);
 void print_symbol_table_identifier(FILE *output, symbol_table_identifier *i);
@@ -421,8 +457,10 @@ void print_arithmetic_identifier(FILE *output, symbol_table_identifier *i);
 void print_pointer_identifier(FILE *output, symbol_table_identifier *i);
 void print_array_identifier(FILE *output, symbol_table_identifier *i);
 void print_function_identifier(FILE *output, symbol_table_identifier *i);
-void add_types();
 symbol_table *file_scope_symbol_table;
 int id_number;
+// symbol_table_identifier *current;
+
+char *children_identifier_to_string(symbol_table_identifier *i);
 #endif
 

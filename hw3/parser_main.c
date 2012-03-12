@@ -39,15 +39,17 @@ int main(int argc, char **argv) {
 		result = 1;
 	switch (result) {
 	case 0:
-		fputs("\n****** PARSE TREE ********\n", output);
-		print_node(output, root);
-		fputs("\n", output);
 		fputs("\n****** SYMBOL TABLES ********\n", output);
 		add_types();
 		file_scope_symbol_table = malloc(sizeof(symbol_table));
 		assert(file_scope_symbol_table != NULL);
+		file_scope_symbol_table->identifiers = malloc(sizeof(*file_scope_symbol_table->identifiers));
 		id_number = 1;
-		print_symbol_table(output, create_symbol_table(root, file_scope_symbol_table));
+		create_symbol_table(root, file_scope_symbol_table);
+		print_symbol_table(output, file_scope_symbol_table);
+		fputs("\n****** PARSE TREE ********\n", output);
+		print_node(output, root);
+		fputs("\n", output);
 		break;
 	case 1:
 		fprintf(stderr, "Number of errors: %d", yynerrs);

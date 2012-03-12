@@ -200,7 +200,7 @@ assignment_op : ASSIGN |
  BITWISE_XOR_AND_ASSIGN 
 ;
 conditional_expr : logical_or_expr 
- | logical_or_expr QUESTION_MARK expr COLON conditional_expr 
+	| logical_or_expr QUESTION_MARK expr COLON conditional_expr {$$ = create_ternary_expr($1, $3, $5);}
 ;
 logical_or_expr : logical_and_expr 
  | logical_or_expr LOGICAL_OR logical_and_expr             {$$ = create_binary_expr_node($1, $2, $3);}

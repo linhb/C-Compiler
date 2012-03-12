@@ -47,16 +47,17 @@ node *create_compound_number_type_specifier_node(node *reserved_words[]) {
 	for (i = 0; i< 3; i++) {
 		n->data.compound_number_type_specifier->reserved_words[i] = reserved_words[i];
 	}
+	if (reserved_words[1]!=NULL)
 	if (is_type(n, 0, "unsigned")) {
 		n->data.compound_number_type_specifier->is_unsigned = 1;
 	}
 	if (is_type(n, 0, "short") || is_type(n, 1, "short")) {
 		n->data.compound_number_type_specifier->number_type = NUMBER_TYPE_SHORT;
 	}
-	if (is_type(n, 0, "long") || is_type(n, 1, "long")) {
+	else if (is_type(n, 0, "long") || is_type(n, 1, "long")) {
 		n->data.compound_number_type_specifier->number_type = NUMBER_TYPE_LONG;
 	}	
-	if (is_type(n, 0, "char") || is_type(n, 1, "char")) {
+	else if (is_type(n, 0, "char") || is_type(n, 1, "char")) {
 		n->data.compound_number_type_specifier->number_type = NUMBER_TYPE_CHAR;
 	}
 	else {
@@ -140,6 +141,16 @@ node *create_parameter_list_node(node *parameter_list, node *parameter_decl) {
 	assert(n->data.parameter_list != NULL);
 	n->data.parameter_list->parameter_list = parameter_list;
 	n->data.parameter_list->parameter_decl = parameter_decl;
+	if (parameter_list != NULL) {
+		int number_of_params = parameter_list->data.parameter_list->number_of_params;
+		n->data.parameter_list->number_of_params = number_of_params + 1;
+	}
+	else {
+		// if 1 arg, no parameter_list node was created, so this function is never called, so this field will never be 1
+		// if 2 args, 1 parameter_list node will be created which is the node being created right now
+		n->data.parameter_list->number_of_params = 2;
+	}
+	// printf("HAZ %d PARAMS\n", n->data.parameter_list->number_of_params);
 	return n;		
 }
 node *create_parameter_decl_node(node *declaration_specifiers, node *declarator){	
@@ -317,6 +328,15 @@ node *create_null_statement_node() {
 	node *n = create_node(NULL_STATEMENT_NODE);
 	return n;
 }
+node *create_ternary_expr(node *logical_or_expr, node *expr, node *conditional_expr) {
+	node *n = create_node(TERNARY_EXPR_NODE);
+	n->data.ternary_expr = malloc(sizeof(*n->data.ternary_expr));
+	assert(n->data.ternary_expr != NULL);
+	n->data.ternary_expr->logical_or_expr = logical_or_expr;
+	n->data.ternary_expr->expr = expr;
+	n->data.ternary_expr->conditional_expr = conditional_expr;
+	return n;
+}
 
 /***************************** PRETTY PRINTER FUNCTIONS *******************************/
 
@@ -436,6 +456,9 @@ void print_node(FILE *output, node *n) {
 		break;
 	case NULL_STATEMENT_NODE:
 		print_null_statement_node(output, n);
+		break;    
+	case TERNARY_EXPR_NODE:
+		print_ternary_expr_node(output, n);
 		break;
 	default:
 		fprintf(stderr, "Can't print current node of type %d", n->node_type);
@@ -467,6 +490,9 @@ void print_string_node(FILE *output, node *n) {
 }
 void print_identifier_node(FILE *output, node *n) {
 	fprintf(output, "%s", n->data.identifier->name);
+	if (n->data.identifier->symbol_table_identifier != NULL) {
+		fprintf(output, "\t/* symbol %d */\t", n->data.identifier->symbol_table_identifier->id_number);
+	}
 }
 void print_decl_node(FILE *output, node *n) {
 	print_indentation(output);
@@ -701,6 +727,13 @@ void print_null_statement_node(FILE *output, node *n) {
 	print_indentation(output);
 	fputs(";\n", output);
 }
+void print_ternary_expr_node(FILE *output, node *n) {
+	print_node(output, n->data.ternary_expr->logical_or_expr);
+	fputs(" ? ", output);
+	print_node(output, n->data.ternary_expr->expr);
+	fputs(" : ", output);
+	print_node(output, n->data.ternary_expr->conditional_expr);	
+}
 void print_indentation(FILE *output) {
 	int i;
 	for (i = 1; i <= indent; i++) {
@@ -741,65 +774,249 @@ void print_indentation(FILE *output) {
 // }
 
 
-void add_after_symbol_table_identifier(symbol_table_identifier *old, symbol_table_identifier *new) {
-	new->next = old->next;
-	old->next = new;
+void add_to_symbol_table_list(symbol_table *list, symbol_table *new) {
+	symbol_table *old = get_last_symbol_table_list_element(list);
+	if (old == NULL) { // empty list, so put 'new' in as first element
+		old = new;
+	}
+	else {
+		old->next = new;
+	}
+}
+void add_to_symbol_table_identifier_list(symbol_table_identifier *list, symbol_table_identifier *new) {
+	symbol_table_identifier *old = get_last_symbol_table_identifier_list_element(list);
+	if (old == NULL) { // empty list, so put 'new' in as first element
+		old = new;
+	}
+	else {
+		old->next = new;
+	}
 }
 
-symbol_table *create_symbol_table(node *n, symbol_table *st) {
+symbol_table *get_last_symbol_table_list_element(symbol_table *list) {
+	// list can be null, 1 element (next == NULL) or more
+	if (list == NULL) {
+		return NULL;
+	}
+	else {
+		if (list->next == NULL) {
+			return list;
+		}
+		else {
+			symbol_table *last = list->next;
+			while (last->next != NULL) {
+				last = last->next;
+			}
+			return last;	
+		}
+	}
+}
+symbol_table_identifier *get_last_symbol_table_identifier_list_element(symbol_table_identifier *list) {
+	// list can be null, 1 element (next == NULL) or more
+	if (list == NULL) {
+		return NULL;
+	}
+	else {
+		if (list->next == NULL) {
+			return list;
+		}
+		else {
+			symbol_table_identifier *last = list->next;
+			while (last->next != NULL) {
+				last = last->next;
+			}
+			return last;	
+		}
+	}
+}
+
+void create_symbol_table(node *n, symbol_table *st) {
 	switch (n->node_type) {
 	case DECL_NODE:
-		st = create_decl_node_symbol_table(n, st);
+		create_decl_node_symbol_table(n, st);
+		break;
 	case TRANSLATION_UNIT_NODE: // can be compound statement or function def
-	
+		create_symbol_table(n->data.translation_unit->translation_unit, st);
+		create_symbol_table(n->data.translation_unit->top_level_decl, st);
+		break;
+	case FUNCTION_DEFINITION_NODE:
+		create_function_def_specifier_node_symbol_table(n->data.function_definition->function_def_specifier, st, n->data.function_definition->compound_statement);
+		break;
+	case COMPOUND_STATEMENT_NODE:
+		create_compound_statement_node_symbol_table(n, st, 1);
+		break;
+	case DECLARATION_OR_STATEMENT_LIST_NODE:
+		create_declaration_or_statement_list_node_symbol_table(n, st);
+		break;
 	default:
 		break;
 	}
-	return st;
 }
 
-symbol_table *create_decl_node_symbol_table(node *n, symbol_table *st) {
-	st->identifiers = malloc(sizeof(*st->identifiers));
-	symbol_table_identifier *i = st->identifiers;
+symbol_table_identifier *create_identifier(symbol_table *st) {
+	symbol_table_identifier *current = malloc(sizeof(symbol_table_identifier));
+	assert(current != NULL);
+	add_to_symbol_table_identifier_list(st->identifiers, current);
+	advance_current_identifier(current);
+	return current;
+}
+
+void create_decl_node_symbol_table(node *n, symbol_table *st) {
+	if (st->identifiers == NULL) {
+		st->identifiers = malloc(sizeof(*st->identifiers));
+		assert(st->identifiers != NULL);
+	}
+	symbol_table_identifier *current = create_identifier(st);
 	node *decl_spec = n->data.decl->declaration_specifier;
 	node *initialized_declarator_list = n->data.decl->initialized_declarator_list;
-	if (decl_spec->node_type == COMPOUND_NUMBER_TYPE_SPECIFIER_NODE) {
-		i->id_number = id_number;
-		id_number++;
-		i->type = ARITHMETIC_TYPE;
-		i->name = initialized_declarator_list->data.initialized_declarator_list->initialized_declarator->data.identifier->name;
-		i->data.arithmetic_identifier = malloc(sizeof(arithmetic_identifier));
-		arithmetic_identifier *ai = i->data.arithmetic_identifier;
+	int declarator_node_type =  initialized_declarator_list->data.initialized_declarator_list->initialized_declarator->node_type;
+	if (declarator_node_type == POINTER_DECL_NODE) {
+		printf("i has a pointer\n");
+		current->type = POINTER_TYPE;     
+		// current->name = 
+		// i->data.pointer_identifier->base = ;
+	}
+	else if (declarator_node_type == ARRAY_DECLARATOR_NODE) {
+		current->type = ARRAY_TYPE;
+		current->name = initialized_declarator_list->data.initialized_declarator_list->initialized_declarator->data.array_declarator->direct_declarator->data.identifier->name;		initialized_declarator_list->data.initialized_declarator_list->initialized_declarator->data.array_declarator->direct_declarator->data.identifier->symbol_table_identifier = current;
+		current->data.array_identifier = malloc(sizeof(*current->data.array_identifier));
+		assert(current->data.array_identifier != NULL);
+		array_identifier *ai = current->data.array_identifier;
+		node *array_declarator = initialized_declarator_list->data.initialized_declarator_list->initialized_declarator;
+		if (array_declarator->data.array_declarator->constant_expr->node_type == NUMBER_NODE) { 
+			// if not NUMBER_NODE, it's an IDENTIFIER_NODE or expr, so size is unknown
+			ai->size = array_declarator->data.array_declarator->constant_expr->data.number->value;
+		}
+		if (decl_spec->node_type == COMPOUND_NUMBER_TYPE_SPECIFIER_NODE) {
+			ai->element_type = decl_spec->data.compound_number_type_specifier->number_type;
+		}
+	}
+	else if (decl_spec->node_type == COMPOUND_NUMBER_TYPE_SPECIFIER_NODE) {
+		current->type = ARITHMETIC_TYPE;
+		current->name = initialized_declarator_list->data.initialized_declarator_list->initialized_declarator->data.identifier->name;
+		initialized_declarator_list->data.initialized_declarator_list->
+			initialized_declarator->data.identifier->symbol_table_identifier = current;
+		current->data.arithmetic_identifier = malloc(sizeof(arithmetic_identifier));
+		arithmetic_identifier *ai = current->data.arithmetic_identifier;
 		assert(ai != NULL);
 		ai->is_unsigned = decl_spec->data.compound_number_type_specifier->is_unsigned;
 		ai->number_type = decl_spec->data.compound_number_type_specifier->number_type;
 	}
-	if (initialized_declarator_list->node_type == INITIALIZED_DECLARATOR_LIST_NODE) {
-		if (initialized_declarator_list->data.initialized_declarator_list->initialized_declarator->node_type == POINTER_DECL_NODE) {
-			printf("i has a pointer\n");
-			i->type = POINTER_TYPE;     
-			// i->data.pointer_identifier->base_type = ;
+}
+
+void create_function_def_specifier_node_symbol_table(node *n, symbol_table *st, node *compound_statement) {
+	if (st->identifiers == NULL) {
+		st->identifiers = malloc(sizeof(*st->identifiers));
+		assert(st->identifiers != NULL);
+	}
+	symbol_table_identifier *current = create_identifier(st);
+	current->type = FUNCTION_TYPE;
+	current->name = n->data.function_def_specifier->declarator->data.direct_declarator->declarator->data.identifier->name;
+	n->data.function_def_specifier->declarator->data.direct_declarator->declarator->data.identifier->symbol_table_identifier = current;
+	node *decl_spec = n->data.function_def_specifier->declaration_specifiers;
+	current->data.function_identifier = malloc(sizeof(*current->data.function_identifier));
+	if (decl_spec->node_type == RESERVED_WORD_NODE && !strcmp(decl_spec->data.reserved_word->text, "void")) {
+		current->data.function_identifier->return_type = VOID_TYPE;
+	}
+	else if (n->data.function_def_specifier->declarator->node_type == POINTER_DECL_NODE) {
+		current->data.function_identifier->return_type = POINTER_TYPE;
+	}
+	else if (decl_spec->node_type == COMPOUND_NUMBER_TYPE_SPECIFIER_NODE) {
+		current->data.function_identifier->return_type = decl_spec->data.compound_number_type_specifier->number_type; 
+	}
+	node *parameter_type_list = n->data.function_def_specifier->declarator->data.function_declarator->parameter_type_list;
+	if (parameter_type_list->node_type == PARAMETER_LIST_NODE) {
+		current->data.function_identifier->argc = parameter_type_list->data.parameter_list->number_of_params;
+	}
+	else {
+		current->data.function_identifier->argc = 1;
+	}
+	//now prepare the function scope ST then add the arguments to it
+	if (st->children == NULL) {
+		st->children = malloc(sizeof(*st->children));
+		assert(st->children != NULL);
+		create_compound_statement_node_symbol_table(compound_statement, st->children, 0);
+		create_symbol_table(parameter_type_list, st->children);
+	}
+	else {
+		symbol_table *new = malloc(sizeof(symbol_table));
+		assert(new != NULL);
+		add_to_symbol_table_list(st->children, new);
+		create_compound_statement_node_symbol_table(compound_statement, new, 0);
+		create_symbol_table(parameter_type_list, new);
+	}
+}
+
+void create_compound_statement_node_symbol_table(node *n, symbol_table *st, int create_new_symbol_table) {
+	if (n->data.compound_statement->declaration_or_statement_list != NULL) {
+	// if create_new_symbol_table is 0, which is only in a function definition, then just 
+		if (create_new_symbol_table) {
+			if (st->children == NULL) {
+				st->children = malloc(sizeof(*st->children));
+				assert(st->children != NULL);
+				create_symbol_table(n->data.compound_statement->declaration_or_statement_list, st->children);
+			}
+			else {
+				printf("OHAI\n");
+				symbol_table *new = malloc(sizeof(symbol_table));
+				assert(new != NULL);
+				add_to_symbol_table_list(st->children, new);
+				create_symbol_table(n->data.compound_statement->declaration_or_statement_list, new);
+			}
+		}
+		else {
+			create_symbol_table(n->data.compound_statement->declaration_or_statement_list, st);
 		}
 	}
-	if (decl_spec->node_type == ARRAY_DECLARATOR_NODE) {
-		printf("i has an array\n");			
-	}
-	return st;
 }
+
+void create_declaration_or_statement_list_node_symbol_table(node *n, symbol_table *st) {
+	if (n->data.declaration_or_statement_list->declaration_or_statement_list != NULL) {
+		create_symbol_table(n->data.declaration_or_statement_list->declaration_or_statement_list, st);
+	}
+	create_symbol_table(n->data.declaration_or_statement_list->declaration_or_statement, st);
+}
+void advance_current_identifier(symbol_table_identifier *current) {
+	// // when first node, just start modifying current right away and don't set current->next
+	// // otherwise, create current->next and set current to it, then proceed
+	// if (id_number > 1) {
+	// 	symbol_table_identifier *next = malloc(sizeof(*next));
+	// 	current->next = next;
+	// 	current = next;
+	// }
+	current->id_number = id_number;
+	id_number++;
+}
+
+/************** SYMBOL TABLE PRINTING FUNCTIONS *******************/
 
 void print_symbol_table(FILE *output, symbol_table *s) {
 	// print identifiers
+	print_indentation(output);
 	fputs("Identifiers:\n", output);
 	symbol_table_identifier *i = s->identifiers;
 	while (i != NULL) {
+		print_indentation(output);
 		print_symbol_table_identifier(output, i);
 		i = i->next;
 	}
+	fputs("\n", output);
 	// print children
+	if (s->children != NULL) {		
+		indent++;
+		print_indentation(output);
+		fputs("Children:\n", output);
+		print_symbol_table(output, s->children); // this will print any subsequent children when those children print their siblings
+		indent--;
+	}
+	fputs("\n", output);
 	// print next ST                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       
-	
+	if (s->next != NULL) {
+		print_symbol_table(output, s->next); // this will print all subsequent siblings
+	}
 }
 void print_symbol_table_identifier(FILE *output, symbol_table_identifier *i) {
+	fprintf(output, "%s -> %s, %d, ", i->name, i->name, i->id_number);
 	switch (i->type) {
 	case ARITHMETIC_TYPE:
 		print_arithmetic_identifier(output, i);
@@ -817,36 +1034,34 @@ void print_symbol_table_identifier(FILE *output, symbol_table_identifier *i) {
 }
 
 void print_arithmetic_identifier(FILE *output, symbol_table_identifier *i) {
-	char *type;
-	switch (i->data.arithmetic_identifier->number_type) {
-	case NUMBER_TYPE_INT:
-		type = "int";
-		break;
-	case NUMBER_TYPE_LONG:
-		type = "long int";
-		break;
-	case NUMBER_TYPE_SHORT:
-		type = "short int";
-		break;
-	case NUMBER_TYPE_CHAR:
-		type = "char";
-		break;
-	}
-	fprintf(output, "%s -> %s, %d, %s\n", i->name, i->name, i->id_number, type);
+	char *sign = i->data.arithmetic_identifier->is_unsigned ? "unsigned" : "signed";
+	fprintf(output, "%s %s\n", sign, types[i->data.arithmetic_identifier->number_type]);
 }
 void print_pointer_identifier(FILE *output, symbol_table_identifier *i) {
 	
 }
 void print_array_identifier(FILE *output, symbol_table_identifier *i) {
-	
+	fprintf(output, "array (%d, %s)\n", i->data.array_identifier->size, types[i->data.array_identifier->element_type]);
 }
 void print_function_identifier(FILE *output, symbol_table_identifier *i) {
-	
+	function_identifier *data = i->data.function_identifier;
+	fprintf(output, "function (%s, %d, %s)\n", types[data->return_type], data->argc, children_identifier_to_string(data->argv));
 }
 
 void add_types() {
-	ADD_TYPE(types, ARITHMETIC_TYPE);
-	ADD_TYPE(types, POINTER_TYPE);
-	ADD_TYPE(types, ARRAY_TYPE);
-	ADD_TYPE(types, FUNCTION_TYPE);
+	types[NUMBER_TYPE_INT] = "int";
+	types[NUMBER_TYPE_LONG] = 	"long int";
+	types[NUMBER_TYPE_SHORT] = "short int";
+	types[NUMBER_TYPE_CHAR] = "char";
+	types[VOID_TYPE] = "void";
+	types[POINTER_TYPE] = "pointer";
+}
+
+int get_type_from_node(node *n) {
+	// can return constants representing one of: int, long, short, char, pointer, array 
+	
+}
+
+char *children_identifier_to_string(symbol_table_identifier *i) {
+	return "pretend string is here";
 }

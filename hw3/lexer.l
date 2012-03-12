@@ -133,6 +133,7 @@ void create_number_node(char *yytext) {
 	num->node_type = NUMBER_NODE;
 	num->data.number = malloc(sizeof(number));
 	assert(num->data.number != NULL);
+	num->data.number->is_char = 0;
 	num->data.number->value = strtoul(yytext, NULL, 10);
 	unsigned long int ul_limit = 4294967295UL;
 	unsigned long int int_limit = 2147483647UL;
