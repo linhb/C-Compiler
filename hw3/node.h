@@ -444,9 +444,12 @@ symbol_table_identifier *get_last_symbol_table_identifier_list_element(symbol_ta
 
 void create_symbol_table(node *result, symbol_table *st);
 void create_decl_node_symbol_table(node *n, symbol_table *st);
+symbol_table_identifier *create_decl_identifier(node *decl_spec, node *declarator, symbol_table_identifier *current);
 void create_function_def_specifier_node_symbol_table(node *n, symbol_table *st, node *compound_statement);
 void create_compound_statement_node_symbol_table(node *n, symbol_table *st, int create_new_symbol_table);
 void create_declaration_or_statement_list_node_symbol_table(node *n, symbol_table *st);
+void create_parameter_list_node_symbol_table(node *n, symbol_table *st);
+void create_parameter_decl_node_symbol_table(node *n, symbol_table *st);
 
 symbol_table_identifier *create_identifier(symbol_table *st);
 void advance_current_identifier();
