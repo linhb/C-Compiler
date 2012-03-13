@@ -838,7 +838,7 @@ symbol_table_identifier *get_last_symbol_table_identifier_list_element(symbol_ta
 }
 symbol_table_identifier *find_identifier_in_symbol_table(symbol_table *st, char *name) {
 	symbol_table_identifier *i;
-	if (st->identifiers != NULL && (i = find_in_identifier_list(st->identifiers, name)) != NULL) {
+	if ((i = find_identifier_in_same_symbol_table(st, name)) != NULL) {
 		return i;
 	}
 	else if (st->parent != NULL) {
@@ -848,17 +848,27 @@ symbol_table_identifier *find_identifier_in_symbol_table(symbol_table *st, char 
 		return NULL;
 	}
 }
+symbol_table_identifier *find_identifier_in_same_symbol_table(symbol_table *st, char *name) {
+	symbol_table_identifier *i;
+	if (st->identifiers != NULL && ((i = find_in_identifier_list(st->identifiers, name)) != NULL)) {
+		return i;
+	}
+	else {
+		return NULL;
+	}
+}
 symbol_table_identifier *find_in_identifier_list(symbol_table_identifier *list, char *name) {
 	symbol_table_identifier *current = list;
-	if (!strcmp(current->name, name)) { // check 1st element
+	if (current->name != NULL && !strcmp(current->name, name)) { // check 1st element
 		return current;
 	}
 	else if (current->next != NULL) { 
 		while ((current = current->next) != NULL) {
 			if (!strcmp(current->name, name)) { 
 				return current;
-			}			
+			}
 		}
+		return NULL;
 	}
 	else { // list has only 1 element and it's not it, so not found
 		return NULL;
@@ -878,9 +888,7 @@ void create_symbol_table(node *n, symbol_table *st) {
 		create_function_def_specifier_node_symbol_table(n->data.function_definition->function_def_specifier, st, n->data.function_definition->compound_statement);
 		break;
 	case COMPOUND_STATEMENT_NODE:
-		current_scope_level++;
 		create_compound_statement_node_symbol_table(n, st, 1);
-		current_scope_level--;
 		break;
 	case DECLARATION_OR_STATEMENT_LIST_NODE:
 		create_declaration_or_statement_list_node_symbol_table(n, st);
@@ -914,49 +922,72 @@ symbol_table_identifier *create_identifier(symbol_table *st) {
 	advance_current_identifier(current);
 	return current;
 }
-
+int redeclared_variable(symbol_table *st, char *name) {
+	if (find_identifier_in_same_symbol_table(st, name) != NULL) {
+		printf("ERROR: variable %s redeclared\n", name);
+		return 1;
+	}
+	return 0;
+}
 void create_decl_node_symbol_table(node *n, symbol_table *st) {
 	symbol_table_identifier *current = create_identifier(st);
 	node *decl_spec = n->data.decl->declaration_specifier;
 	node *initialized_declarator_list = n->data.decl->initialized_declarator_list;
 	node *initialized_declarator = initialized_declarator_list->data.initialized_declarator_list->initialized_declarator;
-	current = create_decl_identifier(decl_spec, initialized_declarator, current);
-	st->identifiers = add_to_symbol_table_identifier_list(st->identifiers, current); 
+	current = create_decl_identifier(decl_spec, initialized_declarator, current, st);  
+	if (current != NULL) {
+		st->identifiers = add_to_symbol_table_identifier_list(st->identifiers, current); 
+	}
 }
-symbol_table_identifier *create_decl_identifier(node *decl_spec, node *declarator, symbol_table_identifier *current) {
+symbol_table_identifier *create_decl_identifier(node *decl_spec, node *declarator, symbol_table_identifier *current, symbol_table *st) {
 	int declarator_node_type =  declarator->node_type;
 	if (declarator_node_type == POINTER_DECL_NODE) {
-		current->type = POINTER_TYPE;     
 		current->name = declarator->data.pointer_decl->direct_declarator->data.identifier->name;
-		current->data.pointer_identifier = malloc(sizeof(*current->data.pointer_identifier));
-		if (decl_spec->node_type == COMPOUND_NUMBER_TYPE_SPECIFIER_NODE) {
-			current->data.pointer_identifier->base = decl_spec->data.compound_number_type_specifier->number_type;
+		if (redeclared_variable(st, current->name)) {
+			current = NULL;
+		}
+		else {
+			current->type = POINTER_TYPE;     
+			current->data.pointer_identifier = malloc(sizeof(*current->data.pointer_identifier));
+			if (decl_spec->node_type == COMPOUND_NUMBER_TYPE_SPECIFIER_NODE) {
+				current->data.pointer_identifier->base = decl_spec->data.compound_number_type_specifier->number_type;
+			}
 		}
 	}
 	else if (declarator_node_type == ARRAY_DECLARATOR_NODE) {
 		current->type = ARRAY_TYPE;
 		current->name = declarator->data.array_declarator->direct_declarator->data.identifier->name;			
-		declarator->data.array_declarator->direct_declarator->data.identifier->symbol_table_identifier = current;
-		current->data.array_identifier = malloc(sizeof(*current->data.array_identifier));
-		assert(current->data.array_identifier != NULL);
-		array_identifier *ai = current->data.array_identifier;
-		if (declarator->data.array_declarator->constant_expr->node_type == NUMBER_NODE) { 
-			// if not NUMBER_NODE, it's an IDENTIFIER_NODE or expr, so size is unknown
-			ai->size = declarator->data.array_declarator->constant_expr->data.number->value;
+		if (redeclared_variable(st, current->name)) {
+			current = NULL;
 		}
-		if (decl_spec->node_type == COMPOUND_NUMBER_TYPE_SPECIFIER_NODE) {
-			ai->element_type = decl_spec->data.compound_number_type_specifier->number_type;
+		else {
+			declarator->data.array_declarator->direct_declarator->data.identifier->symbol_table_identifier = current;
+			current->data.array_identifier = malloc(sizeof(*current->data.array_identifier));
+			assert(current->data.array_identifier != NULL);
+			array_identifier *ai = current->data.array_identifier;
+			if (declarator->data.array_declarator->constant_expr->node_type == NUMBER_NODE) { 
+				// if not NUMBER_NODE, it's an IDENTIFIER_NODE or expr, so size is unknown
+				ai->size = declarator->data.array_declarator->constant_expr->data.number->value;
+			}
+			if (decl_spec->node_type == COMPOUND_NUMBER_TYPE_SPECIFIER_NODE) {
+				ai->element_type = decl_spec->data.compound_number_type_specifier->number_type;
+			}
 		}
 	}
 	else if (decl_spec->node_type == COMPOUND_NUMBER_TYPE_SPECIFIER_NODE) {
 		current->type = ARITHMETIC_TYPE;
 		current->name = declarator->data.identifier->name;
-		declarator->data.identifier->symbol_table_identifier = current;
-		current->data.arithmetic_identifier = malloc(sizeof(arithmetic_identifier));
-		arithmetic_identifier *ai = current->data.arithmetic_identifier;
-		assert(ai != NULL);
-		ai->is_unsigned = decl_spec->data.compound_number_type_specifier->is_unsigned;
-		ai->number_type = decl_spec->data.compound_number_type_specifier->number_type;
+		if (redeclared_variable(st, current->name)) {
+			current = NULL;
+		}
+		else {
+			declarator->data.identifier->symbol_table_identifier = current;
+			current->data.arithmetic_identifier = malloc(sizeof(arithmetic_identifier));
+			arithmetic_identifier *ai = current->data.arithmetic_identifier;
+			assert(ai != NULL);
+			ai->is_unsigned = decl_spec->data.compound_number_type_specifier->is_unsigned;
+			ai->number_type = decl_spec->data.compound_number_type_specifier->number_type;
+		}
 	}
 	return current;
 }
@@ -969,50 +1000,55 @@ void create_function_def_specifier_node_symbol_table(node *n, symbol_table *st, 
 	symbol_table_identifier *current = create_identifier(st);
 	current->type = FUNCTION_TYPE;
 	current->name = n->data.function_def_specifier->declarator->data.direct_declarator->declarator->data.identifier->name;
-	n->data.function_def_specifier->declarator->data.direct_declarator->declarator->data.identifier->symbol_table_identifier = current;
-	node *decl_spec = n->data.function_def_specifier->declaration_specifiers;
-	current->data.function_identifier = malloc(sizeof(*current->data.function_identifier));
-	if (decl_spec->node_type == RESERVED_WORD_NODE && !strcmp(decl_spec->data.reserved_word->text, "void")) {
-		current->data.function_identifier->return_type = VOID_TYPE;
-	}
-	else if (n->data.function_def_specifier->declarator->node_type == POINTER_DECL_NODE) {
-		current->data.function_identifier->return_type = POINTER_TYPE;
-	}
-	else if (decl_spec->node_type == COMPOUND_NUMBER_TYPE_SPECIFIER_NODE) {
-		current->data.function_identifier->return_type = decl_spec->data.compound_number_type_specifier->number_type; 
-	}
-	node *parameter_type_list = n->data.function_def_specifier->declarator->data.function_declarator->parameter_type_list;
-	if (parameter_type_list->node_type == PARAMETER_LIST_NODE) {
-		current->data.function_identifier->argc = parameter_type_list->data.parameter_list->number_of_params;
+	if (redeclared_variable(st, current->name)) {
+		current = NULL;
 	}
 	else {
-		current->data.function_identifier->argc = 1;
-	}
-	//now prepare the function scope ST then add the arguments to it
-	if (st->children == NULL) {
-		st->children = malloc(sizeof(*st->children));
-		assert(st->children != NULL);
-		current_scope_level++;
-		st->children->scope_level = current_scope_level;
-		st_id++;
-		st->children->st_id = st_id;
-		st->children->parent = st;
-		create_compound_statement_node_symbol_table(compound_statement, st->children, 0);
-		current_scope_level--;
-		create_symbol_table(parameter_type_list, st->children);
-	}
-	else {
-		symbol_table *new = malloc(sizeof(symbol_table));
-		assert(new != NULL);
-		current_scope_level++;
-		new->scope_level = current_scope_level;
-		st_id++;
-		new->st_id = st_id;
-		st->children = add_to_symbol_table_list(st->children, new);
-		new->parent = st;
-		create_compound_statement_node_symbol_table(compound_statement, new, 0);
-		current_scope_level--;
-		create_symbol_table(parameter_type_list, new);
+		n->data.function_def_specifier->declarator->data.direct_declarator->declarator->data.identifier->symbol_table_identifier = current;
+		node *decl_spec = n->data.function_def_specifier->declaration_specifiers;
+		current->data.function_identifier = malloc(sizeof(*current->data.function_identifier));
+		if (decl_spec->node_type == RESERVED_WORD_NODE && !strcmp(decl_spec->data.reserved_word->text, "void")) {
+			current->data.function_identifier->return_type = VOID_TYPE;
+		}
+		else if (n->data.function_def_specifier->declarator->node_type == POINTER_DECL_NODE) {
+			current->data.function_identifier->return_type = POINTER_TYPE;
+		}
+		else if (decl_spec->node_type == COMPOUND_NUMBER_TYPE_SPECIFIER_NODE) {
+			current->data.function_identifier->return_type = decl_spec->data.compound_number_type_specifier->number_type; 
+		}
+		node *parameter_type_list = n->data.function_def_specifier->declarator->data.function_declarator->parameter_type_list;
+		if (parameter_type_list->node_type == PARAMETER_LIST_NODE) {
+			current->data.function_identifier->argc = parameter_type_list->data.parameter_list->number_of_params;
+		}
+		else {
+			current->data.function_identifier->argc = 1;
+		}
+		//now prepare the function scope ST then add the arguments to it
+		if (st->children == NULL) {
+			st->children = malloc(sizeof(*st->children));
+			assert(st->children != NULL);
+			current_scope_level++;
+			st->children->scope_level = current_scope_level;
+			st_id++;
+			st->children->st_id = st_id;
+			st->children->parent = st;
+			create_compound_statement_node_symbol_table(compound_statement, st->children, 0);
+			current_scope_level--;
+			create_symbol_table(parameter_type_list, st->children);
+		}
+		else {
+			symbol_table *new = malloc(sizeof(symbol_table));
+			assert(new != NULL);
+			current_scope_level++;
+			new->scope_level = current_scope_level;
+			st_id++;
+			new->st_id = st_id;
+			st->children = add_to_symbol_table_list(st->children, new);
+			new->parent = st;
+			create_compound_statement_node_symbol_table(compound_statement, new, 0);
+			current_scope_level--;
+			create_symbol_table(parameter_type_list, new);
+		} 
 	}
 }
 
@@ -1067,7 +1103,7 @@ void create_parameter_decl_node_symbol_table(node *n, symbol_table *st)  {
 	symbol_table_identifier *current = create_identifier(st);
 	node *decl_spec = n->data.parameter_decl->declaration_specifiers;
 	node *declarator = n->data.parameter_decl->declarator;
-	current = create_decl_identifier(decl_spec, declarator, current);
+	current = create_decl_identifier(decl_spec, declarator, current, st);
 }
 void create_subscript_expr_node_symbol_table(node *n, symbol_table *st)  {
 	// search the current ST and its parents for the closest matching ID name; 
@@ -1118,7 +1154,7 @@ void advance_current_identifier(symbol_table_identifier *current) {
 void print_symbol_table(FILE *output, symbol_table *s) {
 	// print identifiers
 	print_indentation(output);
-	fprintf(output, "Scope %d:\n", s->scope_level);
+	fprintf(output, "Scope level %d:\n", s->scope_level);
 	print_indentation(output);
 	fprintf(output, "Symbol table #%d:\n", s->st_id);
 	print_indentation(output);
@@ -1176,7 +1212,12 @@ void print_pointer_identifier(FILE *output, symbol_table_identifier *i) {
 	fprintf(output, "pointer (%s)", types[i->data.pointer_identifier->base]);
 }
 void print_array_identifier(FILE *output, symbol_table_identifier *i) {
-	fprintf(output, "array (%d, %s)", i->data.array_identifier->size, types[i->data.array_identifier->element_type]);
+	if (i->data.array_identifier->size != NULL) {
+		fprintf(output, "array (%d, %s)", i->data.array_identifier->size, types[i->data.array_identifier->element_type]);
+	}
+	else {
+		fprintf(output, "array (?, %s)", types[i->data.array_identifier->element_type]);
+	}
 }
 void print_function_identifier(FILE *output, symbol_table_identifier *i) {
 	function_identifier *data = i->data.function_identifier;

@@ -454,10 +454,12 @@ symbol_table *get_last_symbol_table_list_element(symbol_table *list);
 symbol_table_identifier *get_last_symbol_table_identifier_list_element(symbol_table_identifier *list);
 symbol_table_identifier *find_in_identifier_list(symbol_table_identifier *list, char *name);
 symbol_table_identifier *find_identifier_in_symbol_table(symbol_table *st, char *name);
+symbol_table_identifier *find_identifier_in_same_symbol_table(symbol_table *st, char *name);
 
 void create_symbol_table(node *result, symbol_table *st);
+int redeclared_variable(symbol_table *st, char *name);
 void create_decl_node_symbol_table(node *n, symbol_table *st);
-symbol_table_identifier *create_decl_identifier(node *decl_spec, node *declarator, symbol_table_identifier *current);
+symbol_table_identifier *create_decl_identifier(node *decl_spec, node *declarator, symbol_table_identifier *current, symbol_table *st);
 void create_function_def_specifier_node_symbol_table(node *n, symbol_table *st, node *compound_statement);
 void create_compound_statement_node_symbol_table(node *n, symbol_table *st, int create_new_symbol_table);
 void create_declaration_or_statement_list_node_symbol_table(node *n, symbol_table *st);
