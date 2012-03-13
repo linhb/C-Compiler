@@ -51,7 +51,7 @@ long    		 printf("*********creating reserved_word node\n"); create_reserved_wor
 while				 printf("*********creating reserved_word node\n"); create_reserved_word_node(yytext, WHILE); return WHILE;
 
 {identifier}	{
-	printf("*********creating identifier node\n"); create_identifier_node(yytext);
+	printf("*********creating identifier node %s\n", yytext); create_identifier_node(yytext);
 	return IDENTIFIER;
 }
 {number} {

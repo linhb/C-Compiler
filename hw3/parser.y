@@ -152,7 +152,7 @@ parameter_decl : declaration_specifiers declarator       {printf("*********creat
  | declaration_specifiers
 ;
 abstract_declarator : pointer 
-	| pointer direct_abstract_declarator       {printf("*********creating declaration_or_statement_list node\n"); $$ = create_declaration_or_statement_list_node($1, $2);}
+	| pointer direct_abstract_declarator       {printf("*********creating abstract_declarator node\n"); $$ = create_abstract_declarator_node($1, $2);}
  | direct_abstract_declarator
 ;
 direct_abstract_declarator : LEFT_PAREN abstract_declarator RIGHT_PAREN      {printf("*********creating direct_abstract_declarator node\n"); $$ = create_direct_abstract_declarator_node($1, $2, $3, NULL);}
@@ -315,7 +315,7 @@ primary_expr : IDENTIFIER        // do something
  | INTEGER_CONST 
  | parenthesized_expr 
 ;
-parenthesized_expr : LEFT_PAREN expr RIGHT_PAREN               {printf("*********creating direct_declarator node\n"); $$ = create_direct_declarator_node($2);}
+parenthesized_expr : LEFT_PAREN expr RIGHT_PAREN               {$$ = $2;}
 ;
 subscript_expr : postfix_expr LEFT_BRACKET expr RIGHT_BRACKET           {printf("*********creating subscript_expr node\n"); $$ = create_subscript_expr_node($1, $3);}
 ;

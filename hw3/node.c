@@ -141,16 +141,16 @@ node *create_parameter_list_node(node *parameter_list, node *parameter_decl) {
 	assert(n->data.parameter_list != NULL);
 	n->data.parameter_list->parameter_list = parameter_list;
 	n->data.parameter_list->parameter_decl = parameter_decl;
-	if (parameter_list != NULL) {
+		// if 1 arg, no parameter_list node was created, so this function is never called, so number_of_params will never be 1
+		// if 2 args, 1 parameter_list node will be created which is the node being created right now, which will have NULL parameter_list
+		// there will only be a parent parameter_list node of type PARAMETER_LIST_NODE if there are 3 or more arguments
+	if (parameter_list != NULL && parameter_list->node_type == PARAMETER_LIST_NODE) {
 		int number_of_params = parameter_list->data.parameter_list->number_of_params;
 		n->data.parameter_list->number_of_params = number_of_params + 1;
 	}
 	else {
-		// if 1 arg, no parameter_list node was created, so this function is never called, so this field will never be 1
-		// if 2 args, 1 parameter_list node will be created which is the node being created right now
 		n->data.parameter_list->number_of_params = 2;
 	}
-	// printf("HAZ %d PARAMS\n", n->data.parameter_list->number_of_params);
 	return n;		
 }
 node *create_parameter_decl_node(node *declaration_specifiers, node *declarator){	
@@ -337,11 +337,21 @@ node *create_ternary_expr(node *logical_or_expr, node *expr, node *conditional_e
 	n->data.ternary_expr->conditional_expr = conditional_expr;
 	return n;
 }
+node *create_abstract_declarator_node(node *pointer, node *direct_abstract_declarator) {
+	node *n = create_node(ABSTRACT_DECLARATOR_NODE);
+	n->data.abstract_declarator = malloc(sizeof(*n->data.abstract_declarator));
+	assert(n->data.abstract_declarator != NULL);
+	n->data.abstract_declarator->pointer = pointer;
+	n->data.abstract_declarator->direct_abstract_declarator = direct_abstract_declarator;
+	return n;
+}
 
 /***************************** PRETTY PRINTER FUNCTIONS *******************************/
 
 void print_node(FILE *output, node *n) {
 	assert(n != NULL);
+	// DEBUG
+	// printf("\nPrinting node type %d\n", n->node_type);
 	switch (n->node_type) {
 	case NUMBER_NODE:
 		print_number_node(output, n);
@@ -459,6 +469,9 @@ void print_node(FILE *output, node *n) {
 		break;    
 	case TERNARY_EXPR_NODE:
 		print_ternary_expr_node(output, n);
+		break;
+	case ABSTRACT_DECLARATOR_NODE:
+		print_abstract_declarator_node(output, n);
 		break;
 	default:
 		fprintf(stderr, "Can't print current node of type %d", n->node_type);
@@ -735,45 +748,16 @@ void print_ternary_expr_node(FILE *output, node *n) {
 	fputs(" : ", output);
 	print_node(output, n->data.ternary_expr->conditional_expr);	
 }
+void print_abstract_declarator_node(FILE *output, node *n) {
+	print_node(output, n->data.abstract_declarator->pointer);
+	print_node(output, n->data.abstract_declarator->direct_abstract_declarator);
+}
 void print_indentation(FILE *output) {
 	int i;
 	for (i = 1; i <= indent; i++) {
 		fputs("  ", output);
 	}
 }
-
-/***********SYMBOL TABLE DEFINITIONS****************/                                       
-
-// symbol_table_entry *create_symbol_table_entry(node *declaration_specifiers, node *initialized_declarator_list){  
-// 	symbol_table_entry *entry = malloc(sizeof(*entry));
-// 	entry->name = initialized_declarator_list->data.identifier->name;
-// 	entry->scope_id = scope;	
-// 	switch (declaration_specifiers->node_type) {
-// 	case RESERVED_WORD_NODE: /* can only be int, short, long, char */
-// 		// switch (declaration_specifiers->data.reserved_word->value) {
-// 		// case INT:
-// 		// case LONG:
-// 		// case SHORT:
-// 		// case CHAR:
-// 			assert(entry != NULL);
-// 			entry->type = ARITHMETIC_TYPE;
-// 			entry->data.arithmetic_type_entry = malloc(sizeof(*entry->data.arithmetic_type_entry));
-// 			entry->data.arithmetic_type_entry->arithmetic_type = declaration_specifiers;
-// 		// 	break;
-// 		// }
-// 		break;
-// 	}
-// 	return entry;
-// }
-// void print_symbol_table_entry(FILE *output, symbol_table_entry *entry) {
-// 	switch (entry->type) {
-// 	case ARITHMETIC_TYPE:
-// 		print_node(output, entry->data.arithmetic_type_entry->arithmetic_type);
-// 		break;
-// 	}
-// 	fputs(entry->name, output);
-// }
-
 
 symbol_table *add_to_symbol_table_list(symbol_table *list, symbol_table *new) {
 	symbol_table *old = get_last_symbol_table_list_element(list);
@@ -876,48 +860,78 @@ symbol_table_identifier *find_in_identifier_list(symbol_table_identifier *list, 
 }
 
 void create_symbol_table(node *n, symbol_table *st) {
-	switch (n->node_type) {
-	case DECL_NODE:
-		create_decl_node_symbol_table(n, st);
-		break;
-	case TRANSLATION_UNIT_NODE: 
-		create_symbol_table(n->data.translation_unit->translation_unit, st);
-		// printf("made ST for type %d", n->data.translation_unit->translation_unit->node_type);
-		create_symbol_table(n->data.translation_unit->top_level_decl, st);
-		// printf("made ST for type %d", n->data.translation_unit->top_level_decl->node_type);
-		break;
-	case FUNCTION_DEFINITION_NODE:
-		create_function_def_specifier_node_symbol_table(n->data.function_definition->function_def_specifier, st, n->data.function_definition->compound_statement);
-		break;
-	case COMPOUND_STATEMENT_NODE:
-		create_compound_statement_node_symbol_table(n, st, 1);
-		break;
-	case DECLARATION_OR_STATEMENT_LIST_NODE:
-		create_declaration_or_statement_list_node_symbol_table(n, st);
-		break;
-	case PARAMETER_LIST_NODE:
-		create_parameter_list_node_symbol_table(n, st);
-		break;
-	case PARAMETER_DECL_NODE:
-		create_parameter_decl_node_symbol_table(n, st);
-		break;
-	case SUBSCRIPT_EXPR_NODE:
-		create_subscript_expr_node_symbol_table(n, st);
-		break;
-	case BINARY_EXPRESSION_NODE:
-		create_symbol_table(n->data.binary_expression->left, st);
-		create_symbol_table(n->data.binary_expression->right, st);
-		break;
-	case STATEMENT_NODE:
-		create_symbol_table(n->data.statement->statement, st);
-		break;
-		case IDENTIFIER_NODE: // if seeing an identifier here, it wasn't part of a declaration, so just have to add its ST entry to it
-		create_identifier_node_symbol_table(n, st);
-		break;
-	default:
-		// DEBUG
-		// printf("Node type %d: No action required\n", n->node_type);
-		break;
+	if (n != NULL) {
+		switch (n->node_type) {
+		case DECL_NODE:
+			create_decl_node_symbol_table(n, st);
+			break;
+		case TRANSLATION_UNIT_NODE: 
+			create_symbol_table(n->data.translation_unit->translation_unit, st);
+			// printf("made ST for type %d", n->data.translation_unit->translation_unit->node_type);
+			create_symbol_table(n->data.translation_unit->top_level_decl, st);
+			// printf("made ST for type %d", n->data.translation_unit->top_level_decl->node_type);
+			break;
+		case FUNCTION_DEFINITION_NODE:
+			create_function_def_specifier_node_symbol_table(n->data.function_definition->function_def_specifier, st, n->data.function_definition->compound_statement);
+			break;
+		case COMPOUND_STATEMENT_NODE:
+			create_compound_statement_node_symbol_table(n, st, 1);
+			break;
+		case DECLARATION_OR_STATEMENT_LIST_NODE:
+			create_declaration_or_statement_list_node_symbol_table(n, st);
+			break;
+		case PARAMETER_LIST_NODE:
+			create_parameter_list_node_symbol_table(n, st);
+			break;
+		case PARAMETER_DECL_NODE:
+			create_parameter_decl_node_symbol_table(n, st);
+			break;
+		case SUBSCRIPT_EXPR_NODE:
+			create_subscript_expr_node_symbol_table(n, st);
+			break;
+		case BINARY_EXPRESSION_NODE:
+			create_symbol_table(n->data.binary_expression->left, st);
+			create_symbol_table(n->data.binary_expression->right, st);
+			break;
+		case STATEMENT_NODE:
+			create_symbol_table(n->data.statement->statement, st);
+			break;
+			case IDENTIFIER_NODE: // if seeing an identifier here, it wasn't part of a declaration, so just have to add its ST entry to it
+			create_identifier_node_symbol_table(n, st);
+			break;
+		case IF_ELSE_STATEMENT_NODE:
+			create_symbol_table(n->data.if_else_statement->expr, st);
+			create_symbol_table(n->data.if_else_statement->if_statement, st);
+			create_symbol_table(n->data.if_else_statement->else_statement, st);
+			break;
+		case UNARY_EXPRESSION_NODE:
+			create_symbol_table(n->data.unary_expression->operand, st);
+			break;
+		case CAST_EXPR_NODE:
+			create_symbol_table(n->data.cast_expr->cast_expr, st);
+			break;
+		case DO_STATEMENT_NODE:
+			create_symbol_table(n->data.do_statement->statement, st);
+			create_symbol_table(n->data.do_statement->expr, st);
+			break;
+		case WHILE_STATEMENT_NODE:
+			create_symbol_table(n->data.while_statement->expr, st);
+			create_symbol_table(n->data.while_statement->statement, st);
+			break;
+		case FOR_STATEMENT_NODE:
+			create_symbol_table(n->data.for_statement->for_expr, st);
+			create_symbol_table(n->data.for_statement->statement, st);
+			break;
+		case FOR_EXPR_NODE:
+			create_symbol_table(n->data.for_expr->initial_clause, st);
+			create_symbol_table(n->data.for_expr->goal_expr, st);
+			create_symbol_table(n->data.for_expr->advance_expr, st);
+			break;
+		default:
+			// DEBUG
+			// printf("Node type %d: No action required\n", n->node_type);
+			break;
+		} 
 	}
 }
 
@@ -967,9 +981,11 @@ symbol_table_identifier *create_decl_identifier(node *decl_spec, node *declarato
 			current->data.array_identifier = malloc(sizeof(*current->data.array_identifier));
 			assert(current->data.array_identifier != NULL);
 			array_identifier *ai = current->data.array_identifier;
-			if (declarator->data.array_declarator->constant_expr->node_type == NUMBER_NODE) { 
-				// if not NUMBER_NODE, it's an IDENTIFIER_NODE or expr, so size is unknown
-				ai->size = declarator->data.array_declarator->constant_expr->data.number->value;
+			if (declarator->data.array_declarator->constant_expr != NULL) {
+				if (declarator->data.array_declarator->constant_expr->node_type == NUMBER_NODE) { 
+					// if not NUMBER_NODE, it's an IDENTIFIER_NODE or expr, so size is unknown
+					ai->size = declarator->data.array_declarator->constant_expr->data.number->value;
+				}
 			}
 			if (decl_spec->node_type == COMPOUND_NUMBER_TYPE_SPECIFIER_NODE) {
 				ai->element_type = decl_spec->data.compound_number_type_specifier->number_type;

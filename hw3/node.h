@@ -46,6 +46,7 @@ Header file containing integer constants that stand for different types of nodes
 #define POINTER_NODE 40
 #define NULL_STATEMENT_NODE 41
 #define TERNARY_EXPR_NODE 42
+#define ABSTRACT_DECLARATOR_NODE 43
 
 typedef struct t_node {
 	int node_type;
@@ -91,6 +92,7 @@ typedef struct t_node {
 		struct n_direct_abstract_declarator *direct_abstract_declarator;
 		struct n_pointer *pointer;
 		struct n_ternary_expr *ternary_expr;
+		struct n_abstract_declarator *abstract_declarator;
 	} data;
 } node;
 
@@ -294,6 +296,11 @@ typedef struct n_ternary_expr
 	node *expr;
 	node *conditional_expr;
 } ternary_expr;
+typedef struct n_abstract_declarator
+{
+	node *pointer;
+	node *direct_abstract_declarator;
+} abstract_declarator;
 
 node *create_node(int node_type);
 node *create_decl_node(node *declaration_specifier, node *initialized_declarator_list);
@@ -330,6 +337,7 @@ node *create_direct_abstract_declarator_node(node *n1, node *n2, node *n3, node 
 node *create_pointer_node(node *pointer);
 node *create_null_statement_node();  
 node *create_ternary_expr(node *logical_or_expr, node *expr, node *conditional_expr);
+node *create_abstract_declarator_node(node *pointer, node *direct_abstract_declarator);
 int is_type(node *n, int index, char *type);
 
 /***************************** PRETTY PRINTER FUNCTIONS *******************************/
@@ -375,6 +383,7 @@ void print_direct_abstract_declarator_node(FILE *output, node *n);
 void print_pointer_node(FILE *output, node *n);
 void print_null_statement_node(FILE *output, node *n);
 void print_ternary_expr_node(FILE *output, node *n);
+void print_abstract_declarator_node(FILE *output, node *n);
 
 /***********SYMBOL TABLE DEFINITIONS AND HEADERS****************/
 
