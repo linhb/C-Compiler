@@ -880,9 +880,11 @@ void create_symbol_table(node *n, symbol_table *st) {
 	case DECL_NODE:
 		create_decl_node_symbol_table(n, st);
 		break;
-	case TRANSLATION_UNIT_NODE: // can be compound statement or function def
+	case TRANSLATION_UNIT_NODE: 
 		create_symbol_table(n->data.translation_unit->translation_unit, st);
+		// printf("made ST for type %d", n->data.translation_unit->translation_unit->node_type);
 		create_symbol_table(n->data.translation_unit->top_level_decl, st);
+		// printf("made ST for type %d", n->data.translation_unit->top_level_decl->node_type);
 		break;
 	case FUNCTION_DEFINITION_NODE:
 		create_function_def_specifier_node_symbol_table(n->data.function_definition->function_def_specifier, st, n->data.function_definition->compound_statement);
@@ -911,7 +913,10 @@ void create_symbol_table(node *n, symbol_table *st) {
 		break;
 		case IDENTIFIER_NODE: // if seeing an identifier here, it wasn't part of a declaration, so just have to add its ST entry to it
 		create_identifier_node_symbol_table(n, st);
+		break;
 	default:
+		// DEBUG
+		// printf("Node type %d: No action required\n", n->node_type);
 		break;
 	}
 }
@@ -935,9 +940,6 @@ void create_decl_node_symbol_table(node *n, symbol_table *st) {
 	node *initialized_declarator_list = n->data.decl->initialized_declarator_list;
 	node *initialized_declarator = initialized_declarator_list->data.initialized_declarator_list->initialized_declarator;
 	current = create_decl_identifier(decl_spec, initialized_declarator, current, st);  
-	if (current != NULL) {
-		st->identifiers = add_to_symbol_table_identifier_list(st->identifiers, current); 
-	}
 }
 symbol_table_identifier *create_decl_identifier(node *decl_spec, node *declarator, symbol_table_identifier *current, symbol_table *st) {
 	int declarator_node_type =  declarator->node_type;
@@ -989,14 +991,13 @@ symbol_table_identifier *create_decl_identifier(node *decl_spec, node *declarato
 			ai->number_type = decl_spec->data.compound_number_type_specifier->number_type;
 		}
 	}
+	if (current != NULL) {
+		st->identifiers = add_to_symbol_table_identifier_list(st->identifiers, current); 
+	}	
 	return current;
 }
 
 void create_function_def_specifier_node_symbol_table(node *n, symbol_table *st, node *compound_statement) {
-	if (st->identifiers == NULL) {
-		st->identifiers = malloc(sizeof(*st->identifiers));
-		assert(st->identifiers != NULL);
-	}
 	symbol_table_identifier *current = create_identifier(st);
 	current->type = FUNCTION_TYPE;
 	current->name = n->data.function_def_specifier->declarator->data.direct_declarator->declarator->data.identifier->name;
@@ -1020,8 +1021,13 @@ void create_function_def_specifier_node_symbol_table(node *n, symbol_table *st, 
 		if (parameter_type_list->node_type == PARAMETER_LIST_NODE) {
 			current->data.function_identifier->argc = parameter_type_list->data.parameter_list->number_of_params;
 		}
-		else {
+		else if (parameter_type_list->node_type == PARAMETER_DECL_NODE) {
+			// DEBUG
+			// printf("param list not found, what's in param list is type %d\n", parameter_type_list->node_type);
 			current->data.function_identifier->argc = 1;
+		}
+		else if (parameter_type_list->node_type == RESERVED_WORD_NODE) { // the only reserved word that can be a parameter is void, so 0 arguments
+			current->data.function_identifier->argc = 0;
 		}
 		//now prepare the function scope ST then add the arguments to it
 		if (st->children == NULL) {
@@ -1049,6 +1055,9 @@ void create_function_def_specifier_node_symbol_table(node *n, symbol_table *st, 
 			current_scope_level--;
 			create_symbol_table(parameter_type_list, new);
 		} 
+	}
+	if (current != NULL) {
+		st->identifiers = add_to_symbol_table_identifier_list(st->identifiers, current); 
 	}
 }
 
@@ -1096,10 +1105,6 @@ void create_parameter_list_node_symbol_table(node *n, symbol_table *st) {
 	create_symbol_table(n->data.parameter_list->parameter_decl, st);
 }
 void create_parameter_decl_node_symbol_table(node *n, symbol_table *st)  {
-	if (st->identifiers == NULL) {
-		st->identifiers = malloc(sizeof(*st->identifiers));
-		assert(st->identifiers != NULL);
-	}
 	symbol_table_identifier *current = create_identifier(st);
 	node *decl_spec = n->data.parameter_decl->declaration_specifiers;
 	node *declarator = n->data.parameter_decl->declarator;
@@ -1196,6 +1201,8 @@ void print_symbol_table_identifier(FILE *output, symbol_table_identifier *i) {
 		case FUNCTION_TYPE:
 			print_function_identifier(output, i);
 			break;
+		default:
+			printf("ERROR: unknown node type: %d\n", i->type);
 		}
 		if (i->next != NULL) {
 			fputs("\n", output);
@@ -1240,4 +1247,4 @@ int get_type_from_node(node *n) {
 
 char *children_identifier_to_string(symbol_table_identifier *i) {
 	return "pretend string is here";
-}
+			}	

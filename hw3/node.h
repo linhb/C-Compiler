@@ -406,7 +406,7 @@ typedef struct t_symbol_table_identifier
 { 
 	int type;
 	char *name;
-	int identifier_id;
+	int identifier_id; // not meant to be consecutive; there'll be gaps when a redeclared variable is encountered
 	struct t_symbol_table_identifier *next;
 	struct t_symbol_table st;
 	union {

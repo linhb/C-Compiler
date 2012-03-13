@@ -43,7 +43,6 @@ int main(int argc, char **argv) {
 		add_types();
 		file_scope_symbol_table = malloc(sizeof(symbol_table));
 		assert(file_scope_symbol_table != NULL);
-		// file_scope_symbol_table->identifiers = malloc(sizeof(*file_scope_symbol_table->identifiers));
 		identifier_id = 1;
 		current_scope_level = 1;
 		st_id = 1;
