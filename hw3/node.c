@@ -603,12 +603,8 @@ void print_binary_expr_node(FILE *output, node *n) {
 	fputs(")", output);	
 }
 void print_subscript_expr_node(FILE *output, node *n) {  
-	node *postfix_expr = n->data.subscript_expr->postfix_expr
-	if (postfix_expr->node_type == IDENTIFIER_NODE) {
-		// update this identifier node to point to the right ST entry, then print it normally
-		postfix_expr->data.identifier->symbol_table_identifier = find_identifier_in_symbol_table(file_scope_symbol_table, postfix_expr->data.identifier->name);
-		print_node(output, postfix_expr);
-	}
+	node *postfix_expr = n->data.subscript_expr->postfix_expr;
+	print_node(output, postfix_expr);
 	fputs("[", output);
 	print_node(output, n->data.subscript_expr->expr);
 	fputs("]", output);
@@ -779,23 +775,29 @@ void print_indentation(FILE *output) {
 // }
 
 
-void add_to_symbol_table_list(symbol_table *list, symbol_table *new) {
+symbol_table *add_to_symbol_table_list(symbol_table *list, symbol_table *new) {
 	symbol_table *old = get_last_symbol_table_list_element(list);
-	if (old == NULL) { // empty list, so put 'new' in as first element
-		old = new;
+	if (old == NULL) { // empty list, so put 'new' in as first element   
+		list = malloc(sizeof(symbol_table));
+		assert(list != NULL);
+		list = new;
 	}
 	else {
 		old->next = new;
 	}
+	return list;
 }
-void add_to_symbol_table_identifier_list(symbol_table_identifier *list, symbol_table_identifier *new) {
+symbol_table_identifier *add_to_symbol_table_identifier_list(symbol_table_identifier *list, symbol_table_identifier *new) {
 	symbol_table_identifier *old = get_last_symbol_table_identifier_list_element(list);
-	if (old == NULL) { // empty list, so put 'new' in as first element
-		old = new;
+	if (old == NULL) { // empty list, so put 'new' in as first element   
+		list = malloc(sizeof(symbol_table_identifier));
+		assert(list != NULL);
+		list = new;
 	}
 	else {
 		old->next = new;
 	}
+	return list;
 }
 
 symbol_table *get_last_symbol_table_list_element(symbol_table *list) {
@@ -834,6 +836,34 @@ symbol_table_identifier *get_last_symbol_table_identifier_list_element(symbol_ta
 		}
 	}
 }
+symbol_table_identifier *find_identifier_in_symbol_table(symbol_table *st, char *name) {
+	symbol_table_identifier *i;
+	if (st->identifiers != NULL && (i = find_in_identifier_list(st->identifiers, name)) != NULL) {
+		return i;
+	}
+	else if (st->parent != NULL) {
+		return find_identifier_in_symbol_table(st->parent, name);
+	}
+	else {
+		return NULL;
+	}
+}
+symbol_table_identifier *find_in_identifier_list(symbol_table_identifier *list, char *name) {
+	symbol_table_identifier *current = list;
+	if (!strcmp(current->name, name)) { // check 1st element
+		return current;
+	}
+	else if (current->next != NULL) { 
+		while ((current = current->next) != NULL) {
+			if (!strcmp(current->name, name)) { 
+				return current;
+			}			
+		}
+	}
+	else { // list has only 1 element and it's not it, so not found
+		return NULL;
+	}
+}
 
 void create_symbol_table(node *n, symbol_table *st) {
 	switch (n->node_type) {
@@ -861,6 +891,18 @@ void create_symbol_table(node *n, symbol_table *st) {
 	case PARAMETER_DECL_NODE:
 		create_parameter_decl_node_symbol_table(n, st);
 		break;
+	case SUBSCRIPT_EXPR_NODE:
+		create_subscript_expr_node_symbol_table(n, st);
+		break;
+	case BINARY_EXPRESSION_NODE:
+		create_symbol_table(n->data.binary_expression->left, st);
+		create_symbol_table(n->data.binary_expression->right, st);
+		break;
+	case STATEMENT_NODE:
+		create_symbol_table(n->data.statement->statement, st);
+		break;
+		case IDENTIFIER_NODE: // if seeing an identifier here, it wasn't part of a declaration, so just have to add its ST entry to it
+		create_identifier_node_symbol_table(n, st);
 	default:
 		break;
 	}
@@ -869,21 +911,17 @@ void create_symbol_table(node *n, symbol_table *st) {
 symbol_table_identifier *create_identifier(symbol_table *st) {
 	symbol_table_identifier *current = malloc(sizeof(symbol_table_identifier));
 	assert(current != NULL);
-	add_to_symbol_table_identifier_list(st->identifiers, current);
 	advance_current_identifier(current);
 	return current;
 }
 
 void create_decl_node_symbol_table(node *n, symbol_table *st) {
-	if (st->identifiers == NULL) {
-		st->identifiers = malloc(sizeof(*st->identifiers));
-		assert(st->identifiers != NULL);
-	}
 	symbol_table_identifier *current = create_identifier(st);
 	node *decl_spec = n->data.decl->declaration_specifier;
 	node *initialized_declarator_list = n->data.decl->initialized_declarator_list;
 	node *initialized_declarator = initialized_declarator_list->data.initialized_declarator_list->initialized_declarator;
 	current = create_decl_identifier(decl_spec, initialized_declarator, current);
+	st->identifiers = add_to_symbol_table_identifier_list(st->identifiers, current); 
 }
 symbol_table_identifier *create_decl_identifier(node *decl_spec, node *declarator, symbol_table_identifier *current) {
 	int declarator_node_type =  declarator->node_type;
@@ -958,6 +996,7 @@ void create_function_def_specifier_node_symbol_table(node *n, symbol_table *st, 
 		st->children->scope_level = current_scope_level;
 		st_id++;
 		st->children->st_id = st_id;
+		st->children->parent = st;
 		create_compound_statement_node_symbol_table(compound_statement, st->children, 0);
 		current_scope_level--;
 		create_symbol_table(parameter_type_list, st->children);
@@ -969,7 +1008,8 @@ void create_function_def_specifier_node_symbol_table(node *n, symbol_table *st, 
 		new->scope_level = current_scope_level;
 		st_id++;
 		new->st_id = st_id;
-		add_to_symbol_table_list(st->children, new);
+		st->children = add_to_symbol_table_list(st->children, new);
+		new->parent = st;
 		create_compound_statement_node_symbol_table(compound_statement, new, 0);
 		current_scope_level--;
 		create_symbol_table(parameter_type_list, new);
@@ -987,6 +1027,7 @@ void create_compound_statement_node_symbol_table(node *n, symbol_table *st, int 
 				st->children->scope_level = current_scope_level;
 				st_id++;
 				st->children->st_id = st_id;
+				st->children->parent = st;
 				create_symbol_table(n->data.compound_statement->declaration_or_statement_list, st->children);
 			}
 			else {
@@ -996,7 +1037,8 @@ void create_compound_statement_node_symbol_table(node *n, symbol_table *st, int 
 				new->scope_level = current_scope_level;
 				st_id++;
 				new->st_id = st_id;
-				add_to_symbol_table_list(st->children, new);
+				new->parent = st;
+				st->children = add_to_symbol_table_list(st->children, new);
 				create_symbol_table(n->data.compound_statement->declaration_or_statement_list, new);
 			}
 			current_scope_level--;
@@ -1027,6 +1069,38 @@ void create_parameter_decl_node_symbol_table(node *n, symbol_table *st)  {
 	node *declarator = n->data.parameter_decl->declarator;
 	current = create_decl_identifier(decl_spec, declarator, current);
 }
+void create_subscript_expr_node_symbol_table(node *n, symbol_table *st)  {
+	// search the current ST and its parents for the closest matching ID name; 
+	// if found, attach it to the id of the expr; 
+	// if not found, print error
+	node *postfix_expr = n->data.subscript_expr->postfix_expr;
+	if (postfix_expr->node_type == IDENTIFIER_NODE) {
+		node *identifier = postfix_expr;
+		char *name = identifier->data.identifier->name;
+		symbol_table_identifier *i = find_identifier_in_symbol_table(st, name);
+		if (i != NULL) {
+			identifier->data.identifier->symbol_table_identifier = i;
+		}
+		else {
+			fprintf(stderr, "ERROR: Variable %s undeclared\n", name);
+		}
+	}
+	else {
+		create_symbol_table(postfix_expr, st);
+	}	
+}
+
+void create_identifier_node_symbol_table(node *n, symbol_table *st)  {
+	char *name = n->data.identifier->name;
+	symbol_table_identifier *i = find_identifier_in_symbol_table(st, name);
+	if (i != NULL) {
+		n->data.identifier->symbol_table_identifier = i;
+	}
+	else {
+		fprintf(stderr, "ERROR: Variable %s undeclared\n", name);
+	}	
+}
+
 void advance_current_identifier(symbol_table_identifier *current) {
 	// // when first node, just start modifying current right away and don't set current->next
 	// // otherwise, create current->next and set current to it, then proceed

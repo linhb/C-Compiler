@@ -109,6 +109,8 @@ typedef struct n_string {
 typedef struct n_identifier {
 	char *name;
 	struct t_symbol_table_identifier *symbol_table_identifier;
+	int scope_level;
+	int st_id;
 } identifier;
 
 typedef struct n_list {
@@ -406,6 +408,7 @@ typedef struct t_symbol_table_identifier
 	char *name;
 	int identifier_id;
 	struct t_symbol_table_identifier *next;
+	struct t_symbol_table st;
 	union {
 		struct t_arithmetic_identifier *arithmetic_identifier;
 		struct t_pointer_identifier *pointer_identifier;
@@ -445,10 +448,12 @@ typedef struct t_function_identifier
 } function_identifier;
 
 // returns pointer to updated ST
-void add_to_symbol_table_list(symbol_table *list, symbol_table *new);
-void add_to_symbol_table_identifier_list(symbol_table_identifier *list, symbol_table_identifier *new);
+symbol_table *add_to_symbol_table_list(symbol_table *list, symbol_table *new);
+symbol_table_identifier *add_to_symbol_table_identifier_list(symbol_table_identifier *list, symbol_table_identifier *new);
 symbol_table *get_last_symbol_table_list_element(symbol_table *list);
 symbol_table_identifier *get_last_symbol_table_identifier_list_element(symbol_table_identifier *list);
+symbol_table_identifier *find_in_identifier_list(symbol_table_identifier *list, char *name);
+symbol_table_identifier *find_identifier_in_symbol_table(symbol_table *st, char *name);
 
 void create_symbol_table(node *result, symbol_table *st);
 void create_decl_node_symbol_table(node *n, symbol_table *st);
@@ -458,6 +463,8 @@ void create_compound_statement_node_symbol_table(node *n, symbol_table *st, int 
 void create_declaration_or_statement_list_node_symbol_table(node *n, symbol_table *st);
 void create_parameter_list_node_symbol_table(node *n, symbol_table *st);
 void create_parameter_decl_node_symbol_table(node *n, symbol_table *st);
+void create_subscript_expr_node_symbol_table(node *n, symbol_table *st); 
+void create_identifier_node_symbol_table(node *n, symbol_table *st);
 
 symbol_table_identifier *create_identifier(symbol_table *st);
 void advance_current_identifier();

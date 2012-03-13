@@ -33,75 +33,75 @@ char_const	\'({escape}|.)\'
 {comments}	
 {whitespace}	
 
-do 					 create_reserved_word_node(yytext, DO); return DO;	
-for     		 create_reserved_word_node(yytext, FOR); return FOR;	
-return  		 create_reserved_word_node(yytext, RETURN); return RETURN;	
-break   		 create_reserved_word_node(yytext, BREAK); return BREAK;	
-short   		 create_reserved_word_node(yytext, SHORT); return SHORT;	
-else    		 create_reserved_word_node(yytext, ELSE); return ELSE;	
-goto    		 create_reserved_word_node(yytext, GOTO); return GOTO;	
-signed  		 create_reserved_word_node(yytext, SIGNED); return SIGNED;	
-unsigned		 create_reserved_word_node(yytext, UNSIGNED); return UNSIGNED;	
-char    		 create_reserved_word_node(yytext, CHAR); return CHAR;	
-if 					 create_reserved_word_node(yytext, IF); return IF;	
-void    		 create_reserved_word_node(yytext, VOID); return VOID;	
-int     		 create_reserved_word_node(yytext, INT); return INT;	
-continue		 create_reserved_word_node(yytext, CONTINUE); return CONTINUE;
-long    		 create_reserved_word_node(yytext, LONG); return LONG;	
-while				 create_reserved_word_node(yytext, WHILE); return WHILE;
+do 					 printf("*********creating reserved_word node\n"); create_reserved_word_node(yytext, DO); return DO;	
+for     		 printf("*********creating reserved_word node\n"); create_reserved_word_node(yytext, FOR); return FOR;	
+return  		 printf("*********creating reserved_word node\n"); create_reserved_word_node(yytext, RETURN); return RETURN;	
+break   		 printf("*********creating reserved_word node\n"); create_reserved_word_node(yytext, BREAK); return BREAK;	
+short   		 printf("*********creating reserved_word node\n"); create_reserved_word_node(yytext, SHORT); return SHORT;	
+else    		 printf("*********creating reserved_word node\n"); create_reserved_word_node(yytext, ELSE); return ELSE;	
+goto    		 printf("*********creating reserved_word node\n"); create_reserved_word_node(yytext, GOTO); return GOTO;	
+signed  		 printf("*********creating reserved_word node\n"); create_reserved_word_node(yytext, SIGNED); return SIGNED;	
+unsigned		 printf("*********creating reserved_word node\n"); create_reserved_word_node(yytext, UNSIGNED); return UNSIGNED;	
+char    		 printf("*********creating reserved_word node\n"); create_reserved_word_node(yytext, CHAR); return CHAR;	
+if 					 printf("*********creating reserved_word node\n"); create_reserved_word_node(yytext, IF); return IF;	
+void    		 printf("*********creating reserved_word node\n"); create_reserved_word_node(yytext, VOID); return VOID;	
+int     		 printf("*********creating reserved_word node\n"); create_reserved_word_node(yytext, INT); return INT;	
+continue		 printf("*********creating reserved_word node\n"); create_reserved_word_node(yytext, CONTINUE); return CONTINUE;
+long    		 printf("*********creating reserved_word node\n"); create_reserved_word_node(yytext, LONG); return LONG;	
+while				 printf("*********creating reserved_word node\n"); create_reserved_word_node(yytext, WHILE); return WHILE;
 
 {identifier}	{
-	create_identifier_node(yytext);
+	printf("*********creating identifier node\n"); create_identifier_node(yytext);
 	return IDENTIFIER;
 }
 {number} {
-	create_number_node(yytext);
+	printf("*********creating number node\n"); create_number_node(yytext);
 	int type = yylval->data.number->type;
 	return type;
 }
 {string} {
-	create_string_node(yytext);
+	printf("*********creating string node\n"); create_string_node(yytext);
 	return STRING_CONST;
 }
 {char_const}	{
-	create_char_node(yytext);
+	printf("*********creating char node\n"); create_char_node(yytext);
 	return INTEGER_CONST;
 }
 
-"!"                    	 create_operator_node(yytext, LOGICAL_NOT); return	LOGICAL_NOT;
-"\|\|" create_operator_node(yytext, LOGICAL_OR); return LOGICAL_OR;
-"&&" create_operator_node(yytext, LOGICAL_AND); return LOGICAL_AND;
-"^" create_operator_node(yytext, BITWISE_XOR); return BITWISE_XOR;
-"&" create_operator_node(yytext, AMPERSAND); return AMPERSAND;
-"\|" create_operator_node(yytext, BITWISE_OR); return BITWISE_OR;
-"~" create_operator_node(yytext, BITWISE_COMPLEMENT); return BITWISE_COMPLEMENT;
-"==" create_operator_node(yytext, IS_EQUAL); return IS_EQUAL;
-"!=" create_operator_node(yytext, IS_NOT_EQUAL); return IS_NOT_EQUAL;
-"<" create_operator_node(yytext, LESS_THAN); return LESS_THAN;
-">" create_operator_node(yytext, GREATER_THAN); return GREATER_THAN;
-"<=" create_operator_node(yytext, LESS_THAN_OR_EQUAL); return LESS_THAN_OR_EQUAL;
-">=" create_operator_node(yytext, GREATER_THAN_OR_EQUAL); return GREATER_THAN_OR_EQUAL;
-"=" create_operator_node(yytext, ASSIGN); return ASSIGN;
-"+=" create_operator_node(yytext, ADD_AND_ASSIGN); return ADD_AND_ASSIGN;
-"-=" create_operator_node(yytext, SUBTRACT_AND_ASSIGN); return SUBTRACT_AND_ASSIGN;
-"*=" create_operator_node(yytext, MULTIPLY_AND_ASSIGN); return MULTIPLY_AND_ASSIGN;
-"/=" create_operator_node(yytext, DIVIDE_AND_ASSIGN); return DIVIDE_AND_ASSIGN;
-"%=" create_operator_node(yytext, REMAINDER_AND_ASSIGN); return REMAINDER_AND_ASSIGN;
-"&=" create_operator_node(yytext, BITWISE_AND_AND_ASSIGN); return BITWISE_AND_AND_ASSIGN;
-"|=" create_operator_node(yytext, BITWISE_OR_AND_ASSIGN); return BITWISE_OR_AND_ASSIGN;
-"^=" create_operator_node(yytext, BITWISE_XOR_AND_ASSIGN); return BITWISE_XOR_AND_ASSIGN;
-">>=" create_operator_node(yytext, BITSHIFT_LEFT_AND_ASSIGN); return BITSHIFT_LEFT_AND_ASSIGN;
-"<<=" create_operator_node(yytext, BITSHIFT_RIGHT_AND_ASSIGN); return BITSHIFT_RIGHT_AND_ASSIGN;
-"+" create_operator_node(yytext, PLUS); return PLUS;
-"-" create_operator_node(yytext, DASH); return DASH;
-"*" create_operator_node(yytext, STAR); return STAR;
-"/" create_operator_node(yytext, SLASH); return SLASH;
-"%" create_operator_node(yytext, REMAINDER); return REMAINDER;
-"++" create_operator_node(yytext, INCREMENT); return INCREMENT;
-"--" create_operator_node(yytext, DECREMENT); return DECREMENT;
-">>" create_operator_node(yytext, BITSHIFT_LEFT); return BITSHIFT_LEFT;
-"<<" create_operator_node(yytext, BITSHIFT_RIGHT); return BITSHIFT_RIGHT;
-"?" create_operator_node(yytext, QUESTION_MARK); return QUESTION_MARK;
+"!"                    	 printf("*********creating operator node\n"); create_operator_node(yytext, LOGICAL_NOT); return	LOGICAL_NOT;
+"\|\|" printf("*********creating operator node\n"); create_operator_node(yytext, LOGICAL_OR); return LOGICAL_OR;
+"&&" printf("*********creating operator node\n"); create_operator_node(yytext, LOGICAL_AND); return LOGICAL_AND;
+"^" printf("*********creating operator node\n"); create_operator_node(yytext, BITWISE_XOR); return BITWISE_XOR;
+"&" printf("*********creating operator node\n"); create_operator_node(yytext, AMPERSAND); return AMPERSAND;
+"\|" printf("*********creating operator node\n"); create_operator_node(yytext, BITWISE_OR); return BITWISE_OR;
+"~" printf("*********creating operator node\n"); create_operator_node(yytext, BITWISE_COMPLEMENT); return BITWISE_COMPLEMENT;
+"==" printf("*********creating operator node\n"); create_operator_node(yytext, IS_EQUAL); return IS_EQUAL;
+"!=" printf("*********creating operator node\n"); create_operator_node(yytext, IS_NOT_EQUAL); return IS_NOT_EQUAL;
+"<" printf("*********creating operator node\n"); create_operator_node(yytext, LESS_THAN); return LESS_THAN;
+">" printf("*********creating operator node\n"); create_operator_node(yytext, GREATER_THAN); return GREATER_THAN;
+"<=" printf("*********creating operator node\n"); create_operator_node(yytext, LESS_THAN_OR_EQUAL); return LESS_THAN_OR_EQUAL;
+">=" printf("*********creating operator node\n"); create_operator_node(yytext, GREATER_THAN_OR_EQUAL); return GREATER_THAN_OR_EQUAL;
+"=" printf("*********creating operator node\n"); create_operator_node(yytext, ASSIGN); return ASSIGN;
+"+=" printf("*********creating operator node\n"); create_operator_node(yytext, ADD_AND_ASSIGN); return ADD_AND_ASSIGN;
+"-=" printf("*********creating operator node\n"); create_operator_node(yytext, SUBTRACT_AND_ASSIGN); return SUBTRACT_AND_ASSIGN;
+"*=" printf("*********creating operator node\n"); create_operator_node(yytext, MULTIPLY_AND_ASSIGN); return MULTIPLY_AND_ASSIGN;
+"/=" printf("*********creating operator node\n"); create_operator_node(yytext, DIVIDE_AND_ASSIGN); return DIVIDE_AND_ASSIGN;
+"%=" printf("*********creating operator node\n"); create_operator_node(yytext, REMAINDER_AND_ASSIGN); return REMAINDER_AND_ASSIGN;
+"&=" printf("*********creating operator node\n"); create_operator_node(yytext, BITWISE_AND_AND_ASSIGN); return BITWISE_AND_AND_ASSIGN;
+"|=" printf("*********creating operator node\n"); create_operator_node(yytext, BITWISE_OR_AND_ASSIGN); return BITWISE_OR_AND_ASSIGN;
+"^=" printf("*********creating operator node\n"); create_operator_node(yytext, BITWISE_XOR_AND_ASSIGN); return BITWISE_XOR_AND_ASSIGN;
+">>=" printf("*********creating operator node\n"); create_operator_node(yytext, BITSHIFT_LEFT_AND_ASSIGN); return BITSHIFT_LEFT_AND_ASSIGN;
+"<<=" printf("*********creating operator node\n"); create_operator_node(yytext, BITSHIFT_RIGHT_AND_ASSIGN); return BITSHIFT_RIGHT_AND_ASSIGN;
+"+" printf("*********creating operator node\n"); create_operator_node(yytext, PLUS); return PLUS;
+"-" printf("*********creating operator node\n"); create_operator_node(yytext, DASH); return DASH;
+"*" printf("*********creating operator node\n"); create_operator_node(yytext, STAR); return STAR;
+"/" printf("*********creating operator node\n"); create_operator_node(yytext, SLASH); return SLASH;
+"%" printf("*********creating operator node\n"); create_operator_node(yytext, REMAINDER); return REMAINDER;
+"++" printf("*********creating operator node\n"); create_operator_node(yytext, INCREMENT); return INCREMENT;
+"--" printf("*********creating operator node\n"); create_operator_node(yytext, DECREMENT); return DECREMENT;
+">>" printf("*********creating operator node\n"); create_operator_node(yytext, BITSHIFT_LEFT); return BITSHIFT_LEFT;
+"<<" printf("*********creating operator node\n"); create_operator_node(yytext, BITSHIFT_RIGHT); return BITSHIFT_RIGHT;
+"?" printf("*********creating operator node\n"); create_operator_node(yytext, QUESTION_MARK); return QUESTION_MARK;
 
 "("                          return LEFT_PAREN;
 ")"                         return RIGHT_PAREN;
