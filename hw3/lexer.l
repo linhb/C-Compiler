@@ -55,7 +55,8 @@ while				 printf("*********creating reserved_word node\n"); create_reserved_word
 	return IDENTIFIER;
 }
 {number} {
-	printf("*********creating number node\n"); create_number_node(yytext);
+	create_number_node(yytext);
+	printf("*********creating number node %s, type %d\n", yytext); 
 	int type = yylval->data.number->type;
 	return type;
 }
@@ -131,6 +132,8 @@ void create_number_node(char *yytext) {
 	node *num = malloc(sizeof(*num));
 	assert(num != NULL);                   
 	num->node_type = NUMBER_NODE;
+	// DEBUG
+	printf("node type %d\n", num->node_type);
 	num->data.number = malloc(sizeof(number));
 	assert(num->data.number != NULL);
 	num->data.number->is_char = 0;

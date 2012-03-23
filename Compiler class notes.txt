@@ -493,7 +493,7 @@ Now we can automatically construct a recursive descent parser:
 		
 		Nonterm 	id			+   			*			(					)							$
 		E	      	E->TE'						 			E->TE'
-		E'      					E->+TE										E'->epsilon   E'->epsilon
+		E'      					E'->+TE'									E'->epsilon   E'->epsilon
 		T	      	T->FT'						 			T->FT'
 		T'      					T'->eps		T'->*FT'				T'->eps				T'->eps
 		F	      	F->id 						 			F->(E)
@@ -625,19 +625,54 @@ Types:
 						still 2 values for 0: 0000 and 1111
 				two's complement
 					to get the negative version, complement the number then add 1
-					thus the most significant bit is 1 for negative, = for positive
+					thus the most significant bit is 1 for negative, 0 for positive
 					eg: 1 is 0001, -1 is 1110+1 = 1111. This works both ways: ~(1111)+1 = 0001
 					now the negative of 0 is ~(0000)+1 = 0000
 				excess notation
 					if you want a lot of positive numbers, pick a bias, eg with 4 bits, pick a bias of 4. Now 0 is represented as -4, 1 as -3, etc. This way you can have numbers from 4 to 15 while the representation is 0 to 11.
 		floating point numbers
-			s	sign bit (0 for positive, 1 for negative)
-			b	base/radix
-			e	exponent value: excess notation number
-			p	number of base-b digits in the significand
-			f(k): significand digits
-			x = 
-			eg: 
+			sign bit (0 for positive, 1 for negative)
+			exponent
+			mantissa/significand/fraction
+			Floating-Point Number Representation
+			IEEE 754 Floating-Point
+			• Size = 32 bits (float), 64 bits (double)
+			• Radix = 2
+			• Sign bit field
+			• Exponent field = 8 bits (float), 11 bits (double)
+			• Fraction field = 23 bits (float), 52 bits (double)
+			• Bias = 127 (float), 1023 (double)
+			• Zero value representation has exponent field = 0, fraction field = 0
+			– Can be positive or negative
+			Normalization
+			• A normalized number has f1 > 0, if x is not 0
+			• A subnormal (denormalized) number is non-zero, has e 
+			= emin
+			and f
+			1 = 0
+			– Exponent is -126 (float), -1022 (double)
+			• An unnormalized number is non-zero, has e > emin
+			and 
+			f
+			1 = 0
+			• A subnormal number is too small to be normalized
+			• Hidden bit
+			– For normalized numbers, there is an assumed single 1 bit 
+			to the left of the binary point
+			– Gives one more significant bit
+		On the number line, FPs aren't spaced equally.
+		Special Values
+		• Infinities
+		– Positive
+		– Negative
+		– sign = 0 for positive infinity, 1 for negative infinity; 
+		biased exponent = all 1 bits; fraction = all 0 bits
+		• NaN’s                                       
+		– Quiet
+		– Signaling
+		– sign = either 0 or 1; biased exponent = all 1 bits; 
+		fraction = anything except all 0 bits (because all 0 bits 
+		represents infinity)
 			
 2/28/12
 
@@ -845,7 +880,7 @@ Heap management
 			free(addr) // doesn't guarantee memory is actually freed
 			You can have alternating spaces that are allocated and free which means no space for big objects
 			can't just compress by moving everything to lower addresses b/c the memory chunks may contain their own address 
-			To allocate, can look through free chunks to find lowest size chunk that fits (best fit) but this is bad b/c ?
+			To allocate, can look through free chunks to find lowest size chunk that fits (best fit) but this is bad b/c the space that's not taken up is useless
 			worst fit (largest chunk left over) is better b/c another big allocation can be made from the leftovers
 			first fit: first chunk that fits
 			next fit: next chunk from last allocation

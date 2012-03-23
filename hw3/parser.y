@@ -139,7 +139,7 @@ pointer : STAR
 pointer_decl : pointer direct_declarator                       {printf("*********creating pointer_decl node\n"); $$ = create_pointer_decl_node($1, $2);}
 ;
 direct_declarator : simple_declarator 
-	| LEFT_PAREN declarator RIGHT_PAREN     {printf("*********creating direct_declarator node\n"); $$ = create_direct_declarator_node($2);}
+	| LEFT_PAREN declarator RIGHT_PAREN     {$$ = $2;}
  | function_declarator 
  | array_declarator                 
 ;

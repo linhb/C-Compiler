@@ -413,29 +413,33 @@ int st_id;
 
 typedef struct t_symbol_table_identifier
 { 
-	int type;
 	char *name;
 	int identifier_id; // not meant to be consecutive; there'll be gaps when a redeclared variable is encountered
 	struct t_symbol_table_identifier *next;
-	struct t_symbol_table st;
-	union {
-		struct t_arithmetic_identifier *arithmetic_identifier;
-		struct t_pointer_identifier *pointer_identifier;
-		struct t_array_identifier *array_identifier;
-		struct t_function_identifier *function_identifier;
-	} data;
+	struct t_type *type;
 } symbol_table_identifier;  // calling it symbol_table_identifier as opposed to plain identifier which is a node
-
-typedef struct t_arithmetic_identifier
+// example: 
+// old: i->data.arithmetic_identifier->is_signed -> 
+// i->type->data.arithmetic_type->
+typedef struct t_type {
+	int type;
+	union {
+		struct t_arithmetic_type *arithmetic_type;
+		struct t_pointer_type *pointer_type;
+		struct t_array_type *array_type;
+		struct t_function_type *function_type;
+	} data;
+} type;
+typedef struct t_arithmetic_type
 {
 	int is_unsigned;
 	int number_type;     
-} arithmetic_identifier;
-typedef struct t_array_identifier
+} arithmetic_type;
+typedef struct t_array_type
 {
-	int element_type;
+	type *element_type;
 	int size; // can be null if size isn't specified or can't be determined at compile time
-} array_identifier;
+} array_type;
 
 #define NUMBER_TYPE_INT 6
 #define NUMBER_TYPE_SHORT 7
@@ -444,17 +448,17 @@ typedef struct t_array_identifier
 
 void add_types();
 
-typedef struct t_pointer_identifier
+typedef struct t_pointer_type
 {
-	int base;
-} pointer_identifier;
+	type *base_type;
+} pointer_type;
 
-typedef struct t_function_identifier
+typedef struct t_function_type
 {
-	int return_type;
+	type *return_type;
 	int argc;
-	symbol_table_identifier *argv;
-} function_identifier;
+	type *arg_types[20]; // hack to get around "invalid use of flexible array member" error with an untyped array
+} function_type;
 
 // returns pointer to updated ST
 symbol_table *add_to_symbol_table_list(symbol_table *list, symbol_table *new);
@@ -467,8 +471,9 @@ symbol_table_identifier *find_identifier_in_same_symbol_table(symbol_table *st, 
 
 void create_symbol_table(node *result, symbol_table *st);
 int redeclared_variable(symbol_table *st, char *name);
+char *get_name_from_declarator(node *n);
 void create_decl_node_symbol_table(node *n, symbol_table *st);
-symbol_table_identifier *create_decl_identifier(node *decl_spec, node *declarator, symbol_table_identifier *current, symbol_table *st);
+symbol_table_identifier *create_decl_identifier(node *parent, node *decl_spec, node *declarator, symbol_table_identifier *current, symbol_table *st);
 void create_function_def_specifier_node_symbol_table(node *n, symbol_table *st, node *compound_statement);
 void create_compound_statement_node_symbol_table(node *n, symbol_table *st, int create_new_symbol_table);
 void create_declaration_or_statement_list_node_symbol_table(node *n, symbol_table *st);
@@ -478,6 +483,7 @@ void create_subscript_expr_node_symbol_table(node *n, symbol_table *st);
 void create_identifier_node_symbol_table(node *n, symbol_table *st);
 
 symbol_table_identifier *create_identifier(symbol_table *st);
+node *create_temp_ini_param_list(node *ini_declarator);
 void advance_current_identifier();
 
 void print_symbol_table(FILE *output, symbol_table *s);
@@ -490,6 +496,8 @@ symbol_table *file_scope_symbol_table;
 int identifier_id;
 // symbol_table_identifier *current;
 
-char *children_identifier_to_string(symbol_table_identifier *i);
+type *get_type_from_decl_node(node *n);
+char *type_to_s(type *t);
+void children_identifier_as_string(symbol_table_identifier *i);
 #endif
 

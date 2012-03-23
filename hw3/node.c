@@ -474,7 +474,7 @@ void print_node(FILE *output, node *n) {
 		print_abstract_declarator_node(output, n);
 		break;
 	default:
-		fprintf(stderr, "Can't print current node of type %d", n->node_type);
+		fprintf(stderr, "ERROR: Can't print current node of type %d", n->node_type);
 	}	
 }
 
@@ -602,11 +602,13 @@ void print_parameter_decl_node(FILE *output, node *n) {
 	print_node(output, n->data.parameter_decl->declarator);
 }
 void print_array_declarator_node(FILE *output, node *n) {  
+	fputs("(", output);
 	print_node(output, n->data.array_declarator->direct_declarator);
 	fputs("[", output);
 	if (n->data.array_declarator->constant_expr != NULL)
 		print_node(output, n->data.array_declarator->constant_expr);
 	fputs("]", output);
+	fputs(")", output);
 }
 void print_binary_expr_node(FILE *output, node *n) {
 	fputs("(", output);
@@ -617,10 +619,12 @@ void print_binary_expr_node(FILE *output, node *n) {
 }
 void print_subscript_expr_node(FILE *output, node *n) {  
 	node *postfix_expr = n->data.subscript_expr->postfix_expr;
+	fputs("(", output);
 	print_node(output, postfix_expr);
 	fputs("[", output);
 	print_node(output, n->data.subscript_expr->expr);
 	fputs("]", output);
+	fputs(")", output);
 }
 void print_unary_expr_node(FILE *output, node *n){
 	fputs("(", output);
@@ -653,8 +657,9 @@ void print_reserved_word_statement_node(FILE *output, node *n) {
 }
 void print_if_else_statement_node(FILE *output, node *n) {
 	print_indentation(output);
-	fputs("if ", output);	
+	fputs("if (", output);	
 	print_node(output, n->data.if_else_statement->expr);
+	fputs(")", output);	
 	print_node(output, n->data.if_else_statement->if_statement);
 	if (n->data.if_else_statement->else_statement != NULL) {
 		print_indentation(output);
@@ -927,6 +932,9 @@ void create_symbol_table(node *n, symbol_table *st) {
 			create_symbol_table(n->data.for_expr->goal_expr, st);
 			create_symbol_table(n->data.for_expr->advance_expr, st);
 			break;
+		case RESERVED_WORD_STATEMENT_NODE:
+			create_symbol_table(n->data.reserved_word_statement->expr, st);
+			break;
 		default:
 			// DEBUG
 			// printf("Node type %d: No action required\n", n->node_type);
@@ -948,104 +956,80 @@ int redeclared_variable(symbol_table *st, char *name) {
 	}
 	return 0;
 }
+char *get_name_from_declarator(node *n) {
+	switch (n->node_type) {
+	case IDENTIFIER_NODE:
+		return n->data.identifier->name;
+	case ARRAY_DECLARATOR_NODE:
+		return get_name_from_declarator(n->data.array_declarator->direct_declarator);
+	case POINTER_DECL_NODE:
+		return get_name_from_declarator(n->data.pointer_decl->direct_declarator);
+	case FUNCTION_DEF_SPECIFIER_NODE:
+		return get_name_from_declarator(n->data.function_def_specifier->declarator->data.direct_declarator->declarator);
+	default:
+		printf("ERROR: tried to get name from unknown node %d\n", n->node_type);
+	}
+}
+node *get_initialized_declarator_from_initialized_declarator_list(node *n) {
+	if (n->node_type == INITIALIZED_DECLARATOR_LIST_NODE) {
+		return  get_initialized_declarator_from_initialized_declarator_list(
+			n->data.initialized_declarator_list->initialized_declarator);
+	}
+	else {
+		return n->data.initialized_declarator_list->initialized_declarator;
+	}
+}
 void create_decl_node_symbol_table(node *n, symbol_table *st) {
 	symbol_table_identifier *current = create_identifier(st);
 	node *decl_spec = n->data.decl->declaration_specifier;
 	node *initialized_declarator_list = n->data.decl->initialized_declarator_list;
-	node *initialized_declarator = initialized_declarator_list->data.initialized_declarator_list->initialized_declarator;
-	current = create_decl_identifier(decl_spec, initialized_declarator, current, st);  
+	node *initialized_declarator = get_initialized_declarator_from_initialized_declarator_list
+		(initialized_declarator_list); 
+	current = create_decl_identifier(n, decl_spec, initialized_declarator, current, st);  
 }
-symbol_table_identifier *create_decl_identifier(node *decl_spec, node *declarator, symbol_table_identifier *current, symbol_table *st) {
+symbol_table_identifier *create_decl_identifier(node *parent, node *decl_spec, node *declarator, symbol_table_identifier *current, symbol_table *st) {
 	int declarator_node_type =  declarator->node_type;
 	if (declarator_node_type == POINTER_DECL_NODE) {
-		current->name = declarator->data.pointer_decl->direct_declarator->data.identifier->name;
-		if (redeclared_variable(st, current->name)) {
-			current = NULL;
-		}
-		else {
-			current->type = POINTER_TYPE;     
-			current->data.pointer_identifier = malloc(sizeof(*current->data.pointer_identifier));
-			if (decl_spec->node_type == COMPOUND_NUMBER_TYPE_SPECIFIER_NODE) {
-				current->data.pointer_identifier->base = decl_spec->data.compound_number_type_specifier->number_type;
-			}
-		}
+		current->name = get_name_from_declarator(declarator->data.pointer_decl->direct_declarator);
+		declarator->data.pointer_decl->direct_declarator->data.identifier->symbol_table_identifier = current;
 	}
 	else if (declarator_node_type == ARRAY_DECLARATOR_NODE) {
-		current->type = ARRAY_TYPE;
-		current->name = declarator->data.array_declarator->direct_declarator->data.identifier->name;			
-		if (redeclared_variable(st, current->name)) {
-			current = NULL;
-		}
-		else {
-			declarator->data.array_declarator->direct_declarator->data.identifier->symbol_table_identifier = current;
-			current->data.array_identifier = malloc(sizeof(*current->data.array_identifier));
-			assert(current->data.array_identifier != NULL);
-			array_identifier *ai = current->data.array_identifier;
-			if (declarator->data.array_declarator->constant_expr != NULL) {
-				if (declarator->data.array_declarator->constant_expr->node_type == NUMBER_NODE) { 
-					// if not NUMBER_NODE, it's an IDENTIFIER_NODE or expr, so size is unknown
-					ai->size = declarator->data.array_declarator->constant_expr->data.number->value;
-				}
-			}
-			if (decl_spec->node_type == COMPOUND_NUMBER_TYPE_SPECIFIER_NODE) {
-				ai->element_type = decl_spec->data.compound_number_type_specifier->number_type;
-			}
-		}
+		current->name = get_name_from_declarator(declarator->data.array_declarator->direct_declarator);			
+		declarator->data.array_declarator->direct_declarator->data.identifier->symbol_table_identifier = current;
 	}
-	else if (decl_spec->node_type == COMPOUND_NUMBER_TYPE_SPECIFIER_NODE) {
-		current->type = ARITHMETIC_TYPE;
-		current->name = declarator->data.identifier->name;
-		if (redeclared_variable(st, current->name)) {
-			current = NULL;
-		}
-		else {
-			declarator->data.identifier->symbol_table_identifier = current;
-			current->data.arithmetic_identifier = malloc(sizeof(arithmetic_identifier));
-			arithmetic_identifier *ai = current->data.arithmetic_identifier;
-			assert(ai != NULL);
-			ai->is_unsigned = decl_spec->data.compound_number_type_specifier->is_unsigned;
-			ai->number_type = decl_spec->data.compound_number_type_specifier->number_type;
-		}
+	else if (decl_spec->node_type == COMPOUND_NUMBER_TYPE_SPECIFIER_NODE) { // it has to be, but checking anyway
+		current->name = get_name_from_declarator(declarator);
+		declarator->data.identifier->symbol_table_identifier = current;
+	}
+	else if (decl_spec->node_type == RESERVED_WORD_NODE && !strcmp(decl_spec->data.reserved_word->text, "void")) {
+		current->name = get_name_from_declarator(declarator);
+		printf("ERROR: variable %s: void is not a valid type\n", current->name);
+		current = NULL;
+	}
+	else {
+		printf("ERROR: unknown decl type %d\n", declarator_node_type);
+	}
+	if (current != NULL && redeclared_variable(st, current->name)) {
+		current = NULL;
 	}
 	if (current != NULL) {
+		current->type = get_type_from_decl_node(parent);
 		st->identifiers = add_to_symbol_table_identifier_list(st->identifiers, current); 
-	}	
+  }       
 	return current;
 }
 
 void create_function_def_specifier_node_symbol_table(node *n, symbol_table *st, node *compound_statement) {
 	symbol_table_identifier *current = create_identifier(st);
-	current->type = FUNCTION_TYPE;
-	current->name = n->data.function_def_specifier->declarator->data.direct_declarator->declarator->data.identifier->name;
+	current->name = get_name_from_declarator(n->data.function_def_specifier->declarator->data.direct_declarator->declarator);
 	if (redeclared_variable(st, current->name)) {
 		current = NULL;
 	}
 	else {
+		current->type = get_type_from_decl_node(n);
 		n->data.function_def_specifier->declarator->data.direct_declarator->declarator->data.identifier->symbol_table_identifier = current;
-		node *decl_spec = n->data.function_def_specifier->declaration_specifiers;
-		current->data.function_identifier = malloc(sizeof(*current->data.function_identifier));
-		if (decl_spec->node_type == RESERVED_WORD_NODE && !strcmp(decl_spec->data.reserved_word->text, "void")) {
-			current->data.function_identifier->return_type = VOID_TYPE;
-		}
-		else if (n->data.function_def_specifier->declarator->node_type == POINTER_DECL_NODE) {
-			current->data.function_identifier->return_type = POINTER_TYPE;
-		}
-		else if (decl_spec->node_type == COMPOUND_NUMBER_TYPE_SPECIFIER_NODE) {
-			current->data.function_identifier->return_type = decl_spec->data.compound_number_type_specifier->number_type; 
-		}
-		node *parameter_type_list = n->data.function_def_specifier->declarator->data.function_declarator->parameter_type_list;
-		if (parameter_type_list->node_type == PARAMETER_LIST_NODE) {
-			current->data.function_identifier->argc = parameter_type_list->data.parameter_list->number_of_params;
-		}
-		else if (parameter_type_list->node_type == PARAMETER_DECL_NODE) {
-			// DEBUG
-			// printf("param list not found, what's in param list is type %d\n", parameter_type_list->node_type);
-			current->data.function_identifier->argc = 1;
-		}
-		else if (parameter_type_list->node_type == RESERVED_WORD_NODE) { // the only reserved word that can be a parameter is void, so 0 arguments
-			current->data.function_identifier->argc = 0;
-		}
 		//now prepare the function scope ST then add the arguments to it
+		node *parameter_type_list = n->data.function_def_specifier->declarator->data.function_declarator->parameter_type_list;
 		if (st->children == NULL) {
 			st->children = malloc(sizeof(*st->children));
 			assert(st->children != NULL);
@@ -1124,7 +1108,7 @@ void create_parameter_decl_node_symbol_table(node *n, symbol_table *st)  {
 	symbol_table_identifier *current = create_identifier(st);
 	node *decl_spec = n->data.parameter_decl->declaration_specifiers;
 	node *declarator = n->data.parameter_decl->declarator;
-	current = create_decl_identifier(decl_spec, declarator, current, st);
+	current = create_decl_identifier(n, decl_spec, declarator, current, st);
 }
 void create_subscript_expr_node_symbol_table(node *n, symbol_table *st)  {
 	// search the current ST and its parents for the closest matching ID name; 
@@ -1158,6 +1142,104 @@ void create_identifier_node_symbol_table(node *n, symbol_table *st)  {
 	}	
 }
 
+
+type *get_type_from_decl_node(node *n) {
+	// n can contain a NUMBER_NODE, POINTER_DECL_NODE, ARRAY_DECLARATOR_NODE or FUNCTION_DECLARATOR_NODE
+	type *id_type = malloc(sizeof(type));
+	if (n->node_type == DECL_NODE || n->node_type == PARAMETER_DECL_NODE) {
+		node *decl_spec;
+		node *initialized_declarator_list;
+		node *declarator;
+		if (n->node_type == DECL_NODE) {
+			decl_spec = n->data.decl->declaration_specifier;
+			initialized_declarator_list = n->data.decl->initialized_declarator_list;
+			declarator = initialized_declarator_list->data.initialized_declarator_list->initialized_declarator;	
+		}
+		else {
+			decl_spec = n->data.parameter_decl->declaration_specifiers;
+			declarator = n->data.parameter_decl->declarator;
+		}
+		node *reduced_node = create_node(n->node_type);
+		reduced_node->data.decl = malloc(sizeof(*reduced_node->data.decl));
+		reduced_node->data.decl->declaration_specifier = decl_spec;
+		if (declarator->node_type == POINTER_DECL_NODE) {
+			id_type->type = POINTER_TYPE;                     
+			id_type->data.pointer_type = malloc(sizeof(pointer_type));
+			reduced_node->data.decl->initialized_declarator_list = create_temp_ini_param_list(declarator->data.pointer_decl->direct_declarator);
+			id_type->data.pointer_type->base_type = get_type_from_decl_node(reduced_node);
+		}
+		else if (declarator->node_type == ARRAY_DECLARATOR_NODE) {
+			id_type->type = ARRAY_TYPE;
+			id_type->data.array_type = malloc(sizeof(array_type));
+			if (declarator->data.array_declarator->constant_expr != NULL && 
+					declarator->data.array_declarator->constant_expr->node_type == NUMBER_NODE) { 
+				// if not NUMBER_NODE, it's an IDENTIFIER_NODE or expr, so size is unknown
+				id_type->data.array_type->size = declarator->data.array_declarator->constant_expr->data.number->value;
+			}
+			reduced_node->data.decl->initialized_declarator_list = create_temp_ini_param_list(declarator->data.array_declarator->direct_declarator);
+			id_type->data.array_type->element_type = get_type_from_decl_node(reduced_node);
+		}
+		else if (declarator->node_type == IDENTIFIER_NODE) {
+			// plain ol' vanilla arithmetic identifier
+			id_type->type = ARITHMETIC_TYPE;
+			id_type->data.arithmetic_type = malloc(sizeof(arithmetic_type));
+			id_type->data.arithmetic_type->number_type = decl_spec->data.compound_number_type_specifier->number_type;
+			id_type->data.arithmetic_type->is_unsigned = decl_spec->data.compound_number_type_specifier->is_unsigned;
+		}
+	}
+	else if (n->node_type == FUNCTION_DEF_SPECIFIER_NODE) {
+		// have declarator and param list, must figure out return type, argc, arg types
+		id_type->type = FUNCTION_TYPE;
+		node *decl_spec = n->data.function_def_specifier->declaration_specifiers;
+		id_type->data.function_type = malloc(sizeof(function_type));
+		if (decl_spec->node_type == RESERVED_WORD_NODE && !strcmp(decl_spec->data.reserved_word->text, "void")) {
+			id_type->data.function_type = NULL;
+		}
+		else {
+			node *reduced_node = create_node(DECL_NODE);
+			reduced_node->data.decl = malloc(sizeof(*reduced_node->data.decl));
+			reduced_node->data.decl->declaration_specifier = decl_spec;
+			reduced_node->data.decl->initialized_declarator_list = create_temp_ini_param_list(n->data.function_def_specifier->declarator->data.function_declarator->direct_declarator);
+			id_type->data.function_type->return_type = get_type_from_decl_node(reduced_node);
+		}
+		node *parameter_type_list = n->data.function_def_specifier->declarator->data.function_declarator->parameter_type_list;
+		if (parameter_type_list->node_type == PARAMETER_LIST_NODE) {
+			id_type->data.function_type->argc = parameter_type_list->data.parameter_list->number_of_params;
+		}
+		else if (parameter_type_list->node_type == PARAMETER_DECL_NODE) {
+			// DEBUG
+			// printf("param list not found, what's in param list is type %d\n", parameter_type_list->node_type);
+			id_type->data.function_type->argc = 1;
+		}
+		else if (parameter_type_list->node_type == RESERVED_WORD_NODE) { // the only reserved word that can be a parameter is void, so 0 arguments
+			id_type->data.function_type->argc = 0;
+		}
+		if (id_type->data.function_type->argc > 0) {
+			if (id_type->data.function_type->argc == 1) {
+				id_type->data.function_type->arg_types[0] = get_type_from_decl_node(parameter_type_list);
+			}
+			else {
+				int i = 0;
+				node *current_param_decl = parameter_type_list->data.parameter_list->parameter_decl;
+				// one day i can use this clever loop, once i figure out how to make it run for 1 argument                                     
+				// for 	(current_param_decl = parameter_type_list->data.parameter_list->parameter_decl;
+				//  			current_param_decl->data.parameter_list->parameter_list == NULL; 
+				// 			current_param_decl = current_param_decl->data.parameter_list->parameter_decl) { 
+				for (i = 0; i < id_type->data.function_type->argc; i++) {
+					id_type->data.function_type->arg_types[i] = get_type_from_decl_node(current_param_decl);
+					current_param_decl = current_param_decl->data.parameter_list->parameter_decl;
+				}		
+			}
+		}
+	}
+	return id_type;
+}
+node *create_temp_ini_param_list(node *ini_declarator) {
+	node *initialized_declarator_list = create_node(INITIALIZED_DECLARATOR_LIST_NODE);
+	initialized_declarator_list->data.initialized_declarator_list = malloc(sizeof(initialized_declarator_list));
+	initialized_declarator_list->data.initialized_declarator_list->initialized_declarator = ini_declarator;
+	return initialized_declarator_list;
+}
 void advance_current_identifier(symbol_table_identifier *current) {
 	// // when first node, just start modifying current right away and don't set current->next
 	// // otherwise, create current->next and set current to it, then proceed
@@ -1203,50 +1285,13 @@ void print_symbol_table(FILE *output, symbol_table *s) {
 void print_symbol_table_identifier(FILE *output, symbol_table_identifier *i) {
 	if (i != NULL) {
 		print_indentation(output);
-		fprintf(output, "%s -> %s, %d, ", i->name, i->name, i->identifier_id);
-		switch (i->type) {
-		case ARITHMETIC_TYPE:
-			print_arithmetic_identifier(output, i);
-			break;
-		case POINTER_TYPE:
-			print_pointer_identifier(output, i);
-			break;
-		case ARRAY_TYPE:
-			print_array_identifier(output, i);
-			break;
-		case FUNCTION_TYPE:
-			print_function_identifier(output, i);
-			break;
-		default:
-			printf("ERROR: unknown node type: %d\n", i->type);
-		}
+		fprintf(output, "%s -> %s, %d, %s", i->name, i->name, i->identifier_id, type_to_s(i->type));
 		if (i->next != NULL) {
 			fputs("\n", output);
 			print_symbol_table_identifier(output, i->next);
 		}
 	}
 }
-
-void print_arithmetic_identifier(FILE *output, symbol_table_identifier *i) {
-	char *sign = i->data.arithmetic_identifier->is_unsigned ? "unsigned" : "signed";
-	fprintf(output, "%s %s", sign, types[i->data.arithmetic_identifier->number_type]);
-}
-void print_pointer_identifier(FILE *output, symbol_table_identifier *i) {
-	fprintf(output, "pointer (%s)", types[i->data.pointer_identifier->base]);
-}
-void print_array_identifier(FILE *output, symbol_table_identifier *i) {
-	if (i->data.array_identifier->size != NULL) {
-		fprintf(output, "array (%d, %s)", i->data.array_identifier->size, types[i->data.array_identifier->element_type]);
-	}
-	else {
-		fprintf(output, "array (?, %s)", types[i->data.array_identifier->element_type]);
-	}
-}
-void print_function_identifier(FILE *output, symbol_table_identifier *i) {
-	function_identifier *data = i->data.function_identifier;
-	fprintf(output, "function (%s, %d, %s)", types[data->return_type], data->argc, children_identifier_to_string(data->argv));
-}
-
 void add_types() {
 	types[NUMBER_TYPE_INT] = "int";
 	types[NUMBER_TYPE_LONG] = 	"long int";
@@ -1256,11 +1301,33 @@ void add_types() {
 	types[POINTER_TYPE] = "pointer";
 }
 
-int get_type_from_node(node *n) {
-	// can return constants representing one of: int, long, short, char, pointer, array 
-	
+char *type_to_s(type *t) {
+	char str[1000];
+	char *args = "";
+	int i;
+	int type = t->type; 
+	printf("printing type %d\n", t->type);
+	switch (type) {
+		case ARITHMETIC_TYPE:
+			return types[t->data.arithmetic_type->number_type];
+		case POINTER_TYPE:
+			sprintf(str, "pointer (%s)", type_to_s(t->data.pointer_type->base_type));
+			break;
+		case ARRAY_TYPE:
+			sprintf(str, "array (%d, %s)", t->data.array_type->size, type_to_s(t->data.array_type->element_type));
+			break;
+		case FUNCTION_TYPE:
+			if (t->data.function_type->argc > 0) {
+				strcat(type_to_s(t->data.function_type->arg_types[0]), args);
+				for (i = 1; i < t->data.function_type->argc; i++) {
+					strcat(", ", args);
+					strcat(type_to_s(t->data.function_type->arg_types[i]), args);
+				} 
+			}
+			sprintf(str, "function (%s, %d, [%s])", type_to_s(t->data.function_type->return_type), t->data.function_type->argc, args);
+			break;
+		default:
+			printf("ERROR: Can't print ST entry of type %d\n", type);
+	}
+	return str;
 }
-
-char *children_identifier_to_string(symbol_table_identifier *i) {
-	return "pretend string is here";
-			}	
