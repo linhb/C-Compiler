@@ -754,6 +754,17 @@ How to represent numbers:
 
 Another shift-reduce example: Fig 9                    
 
+Casting:
+
+integer <-> pointer
+integer -> void *
+anything -> void *
+
+Usual assignment conversions:
+
+any number type can be assigned to any other number type
+0 or pointer can be assigned to void * or compatible pointer
+
 Unary conversion: keep them signed if possible (if the values are small enough) (according to HS p197)
 	unsigned short us;
 	us = 0;
@@ -909,3 +920,117 @@ Assembly language:
 		001000 rs rt immed
 	lw rt, off(base)
 		100011 base rt offset
+		
+3/27/12
+
+TA section:
+
+can have int (a[]) {} but not int a[] without size, because in the first case you're passing a pointer to an int to the function, but in the 2nd it needs a size to allocate space.
+
+Functions can return pointers to arrays but not return arrays.
+
+If array size is a const expr, evaluate it. If it has non-numbers, emit error.
+
+Functions can't be function parameters.
+
+parameters must have names if not a prototype
+
+Function identifiers can appear twice, once in prototype, once in implementation.
+But functions with same name and different signatures are not allowed.
+
+Lecture:
+
+Intermediate code generation 
+
+No need to optimize for efficiency.
+
+Every time you need a subresult, use a brand new T register. 
+
+The only instructions that involve user defined identifiers is LOAD and STORE. Everything else, adding, branching, etc uses temporaries
+
+Example:
+
+l: a = b + c * d;
+goto l;
+all ints
+tree:
+	=
+		a
+		+
+			b
+			*
+				c
+				d
+
+(nop)      *1
+(loadword, t1, c)                   // would be loadByte if c were a char
+(loadword, t2, d)
+(multsigned, t3, t1, t2)
+(loadword, t4, b)
+(add, t5, t4, t3)
+(storeword, a, t5)
+(goto, *1)
+
+i = f(a, b);
+
+(loadword, t6, a)
+(loadword, t7, b)
+(paramword, t6)
+(paramword, t7)
+(call, t8, f, 2)
+(storeword, i, t8)
+
+(returnword, t9)
+
+b = a[i];
+|||
+b = *(a + i);
+|||
+b = i[a];
+
+(loadAddr, t10, a)
+(loadword, t11, i)
+(loadConst, t12, 4)
+(multUnsigned, t13, t11, t12)
+(add, t14, t10, t13)
+(loadwordIndirect, t15, t14)
+(storeWord, b, t15)
+
+(castFromHalfWordToWord, t16, t17)
+
+if (a < b) {
+	c = d;
+}
+else {
+	e = f * g;
+}
+
+{loadWord, t18, a}
+(loadWord, t19, b)
+(lessThanSigned, t20, t18, t19)
+(ifFalse, t20, labeltemp_1)
+(LW, t21, d)
+(sw, c, t21)
+(goto, labeltemp_2)
+labeltemp_1: (nop)     	
+(lw, t22, f)
+(lw, t23, g)
+(multSigned, t24, t22, t23)
+(sw, e, t24)
+labeltemp_2: (nop)
+
+optimize:
+if (a + b) * c + (a + b) *d
+can reuse the temporary for a + b
+
+a = A[i];
+
+(loadAddr, t1, a)
+(loadAddr, t2, A)
+(loadAddr, t3, i)
+(loadConst, t4, 4)
+(loadWordIndirect, t8, t3)
+(multSigned, t5, t3, t4)
+(add, t6, t2, t5)
+(loadWordIndirect, t7, t6)
+(storeWordIndirect, t1, t7)

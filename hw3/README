@@ -1,0 +1,5 @@
+******************************** CSCI E-295 Homework 3 ****************************************
+
+The source code in this directory compiles into a C parser that generates a symbol table. Each scope created in the input generates a symbol table. Every variable declared in input is recorded in the symbol table belonging to its scope, along with its pertinent information. The input, if grammatical, is then reprinted in parse tree form, with annotations next to each identifier indicating which symbol table entry it is, thus indicating whether two identifiers with the same name are the same variable. The program also prints all the symbol tables generated and the identifiers in each.
+
+An error is emitted if a variable is undeclared when used, or redeclared in the same scope.
