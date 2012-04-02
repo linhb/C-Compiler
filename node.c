@@ -1407,13 +1407,16 @@ type *get_type_from_decl_node(node *n) {
 			else {
 				int i = 0;
 				node *current_param_decl = parameter_type_list->data.parameter_list->parameter_decl;
-				// one day i can use this clever loop, once i figure out how to make it run for 1 argument                                     
-				// for 	(current_param_decl = parameter_type_list->data.parameter_list->parameter_decl;
-				//  			current_param_decl->data.parameter_list->parameter_list == NULL; 
-				// 			current_param_decl = current_param_decl->data.parameter_list->parameter_decl) { 
+				node *current_param_list = parameter_type_list->data.parameter_list->parameter_list;
 				for (i = 0; i < id_type->data.function_type->argc; i++) {
 					id_type->data.function_type->arg_types[i] = get_type_from_decl_node(current_param_decl);
-					current_param_decl = current_param_decl->data.parameter_list->parameter_decl;
+					if (current_param_list->node_type == PARAMETER_LIST_NODE) {
+						current_param_decl = current_param_list->data.parameter_list->parameter_decl;
+						current_param_list = current_param_list->data.parameter_list->parameter_list;
+					}
+					else {
+						current_param_decl = current_param_list;
+					}
 				}		
 			}
 		}
@@ -1488,8 +1491,8 @@ void add_types() {
 }
 
 char *type_to_s(type *t) {
-	char *str = malloc(1000);
-	char *args = "";
+	char *str = malloc(2000);
+	char *args = malloc(1000);
 	int i;
 	int type = t->type; 
 	// DEBUG
@@ -1505,10 +1508,10 @@ char *type_to_s(type *t) {
 			break;
 		case FUNCTION_TYPE:
 			if (t->data.function_type->argc > 0) {
-				strcat(type_to_s(t->data.function_type->arg_types[0]), args);
+				strcat(args, type_to_s(t->data.function_type->arg_types[0]));
 				for (i = 1; i < t->data.function_type->argc; i++) {
-					strcat(", ", args);
-					strcat(type_to_s(t->data.function_type->arg_types[i]), args);
+					strcat(args, ", ");
+					strcat(args, type_to_s(t->data.function_type->arg_types[i]));
 				} 
 			}
 			sprintf(str, "function (%s, %d, [%s])", type_to_s(t->data.function_type->return_type), t->data.function_type->argc, args);
@@ -1538,7 +1541,9 @@ void type_check(node *n) {
 			type_check(n->data.function_definition->compound_statement);
 			break;
 		case COMPOUND_STATEMENT_NODE:
-			type_check(n->data.compound_statement->declaration_or_statement_list);
+			if (n->data.compound_statement->declaration_or_statement_list != NULL) {
+				type_check(n->data.compound_statement->declaration_or_statement_list);
+			}
 			break;
 		case STATEMENT_NODE:
 			type_check(n->data.statement->statement);
@@ -1546,6 +1551,9 @@ void type_check(node *n) {
 		case BINARY_EXPRESSION_NODE:
 			type_check(n->data.binary_expression->left);
 			type_check(n->data.binary_expression->right);
+			if (n->data.binary_expression->op->data.operator->value == ASSIGN) {
+				assignment_type_check(n->data.binary_expression->left, n->data.binary_expression->right);
+			}
 			do_binary_conversion(n);
 			break;
 	}
@@ -1668,7 +1676,26 @@ void do_binary_conversion(node *n) {
 	type *right_type = type_of_expr(right);
 	if (is_arithmetic_type(left_type) && is_arithmetic_type(right_type)) {
 		if (compare_arithmetic_types(left_type, right_type) == 1) {
-			// insert_cast()
+			n->data.binary_expression->right = insert_cast(left_type, right);
+		}
+		else {
+			n->data.binary_expression->left = insert_cast(right_type, left);
+		}
+	}
+}
+void assignment_type_check(node *left, node *right) {
+	if (left->node_type != IDENTIFIER_NODE) {
+		printf("ERROR: destination of assignment is not a lvalue.\n");
+	}
+	else {
+		type *left_type = type_of_expr(left);
+		type *right_type = type_of_expr(right);
+		if (!(left_type->type != right_type->type)) {
+			// allowed assignments of different types:
+			// 0 to pointer
+			if (!(left_type->type == POINTER_TYPE && right->node_type == NUMBER_NODE && right->data.number->value == 0)) {
+				printf("ERROR: assignment to incompatible type\n");
+			}
 		}
 	}
 }
