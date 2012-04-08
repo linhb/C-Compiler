@@ -1014,7 +1014,7 @@ else {
 (goto, labeltemp_2)
 labeltemp_1: (nop)     	
 (lw, t22, f)
-(lw, t23, g)
+(lw, t23, g)                                                    
 (multSigned, t24, t22, t23)
 (sw, e, t24)
 labeltemp_2: (nop)
@@ -1034,3 +1034,34 @@ a = A[i];
 (add, t6, t2, t5)
 (loadWordIndirect, t7, t6)
 (storeWordIndirect, t1, t7)
+
+4/3
+
+Lecture:
+
+Words are 32 bits (write most significant first, so 31 - 0)
+Instructions: 3 classes
+	I-Type
+		op			rs		rt		immediate
+		31		  25    20    15      0
+	J-Type (jump)
+		op			target
+		31-26   25-0
+		6				26
+	R-Type
+		op		rs		rt		rd		re		function
+		31    25    20    15    10    5
+		
+Real instructions:
+	ADDU: R-type
+		000000 rs rt rd 0...0 100001
+		addu rd, rs, rt
+	ADD: like ADDU but exception on overflow
+	
+	ADDIU: I-type
+		001001 rs rt immediate
+	ANDI
+	ORI
+	XORI
+	
+	LUI

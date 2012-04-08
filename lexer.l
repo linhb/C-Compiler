@@ -50,7 +50,7 @@ while				 printf("*********creating reserved_word node\n"); yylval = create_rese
 	create_number_node(yytext);
 	printf("*********creating number node %s\n", yytext); 
 	int type = yylval->data.number->type;
-	return type;
+	return NUMBER;
 }
 {string} {
 	printf("*********creating string node\n"); yylval = create_string_node(yytext);
@@ -58,7 +58,7 @@ while				 printf("*********creating reserved_word node\n"); yylval = create_rese
 }
 {char_const}	{
 	printf("*********creating char node\n"); yylval = create_char_node(yytext);
-	return INTEGER_CONST;
+	return NUMBER;
 }
 
 "!"                    	 printf("*********creating operator node\n"); yylval = create_operator_node(yytext, LOGICAL_NOT); return	LOGICAL_NOT;

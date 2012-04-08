@@ -102,7 +102,7 @@ typedef struct n_number {
 	long int value;
 	int overflow;
 	int type;
-	int is_char;
+	int is_unsigned;
 } number;
 
 typedef struct n_string {
@@ -417,6 +417,7 @@ typedef struct t_symbol_table
 	struct t_symbol_table *children;
 	struct t_symbol_table *next;
 	struct t_symbol_table *parent;
+	struct t_symbol_table_identifier *parent_function_identifier;
 	int scope_level;
 	int st_id;
 	/*scope level goes up and down as you enter and exit blocks, but st_id only goes up 
@@ -527,5 +528,6 @@ int str_equals(char *str1, char *str2);
 node *get_core_operand_from_unary_expr(node *n);
 node *get_identifier_from_node(node *n);
 int compare_arithmetic_types(type *t1, type *t2);
+void assignment_type_check(node *left, node *right);
 #endif
 

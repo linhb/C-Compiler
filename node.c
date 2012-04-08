@@ -23,46 +23,27 @@ node *create_node(int node_type) {
 	return n;
 }
 
-/*
-	create_num: read the numeric value of input containing a number, classify the number as int or long, creates a struct containing the number's value and type, and set yylval to the struct
-
-	Parameters:
-		yytext: string, contains the raw input read by lex
-	Return: none
-  Side effects: set global variable yylval to newly created struct number
-
-*/
-
 node *create_number_node(char *yytext) {
 	node *num = create_node(NUMBER_NODE);
 	// DEBUG
 	// printf("node type %d\n", num->node_type);
 	num->data.number = malloc(sizeof(number));
 	assert(num->data.number != NULL);
-	num->data.number->is_char = 0;
 	num->data.number->value = strtoul(yytext, NULL, 10);
 	unsigned long int ul_limit = 4294967295UL;
 	unsigned long int int_limit = 2147483647UL;
 	unsigned long int value = num->data.number->value;
 	if (value <= int_limit)
-		num->data.number->type = INTEGER_CONST;    
+		num->data.number->type = INT;    
  	else if (value <= ul_limit)
-		num->data.number->type = UNSIGNED_LONG_CONST;    
+		num->data.number->type = LONG;    
 	else { /* overflow */
 		num->data.number->value = ul_limit;
-		num->data.number->type = UNSIGNED_LONG_CONST;    
+		num->data.number->type = LONG;    
 		num->data.number->overflow = 1;
 	}
 	return num;
 }     
-
-/*
-	create_string_node: create a string node containing the value of the string token, then point yylval to the created string node
-	Parameters: none
-	Return: none
-  Side effects: set global variable yylval to newly created string node
-*/
-
 node *create_string_node(char *yytext) {
 	node *string = create_node(STRING_NODE);
 	string->data.string = malloc(sizeof(*string->data.string));
@@ -71,14 +52,12 @@ node *create_string_node(char *yytext) {
 	string->data.string->length = strlen(string->data.string->value);
 	return string;
 }
-
 node *create_char_node(char *yytext) { // yytext = "'\127'"
 	node *char_node = create_node(NUMBER_NODE);
 	char_node->data.number = malloc(sizeof(*char_node->data.number));
 	// extract the escape sequence from yytext with escape_string, then extract the integer value and assign it to value
 	char_node->data.number->value = escape_string(yytext)[0];
-	char_node->data.number->type = INTEGER_CONST;
-	char_node->data.number->is_char = 1;
+	char_node->data.number->type = CHAR;
 	return char_node;
 }
 
@@ -659,7 +638,7 @@ void print_node(FILE *output, node *n) {
 }
 
 void print_number_node(FILE *output, node *n) {
-	if (n->data.number->is_char)
+	if (n->data.number->type == CHAR)
 		fprintf(output, "'%c'", (char)n->data.number->value);
 	else
 		fprintf(output, "%lu", n->data.number->value);
@@ -1226,6 +1205,7 @@ void create_function_def_specifier_node_symbol_table(node *n, symbol_table *st, 
 			st->children->parent = st;
 			create_compound_statement_node_symbol_table(compound_statement, st->children, 0);
 			current_scope_level--;
+			st->children->parent_function_identifier = current;
 			create_symbol_table(parameter_type_list, st->children);
 		}
 		else {
@@ -1239,6 +1219,7 @@ void create_function_def_specifier_node_symbol_table(node *n, symbol_table *st, 
 			new->parent = st;
 			create_compound_statement_node_symbol_table(compound_statement, new, 0);
 			current_scope_level--;
+			new->parent_function_identifier = current;
 			create_symbol_table(parameter_type_list, new);
 		} 
 	}
@@ -1489,6 +1470,17 @@ void add_types() {
 	types[VOID_TYPE] = "void";
 	types[POINTER_TYPE] = "pointer";
 }
+char *sign_to_s(int is_unsigned) {
+	switch (is_unsigned) {
+	case 0:
+		return "signed";
+		break;
+	case 1:
+		return "unsigned";
+		break;
+	}
+	return "ERROR: corrupted signedness";
+}
 
 char *type_to_s(type *t) {
 	char *str = malloc(2000);
@@ -1499,7 +1491,8 @@ char *type_to_s(type *t) {
 	// printf("printing type %d\n", t->type);
 	switch (type) {
 		case ARITHMETIC_TYPE:
-			return types[t->data.arithmetic_type->number_type];
+			sprintf(str, "%s %s", sign_to_s(t->data.arithmetic_type->is_unsigned), types[t->data.arithmetic_type->number_type]);
+			break;
 		case POINTER_TYPE:
 			sprintf(str, "pointer (%s)", type_to_s(t->data.pointer_type->base_type));
 			break;
@@ -1690,7 +1683,7 @@ void assignment_type_check(node *left, node *right) {
 	else {
 		type *left_type = type_of_expr(left);
 		type *right_type = type_of_expr(right);
-		if (!(left_type->type != right_type->type)) {
+		if (left_type->type != right_type->type) {
 			// allowed assignments of different types:
 			// 0 to pointer
 			if (!(left_type->type == POINTER_TYPE && right->node_type == NUMBER_NODE && right->data.number->value == 0)) {
@@ -1716,17 +1709,8 @@ type *type_of_expr(node *n) {
 	case NUMBER_NODE:
 		t->type = ARITHMETIC_TYPE;
 		t->data.arithmetic_type = malloc(sizeof(*t->data.arithmetic_type));
-		if (n->data.number->is_char) {
-			t->data.arithmetic_type->number_type = CHAR;
-		}
-		else if (n->data.number->type == UNSIGNED_LONG_CONST) {
-			t->data.arithmetic_type->number_type = LONG;
-			t->data.arithmetic_type->is_unsigned = 1;
-		}
-		else if (n->data.number->type == INTEGER_CONST) {
-			t->data.arithmetic_type->number_type = INT;
-			t->data.arithmetic_type->is_unsigned = 0;			
-		}
+		t->data.arithmetic_type->number_type = n->data.number->type;
+		t->data.arithmetic_type->is_unsigned = n->data.number->is_unsigned;
 		return t;
 	case IDENTIFIER_NODE:
 		return n->data.identifier->symbol_table_identifier->type;
