@@ -839,7 +839,7 @@ Lecture
 Midterm: up to chapter 7, more emphasis on earlier stuff, no chapter 6
 
 Memory management:
-	Allocate memory at function entry, deallocate at function exit -> there is shared memory
+	Allocate memory at function entry, deallocate at function exit -> there is shared memory between subblocks
 		int glob_i, glob_j;
 		int f(float param_f) {
 			int i;
@@ -853,6 +853,10 @@ Memory management:
 		void g(long l) {
 		
 		}
+		void main(void) {
+			f(3.14f);
+		}
+		
 Stacks:
 	'top of stack' is actually the lower memory
 	the lowest memory  memory is for the program, aka 'text' as opposed to data
@@ -860,25 +864,38 @@ Stacks:
 	next is heap storage eg malloc, new, etc
 	
 Stack frame:
-	void main(void) {
-		f(3.14f);
-	}
 	
 	When main is running and about to call f, first evaluate the parameters, which is 3.14. 
 	
 	low			
+	        **** stack frame (activation record) for f ****
 	        callee saved registers
-					temporaries                                                                              <-- stack frame
+					temporaries                    
 	        local vars
-	        return address, which is a pointer into the program
-	        link to old frame pointer (FP) which contains the address of the frame that current function is called from (so main's FP is null)
-	        saved registers by caller
-	        return int
-	        3.14f
+	        return address, which is a pointer into the place in the program immediately after calling the current function (f)
+	        link to old frame pointer (FP). The FP register contains the address of the frame that current function is called from. When you enter a called function, the caller's FP (old FP, main) is saved here so you can get back to it.
+	        saved registers by caller (main) to comply with conventions that help functions find parameters, etc in the same place consistently
+	        f return value (int) (uninitialized)
+	        f's parameters (3.14f)
+					**** end stack frame for f *****
 	high		
+	
+Later called functions have their stack frame put on top of the current stack frame
 
-How to know how much memory to allocate: look at all the symbol tables for that level and down. If >=2 blocks at same level, take the max
-The FP is offset 0. If local vars take up eg 12 bytes, they'll be eg offset -8 to -15.
+The FP is offset 0. Everything is called in terms of offsets from the FP, eg return address is -4. If local vars take up eg 12 bytes, they'll be eg offset -8 to -15.
+	eg: in
+	int f(float param_f) {  
+		// return address -4
+		int i; // offset -8
+		{
+			int j;         // -12
+		}
+		{                
+			int k;  // -12 because they occupy the same memory
+		}
+	}
+How to know how much memory to allocate: look at all the symbol tables for that level and down. If >=2 blocks at same level, take the max. So block 1 above takes 4 bytes, block 2 takes 4, so total 4, plus local variable i, so allocate 8 bytes. Since storage starts at -8 (?), f's storage takes up bytes -8 to -15.
+Since f returns int, f's return value is at +4. f's parameter (3.14f) is +8.
 If language allows functions inside functions, the stack frame can be adjusted:
 	add a pointer called 'access link' into the bottom level function stack frame that points to the FP of the parent function
 	
@@ -900,14 +917,15 @@ Automatic allocation:
 	Garbage collection: recursively 'reach' every object. anything not reached is cleaned up.
 	Compaction: move stuff to lower spaces
 Assembly language:
-	32 registers, 0 to 31
-	register 0 is the constant 0 (can't save to it)
+	32 registers, 0 to 31, treated the same in the instruction set except register 0.
+	register 0 is the constant 0 (can't save to it), can be used to throw away values.
+	register 1 is reserved for the assembler b/c there are instructions that aren't native to the hardware (pseudoinstructions) so the assembler needs a register to emit multiple instructions for them.
 	uses three-address code -> can save to R0 if don't need to save result of operation
 	some instructions are pseudo (not hardware) instructions eg 'neg'
 	v0, v1 can store results of functions where they fit in 2 registers
 	a0-a3: arguments
-	t1-t7: temporary (saved by callee), reserved across calls
-	s0-s7: saved temporary (saved by caller), not reserved across calls
+	t1-t7: temporary (saved by caller), not preserved across calls. Function has to save t values before calling another function or it may be overwritten.
+	s0-s7: saved temporary (saved by callee), preserved across calls (ie still accessible after a function exits). If a function alters a s register value, it has to restore it before exiting
 	stack pointer
 	frame pointer
 	return address
@@ -916,10 +934,20 @@ Assembly language:
 		000000 rs rt rd 00000 100000 (ADD)
 		  6    5   5  5   5     6
 		31                         0
+		Note the 5 bits can represent 0-31, so the 5 bits in rs, rt, rd in the ADD instruction is the register number that holds the operands/results
+		MIPS is a load-store architecture, so the only way to access user-defined variables in RAM is LOAD and STORE instructions. Everything else is between registers only.
+		If a number is small enough, you can embed it in the instruction itself eg
 	addi
-		001000 rs rt immed
-	lw rt, off(base)
-		100011 base rt offset
+		001000 rs rt immed (immed occupies the 16 bits not occupied by the immed opcode and rs, rt. rs and immed are added and the result stored in rt)
+		addi vs addiu: addi throws overflow exception, addiu doesn't
+		same difference between add and addu
+	Accessing memory:
+		loading:
+			lw rt, offset(from base register): load word
+				100011-register number of base, register number of rt, offset (16 bits)
+				Takes offset as a signed number, add it to base to obtain memory address, read contents of that address into rt. This address must end with 00 to end on a word boundary, otherwise get address error exception.
+				To load stuff from memory, call lw with $fp and an offset.
+				Also available: lh (load halfword), lhu (load halfword unsigned - what fills the register?), lb (load byte), sw, sh, sb (storing from registers to memory)
 		
 3/27/12
 
@@ -941,12 +969,15 @@ But functions with same name and different signatures are not allowed.
 Lecture:
 
 Intermediate code generation 
-
+Won't be particular to any computer.
 No need to optimize for efficiency.
+Use three-address code (quadruples, opcode + result + 2 operands), but not every IR node needs 3 addresses.
 
-Every time you need a subresult, use a brand new T register. 
+Every time you need a subresult, use a brand new T register. Use _t or __t notation, doesn't matter b/c it's internal to the IR. Create a temporary for every IR node.
 
-The only instructions that involve user defined identifiers is LOAD and STORE. Everything else, adding, branching, etc uses temporaries
+2 operands have to be same sign. Can carry sign in the temporaries (not good) or put sign in opcode, eg 'less than signed' and 'less than unsigned'. 
+
+The only instructions that involve user defined identifiers is LOAD and STORE. Everything else, adding, branching, etc uses temporaries. 
 
 Example:
 

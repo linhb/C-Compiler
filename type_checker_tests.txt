@@ -1,0 +1,26 @@
+int i(void) {
+	int a;
+	char b;
+	long c;
+	c = (short) a + !~-b;
+}
+/* output */
+int i	/* symbol 1 */	(void )
+{
+  int a	/* symbol 2 */	;
+  char b	/* symbol 3 */	;
+  long c	/* symbol 4 */	;
+  (c	/* symbol 4 */	=(long int )((short )a	/* symbol 2 */	+(!(~(-(int )b	/* symbol 3 */	)))));
+}
+
+
+int j(void) {
+	char b;
+	!(char)(char)(char)-(char)b;
+}
+/* output */
+int j	/* symbol 1 */	(void )
+{
+  char b	/* symbol 2 */	;
+  (!(int )(char )(char )(char )(-(int )(char )b	/* symbol 2 */	));
+}
