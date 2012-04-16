@@ -43,21 +43,23 @@ long    		 printf("*********creating reserved_word node\n"); yylval = create_res
 while				 printf("*********creating reserved_word node\n"); yylval = create_reserved_word_node(yytext, WHILE); return WHILE;
 
 {identifier}	{
-	printf("*********creating identifier node %s\n", yytext); yylval = create_identifier_node(yytext);
+	printf("*********creating identifier node %s\n", yytext); 
+	yylval = create_identifier_node(yytext);
 	return IDENTIFIER;
 }
 {number} {
-	create_number_node(yytext);
 	printf("*********creating number node %s\n", yytext); 
-	int type = yylval->data.number->type;
+	yylval = create_number_node(yytext);
 	return NUMBER;
 }
 {string} {
-	printf("*********creating string node\n"); yylval = create_string_node(yytext);
+	printf("*********creating string node\n"); 
+	yylval = create_string_node(yytext);
 	return STRING_CONST;
 }
 {char_const}	{
-	printf("*********creating char node\n"); yylval = create_char_node(yytext);
+	printf("*********creating char node\n"); 
+	yylval = create_char_node(yytext);
 	return NUMBER;
 }
 

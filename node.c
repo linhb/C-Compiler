@@ -1030,7 +1030,40 @@ symbol_table_identifier *find_in_identifier_list(symbol_table_identifier *list, 
 	}
 }
 
+// void evaluate(node *n) {
+// 	if all_numbers(n) {
+// 		switch (n->node_type) {
+// 			case BINARY_EXPRESSION_NODE:
+// 			switch (n->data.binary_expression->op->data.operator->value) {
+// 				
+// 			}
+// 			case UNARY_EXPRESSION_NODE:
+// 			n->data.
+// 			switch (n->data.unary_expression->operator->data.operator->value) {
+// 				case BITWISE_COMPLEMENT:
+// 				
+// 			}
+// 		}
+// 	}
+// }
+int all_numbers(node *n) {
+	switch (n->node_type) {
+	case BINARY_EXPRESSION_NODE:
+		return (all_numbers(n->data.binary_expression->left) && all_numbers(n->data.binary_expression->right));
+	case UNARY_EXPRESSION_NODE:
+		return all_numbers(n->data.unary_expression->operand);
+	case NUMBER_NODE:
+		return 1;
+	case IDENTIFIER_NODE:
+		return 0;
+	case STRING_NODE:
+		return 0;
+	default:
+		return 0;
+	}
+}
 void create_symbol_table(node *n, symbol_table *st) {
+	// evaluate(n);
 	if (n != NULL) {
 		switch (n->node_type) {
 		case DECL_NODE:
@@ -1100,6 +1133,11 @@ void create_symbol_table(node *n, symbol_table *st) {
 			break;
 		case RESERVED_WORD_STATEMENT_NODE:
 			create_symbol_table(n->data.reserved_word_statement->expr, st);
+			break;
+		case TERNARY_EXPR_NODE:
+			create_symbol_table(n->data.ternary_expr->logical_or_expr, st);
+			create_symbol_table(n->data.ternary_expr->expr, st);
+			create_symbol_table(n->data.ternary_expr->conditional_expr, st);
 			break;
 		default:
 			// DEBUG
@@ -1403,7 +1441,145 @@ type *get_type_from_decl_node(node *n) {
 		}
 	}
 	return id_type;
+} 
+type *get_incomplete_type_from(type *t) {
+	switch (t->type) {
+	case POINTER_TYPE:
+		if (t->data.pointer_type->base_type == NULL) {
+			return t;
+		}
+		else {
+			return get_incomplete_type_from(t->data.pointer_type->base_type);
+		}
+	case ARRAY_TYPE:
+		if (t->data.array_type->element_type == NULL) {
+			return t;
+		}
+		else {
+			return get_incomplete_type_from(t->data.array_type->element_type);
+		}
+	}
+	printf("ERROR: type number %d isn't supposed to have an incomplete subtype\n", t->type);
+	return NULL;
 }
+type *complete_type(type *incomplete, type *missing) {
+	switch (incomplete->type) {
+	case POINTER_TYPE:
+		incomplete->data.pointer_type->base_type = missing;
+	case ARRAY_TYPE:
+		incomplete->data.array_type->element_type = missing;
+	default:
+		printf("ERROR: type number %d isn't supposed to have an incomplete subtype\n", incomplete->type);
+	}
+	return incomplete;
+}
+// type *get_type_from_decl_node(node *n, type *prev_type) {
+// 	// n can contain a NUMBER_NODE, POINTER_DECL_NODE, ARRAY_DECLARATOR_NODE or FUNCTION_DECLARATOR_NODE
+// 	type *id_type = malloc(sizeof(type));
+// 	if (n->node_type == DECL_NODE || n->node_type == PARAMETER_DECL_NODE) {
+// 		node *decl_spec;
+// 		node *initialized_declarator_list;
+// 		node *declarator;
+// 		if (n->node_type == DECL_NODE) {
+// 			decl_spec = n->data.decl->declaration_specifier;
+// 			initialized_declarator_list = n->data.decl->initialized_declarator_list;
+// 			declarator = initialized_declarator_list->data.initialized_declarator_list->initialized_declarator;	
+// 		}
+// 		else {
+// 			decl_spec = n->data.parameter_decl->declaration_specifiers;
+// 			declarator = n->data.parameter_decl->declarator;
+// 		}
+// 		node *reduced_node = create_node(n->node_type);
+// 		reduced_node->data.decl = malloc(sizeof(*reduced_node->data.decl));
+// 		reduced_node->data.decl->declaration_specifier = decl_spec;
+// 		if (declarator->node_type == POINTER_DECL_NODE) {
+// 			id_type->type = POINTER_TYPE;                     
+// 			id_type->data.pointer_type = prev_type == NULL ? malloc(sizeof(pointer_type)) : prev_type;
+// 			reduced_node->data.decl->initialized_declarator_list = create_temp_ini_param_list(declarator->data.pointer_decl->direct_declarator);
+// 			id_type->data.pointer_type->base_type = get_type_from_decl_node(reduced_node);
+// 		}
+// 		else if (declarator->node_type == ARRAY_DECLARATOR_NODE) {
+// 			id_type->type = ARRAY_TYPE;
+// 			id_type->data.array_type = malloc(sizeof(array_type));
+// 			if (declarator->data.array_declarator->constant_expr != NULL && 
+// 					declarator->data.array_declarator->constant_expr->node_type == NUMBER_NODE) { 
+// 				// if not NUMBER_NODE, resolve to NUMBER_NODE if possible, otherwise it's an IDENTIFIER_NODE or expr, so size is unknown
+// 				id_type->data.array_type->size = declarator->data.array_declarator->constant_expr->data.number->value;
+// 			}
+// 			reduced_node->data.decl->initialized_declarator_list = create_temp_ini_param_list(declarator->data.array_declarator->direct_declarator);
+// 			// populate element_type
+// 			// wrap current type in prev_type if available
+// 			// if (prev_type != NULL) {
+// 			// 	type *incomplete = get_incomplete_type_from(prev_type);
+// 			// 	prev_type = complete_type(incomplete, id_type);				
+// 				id_type->data.array_type->element_type = prev_type;
+// 			// }
+// 			// else {
+// 				id_type->data.array_type->element_type = get_type_from_decl_node(reduced_node, prev_type);
+// 			// }
+// 		}
+// 		else if (declarator->node_type == IDENTIFIER_NODE) {
+// 			// plain ol' vanilla arithmetic identifier
+// 			id_type->type = ARITHMETIC_TYPE;
+// 			id_type->data.arithmetic_type = malloc(sizeof(arithmetic_type));
+// 			id_type->data.arithmetic_type->number_type = decl_spec->data.compound_number_type_specifier->number_type;
+// 			id_type->data.arithmetic_type->is_unsigned = decl_spec->data.compound_number_type_specifier->is_unsigned;
+// 			// if (prev_type != NULL) {
+// 			// 	type *incomplete = get_incomplete_type_from(prev_type);
+// 			// 	id_type = complete_type(incomplete, id_type);
+// 			// }
+// 		}
+// 	}
+// 	else if (n->node_type == FUNCTION_DEF_SPECIFIER_NODE) {
+// 		// have declarator and param list, must figure out return type, argc, arg types
+// 		id_type->type = FUNCTION_TYPE;
+// 		node *decl_spec = n->data.function_def_specifier->declaration_specifiers;
+// 		id_type->data.function_type = malloc(sizeof(function_type));
+// 		if (decl_spec->node_type == RESERVED_WORD_NODE && !strcmp(decl_spec->data.reserved_word->text, "void")) {
+// 			id_type->data.function_type = NULL;
+// 		}
+// 		else {
+// 			node *reduced_node = create_node(DECL_NODE);
+// 			reduced_node->data.decl = malloc(sizeof(*reduced_node->data.decl));
+// 			reduced_node->data.decl->declaration_specifier = decl_spec;
+// 			reduced_node->data.decl->initialized_declarator_list = create_temp_ini_param_list(n->data.function_def_specifier->declarator->data.function_declarator->direct_declarator);
+// 			id_type->data.function_type->return_type = get_type_from_decl_node(reduced_node);
+// 		}
+// 		node *parameter_type_list = n->data.function_def_specifier->declarator->data.function_declarator->parameter_type_list;
+// 		if (parameter_type_list->node_type == PARAMETER_LIST_NODE) {
+// 			id_type->data.function_type->argc = parameter_type_list->data.parameter_list->number_of_params;
+// 		}
+// 		else if (parameter_type_list->node_type == PARAMETER_DECL_NODE) {
+// 			// DEBUG
+// 			// printf("param list not found, what's in param list is type %d\n", parameter_type_list->node_type);
+// 			id_type->data.function_type->argc = 1;
+// 		}
+// 		else if (parameter_type_list->node_type == RESERVED_WORD_NODE) { // the only reserved word that can be a parameter is void, so 0 arguments
+// 			id_type->data.function_type->argc = 0;
+// 		}
+// 		if (id_type->data.function_type->argc > 0) {
+// 			if (id_type->data.function_type->argc == 1) {
+// 				id_type->data.function_type->arg_types[0] = get_type_from_decl_node(parameter_type_list);
+// 			}
+// 			else {
+// 				int i = 0;
+// 				node *current_param_decl = parameter_type_list->data.parameter_list->parameter_decl;
+// 				node *current_param_list = parameter_type_list->data.parameter_list->parameter_list;
+// 				for (i = 0; i < id_type->data.function_type->argc; i++) {
+// 					id_type->data.function_type->arg_types[i] = get_type_from_decl_node(current_param_decl);
+// 					if (current_param_list->node_type == PARAMETER_LIST_NODE) {
+// 						current_param_decl = current_param_list->data.parameter_list->parameter_decl;
+// 						current_param_list = current_param_list->data.parameter_list->parameter_list;
+// 					}
+// 					else {
+// 						current_param_decl = current_param_list;
+// 					}
+// 				}		
+// 			}
+// 		}
+// 	}
+// 	return id_type;
+// }
 node *create_temp_ini_param_list(node *ini_declarator) {
 	node *initialized_declarator_list = create_node(INITIALIZED_DECLARATOR_LIST_NODE);
 	initialized_declarator_list->data.initialized_declarator_list = malloc(sizeof(initialized_declarator_list));
@@ -1671,7 +1847,7 @@ void do_binary_conversion(node *n) {
 		if (compare_arithmetic_types(left_type, right_type) == 1) {
 			n->data.binary_expression->right = insert_cast(left_type, right);
 		}
-		else {
+		else if (compare_arithmetic_types(left_type, right_type) == -1) {
 			n->data.binary_expression->left = insert_cast(right_type, left);
 		}
 	}
@@ -1714,6 +1890,12 @@ type *type_of_expr(node *n) {
 		return t;
 	case IDENTIFIER_NODE:
 		return n->data.identifier->symbol_table_identifier->type;
+	case CAST_EXPR_NODE:
+		// if the type_name has an abstract declarator, it's a pointer cast, otherwise an arithmetic cast
+		// if (n->data.cast_expr->type_name->data.type_name->abstract_declarator != NULL) {
+			return get_type_from_decl_node(n->data.cast_expr->type_name);
+			// t->data.pointer_type = malloc(sizeof(*t->data.pointer_type));
+			// t->data.pointer_type->
 	}
 }
 type *larger_type(type *left_type, type *right_type) {
@@ -1735,21 +1917,41 @@ type *larger_type(type *left_type, type *right_type) {
 		}
 	}
 }
-// return 1 (true) if the first type prevails in a binary expression
+// return 0 if equal, 1 if the first type is larger, -1 if 2nd type is larger
 int compare_arithmetic_types(type *t1, type *t2) {
-	if (t1->type == ARITHMETIC_TYPE && t2->type == ARITHMETIC_TYPE) {
+	assert(t1->type == ARITHMETIC_TYPE && t2->type == ARITHMETIC_TYPE);
+	if (is_equal(t1, t2)) {
+		return 0;
+	}
+	else {
 		type *larger = larger_type(t1, t2);
 		if (larger->data.arithmetic_type->is_unsigned == t1->data.arithmetic_type->is_unsigned &&
 		    larger->data.arithmetic_type->number_type == t1->data.arithmetic_type->number_type) {
 			return 1;
 		}
 		else {
-			return 0;
+			return -1;
+		}
+	}
+}
+int is_equal(type *t1, type *t2) {
+	if (t1->type == t2->type) {
+		switch (t1->type) {
+			case ARITHMETIC_TYPE:
+				return (t1->data.arithmetic_type->is_unsigned == t2->data.arithmetic_type->is_unsigned &&
+								t1->data.arithmetic_type->number_type == t2->data.arithmetic_type->number_type);
+			case POINTER_TYPE:
+				return is_equal(t1->data.pointer_type->base_type, t2->data.pointer_type->base_type);
+			case ARRAY_TYPE:
+			;
+			// TODO
+			case FUNCTION_TYPE:
+			;
+			// TODO
 		}
 	}
 	else {
-		printf("ERROR: compare_arithmetic_types used with non-arithmetic type\n");
-		return 999;
+		return 0;
 	}
 }
 type *type_of_unary_expr(node *unary_expression) {
@@ -1782,4 +1984,162 @@ int rank(type *t) {
 	else {
 		return NULL;
 	}
+}
+ir *generate_ir(node *n) {
+	// if binary, copy children's IR then 
+	// if not, eg identifier
+	switch (n->node_type) {
+		case BINARY_EXPRESSION_NODE: {
+			// copy instructions for left
+			// if left's temp is lvalue, dereference
+			// copy instructions for right
+			// if left's temp is lvalue, dereference
+			// generate op IR for left-op-right
+			n->data.binary_expression->left->ir = generate_ir(n->data.binary_expression->left);
+			n->ir = add_to_ir_list(n->ir, n->data.binary_expression->left->ir);
+			if (n->data.binary_expression->left->temp->is_lvalue) {
+				n->ir = add_to_ir_list(n->ir, create_load_word_indirect_ir(n->data.binary_expression->left->temp));
+			}
+			n->data.binary_expression->right->ir = generate_ir(n->data.binary_expression->right);
+			n->ir = add_to_ir_list(n->ir, n->data.binary_expression->right->ir);
+			if (n->data.binary_expression->right->temp->is_lvalue) {
+				n->ir = add_to_ir_list(n->ir, create_load_word_indirect_ir(n->data.binary_expression->right->temp));
+			}
+			// switch (n->data.binary_expression->op->data.operator->value) {
+			// 	case SLASH: {
+			// 		
+			// 	}
+			// }
+			break;
+		}
+		case IDENTIFIER_NODE:   {
+		// load address into a temp, mark that temp as lvalue
+			ir *identifier_ir = create_ir_node(LOAD, LoadAddr);
+			load_ir *l = identifier_ir->data.load_ir;
+			l->rd = malloc(sizeof(*l->rd));
+			l->rd->id = temp_id;
+			temp_id++;
+			l->rd->is_lvalue = 1;
+			l->rs = n->data.identifier->symbol_table_identifier;
+			n->ir = identifier_ir;
+			n->temp = l->rd;
+			break;      
+		}
+		case NUMBER_NODE: {
+			printf("number IR\n");
+			break;
+		}
+		case FUNCTION_DEFINITION_NODE: {
+			// n->ir = generate_ir(n->data.function_definition->function_def_specifier);
+			n->ir = add_to_ir_list(n->ir, generate_ir(n->data.function_definition->compound_statement));
+			break;
+		}
+		case COMPOUND_STATEMENT_NODE: {
+			n->ir = add_to_ir_list(n->ir, generate_ir(n->data.compound_statement->declaration_or_statement_list));
+			break;
+		}
+		case DECLARATION_OR_STATEMENT_LIST_NODE: {
+			n->ir = add_to_ir_list(n->ir, generate_ir(n->data.declaration_or_statement_list->declaration_or_statement_list));
+			n->ir = add_to_ir_list(n->ir, generate_ir(n->data.declaration_or_statement_list->declaration_or_statement));
+			break;
+		}
+		case STATEMENT_NODE: {
+			n->ir = add_to_ir_list(n->ir, generate_ir(n->data.statement->statement));
+			break;
+		}
+	}
+	return n->ir;
+}
+
+ir *create_ir_node(int ir_type, int opcode) {
+	ir *ir_node = malloc(sizeof(*ir_node));
+	ir_node->ir_type = ir_type;
+	ir_node->opcode = opcode;
+	switch (ir_type) {
+	case OP:
+		ir_node->data.op_ir = malloc(sizeof(*ir_node->data.op_ir));
+		break;
+	case LOAD:
+		ir_node->data.load_ir = malloc(sizeof(*ir_node->data.load_ir));
+		break;
+	case STORE:
+		ir_node->data.store_ir = malloc(sizeof(*ir_node->data.store_ir));
+		break;
+	}
+	return ir_node;
+} 
+ir *create_load_word_indirect_ir(temp *rs) {
+	ir *ir = create_ir_node(OP, LoadWordIndirect);
+	ir->data.op_ir->rd = malloc(sizeof(temp));
+	ir->data.op_ir->rd->id = temp_id;
+	temp_id++;
+	ir->data.op_ir->rd->is_lvalue = 0;
+	ir->data.op_ir->rs = rs;
+	return ir;
+}
+ir *get_last_ir_list_element(ir *list) {
+	// list can be null, 1 element (next == NULL) or more
+	if (list == NULL) {
+		return NULL;
+	}
+	else {
+		if (list->next == NULL) {
+			return list;
+		}
+		else {
+			ir *last = list->next;
+			while (last->next != NULL) {
+				last = last->next;
+			}
+			return last;	
+		}
+	}
+}
+ir *add_to_ir_list(ir *list, ir *new) {
+	if (new != NULL) {
+		ir *old = get_last_ir_list_element(list);
+		if (old == NULL) { // empty list, so put 'new' in as first element   
+			list = malloc(sizeof(ir));
+			assert(list != NULL);
+			*list = *new;
+		}
+		else {
+			old->next = new;
+		}
+	}
+	return list;
+}
+void print_ir(ir *ir, FILE *output) {
+	// op_ir: opcode, temp rd, temp rs, temp rt
+	// load_ir: opcode, temp rd, symbol rs
+	// store_ir: opcode, symbol rd, temp rs
+	fprintf(output, "%s(", opcodes[ir->opcode]);
+	switch (ir->ir_type) {
+		case OP:
+			fprintf(output, "t_%d", ir->data.op_ir->rd->id);
+			fprintf(output, ", t_%d", ir->data.op_ir->rs->id);
+			if (ir->data.op_ir->rt != NULL) {
+				fprintf(output, ", t_%d", ir->data.op_ir->rt->id);			
+			}
+			break;
+		case LOAD:
+			fprintf(output, "t_%d, ", ir->data.load_ir->rd->id);
+			fprintf(output, "%s", ir->data.load_ir->rs->name);
+			break;
+		case STORE:
+			fprintf(output, "%s, ", ir->data.store_ir->rd->name);
+			fprintf(output, "t_%d", ir->data.store_ir->rs->id);
+			break;
+		default:
+			fprintf(output, "ERROR: unknown IR node type: %d\n", ir->ir_type);
+	}
+	fputs(")\n", output);
+	if (ir->next != NULL) {
+		print_ir(ir->next, output);
+	}
+}
+
+void add_ir_opcodes() {
+	opcodes[LoadAddr] = "LoadAddr";
+	opcodes[LoadWordIndirect] = "LoadWordIndirect";
 }

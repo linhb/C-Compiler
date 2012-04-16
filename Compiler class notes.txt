@@ -977,13 +977,25 @@ Every time you need a subresult, use a brand new T register. Use _t or __t notat
 
 2 operands have to be same sign. Can carry sign in the temporaries (not good) or put sign in opcode, eg 'less than signed' and 'less than unsigned'. 
 
+No need for some opcodes eg 'less than signed halfword' because doesn't exist in this language.
+Also don't need eg 'signed load word' because load just loads all bits, no need to know sign.
+
+Labels and gotos: have to insert into IR nodes, eg in if statements. Labels should be pointers to the relevant IR node. 
+
 The only instructions that involve user defined identifiers is LOAD and STORE. Everything else, adding, branching, etc uses temporaries. 
+
+When evaluating a statement, for lvalues we only need the address, for rvalues we only need the value.
+Recommend treating everything that can be an lvalue as an lvalue until you find out it's an rvalue. eg in a = b, treat b as an lvalue, until you see the =, then dereference b to get the value.
+Tag every temporary with whether it's lvalue or rvalue.
+
+nop (no-op): IR node that does nothing (doesn't generate code)
 
 Example:
 
 l: a = b + c * d;
 goto l;
 all ints
+
 tree:
 	=
 		a
@@ -1000,15 +1012,17 @@ tree:
 (loadword, t4, b)
 (add, t5, t4, t3)
 (storeword, a, t5)
-(goto, *1)
+(goto, *1)  // in this case, the label came first so i can just refer to it, but if the label came later in the code, i'll need to do backpatching, ie when i see the label, go back and mark wherever it's used where the labeled line is so it can go there. 
+
+How to call a function:
 
 i = f(a, b);
 
 (loadword, t6, a)
 (loadword, t7, b)
-(paramword, t6)
-(paramword, t7)
-(call, t8, f, 2)
+(paramword, t6) // can put t6 on the stack
+(paramword, t7) 
+(call, t8, f, 2) // 2 means 2 parameters, must match number of paramword
 (storeword, i, t8)
 
 (returnword, t9)
@@ -1096,3 +1110,230 @@ Real instructions:
 	XORI
 	
 	LUI
+
+4/9/12
+
+Instructions aren't stored in registers, just its generated data.
+
+4/10/12
+
+TA:
+
+int a, b, c;
+b = 1;
+a[b++] = b++;
+
+
+Memory allocation:
+
+void f(int a) {  //a: offset 4 b/c parameter
+	int b;   //b: -4 because local variable
+	b = 1;
+	{
+		char b;  //b: -5
+		b = a;
+	}
+	{
+		long c;         //c: -8
+		c = a;
+	}
+}
+
+Can optimize memory by packing all the word-size variables together, all the halfword-size variables together etc.
+
+Labels: 
+
+void f(void) {
+	while (expr) statement;
+}
+
+while0: nop
+	expr -> t0
+	ifFalse t0, while1
+	statement
+	always while0
+while1: nop
+
+Should put suffixes on labels to make sure they don't conflict.
+
+Adding to pointers:
+
+int *p;
+int a[5];
+p = &a[0];
+*(p + 1) = 3; // changes a[1]
+when adding/subtracting from a, make sure to a/s the added amount * the size of the base type                             
+	eg if base type is an array of 5 chars, p+1 should really be p+5
+
+
+Casting:
+
+short a;
+unsigned short b;
+a = (short) (+(int) b);
+
+la t0, b
+la t1, a
+lhiu t2, t0 // needs the 'u' so that lh will do the sign extension
+// now t2 is already word sized, so already an int, no need to do more to make b an int
+castUStoI t3, t2 // doesn't do anything
+castItoS t4, t3 // should mask to remove higher 16 bits, so "AND t4, t3, 0xFFFF"
+sh t1, t4 // store half
+
+Lecture:
+
+Problem set 6:
+
+generate MIPS assembly language:
+	don't combine 2 IR nodes
+	don't optimize
+	use graph coloring algorithm to reset register numbers eg at the start of each statement
+	can use built-in functions eg print_int, print_string etc, probably mapped to own functions
+	
+Final working compiler counts more than individual PSes.
+
+Can use pseudo instructions (with daggers in doc) but they'll probably generate >1 instructions.
+
+
+BGEZ: branch if >= 0
+000001 rs BGEZ/00001 offset
+Branching is relative, taking the offset, shift left 2 bits (make it a word boundary, and making 2 more bits available to the range of the offset), sign extend (make 14 copies of the 15th, ie the most significant bit, helps to branch both backward and forward), add that to the address of the next instruction (aka PC, which we can't see), thereby telling it to go forward or backward
+also BGEZL: L = likely, more likely to branch than not branch -> prefetch the branch -> faster
+Assume all branches are close enough to use branch instructions
+
+Also: BGTZ, BLTZ, BLEZ
+
+BEQ: takes 2 registers, branch of equal. Difference: opcode is in 6 most significant bits:
+	000100 rs rt offset
+	
+16 bit offset has range (-32k, 32k - 1)
+-> lots of room to branch, but if needs more:
+JR (jump through register): eg JR $s0: the address to jump to is in register s0 -> now you have a range of -2^32, 2^32 - 1 to branch to
+	format: rs opcode
+
+J (jump) target: larger range than the BG family of instructions, but doesn't need a register
+	000010 target address (26 bits) (target is also concat with 00 to gain 2 more bits, then prepended with the 4 high order bits of the address of the next instruction (PC))
+	
+JAL: jump and link (leave behind a return address)
+	same as J but writes return address to r31 (aka ra, last general-purpose register - the only other special register other than "zero")
+	
+JALR: jump and link register, like JR but can specify 2 registers, so can put return address in any register, doesn't have to be r31
+	rd (return address), rs (register that has address we're branching to)
+
+BLTZ: branch on <= 0: $s0, new_label
+J label -> jump to label on <= 0
+new_label: ...
+
+BLTZAL, BGEZAL: the -and link versions, but the other 2  have no and link version b/c ran out of opcodes 
+
+Shifting:
+logical shifts: put 0s in freed up bits
+arithmetic shifts: maintain sign bit
+SLL: shift left logical constant, so shift amount is in the instruction itself
+	rd (destination), rt (source), sa (shift amount, can only be 5 bits)
+SRL
+SRA
+
+SLLV (v=variable, ie what's in rs will be the number of bits to shift by) 
+	rd, rt, rs (shift amount - only lowest order 5 bits are used, so shift max 31 bits, so basically mod 32)
+SRLV
+SRAV
+
+Multiply instructions:
+MULT: treat operands as 32 bit 2's complement numbers, lower order bits stored in LO, higher stored in HI -> 64 bit result, then can use MFHI and MFLO (move from HI/LO, rd, moves those bits into rd)
+	rs, rt
+DIV: quotient word of result is put in LO, remainder put in HI
+	rs, rt -> rs/rt
+MTHI/MTLO: opposite of MF
+
+SPIM has eg DIV rd, rs, rt which does the MF for you
+
+To move, OR rdest, zero // OR the source with 0, then put in destination
+
+Sample programs:
+	all data needs to be in .data section
+	all text needs to be in .text section
+	can go back and forth by having .data again to re-enter .data
+	needs that b/c .text isn't writable
+	.word initialize the first word?
+	.globl: can only have 1, should be called 'main', doesn't have to be 1st instruction
+	
+	print int:
+	
+			.data
+		count:	.word	45        // initialize .word to 45
+
+			.text
+			.globl	main
+		main:	li	$t0,97         // overwrite .word with 97
+			sw	$t0,count	# zero count
+
+			li	$v0,1		# v0 <- syscall code for print_int     
+			lw	$a0,count	# a0 <- int to print
+			syscall			# print count                         // should print 97, no newline
+
+			li 	$v0,10		# v0 <- syscall code for exit
+			syscall
+		
+	print string:
+	
+			.data
+		hello:	.asciiz	"Hello world!\n"          // .asciiz is an instruction, translates each char into a byte, store in hello, 'z' will null terminate
+
+			.text
+			.globl	main
+		main:	li	$v0, 4		# v0 <- system call code for print_string
+			la	$a0, hello	# a0 -> hello string // loads into a0 the pointer to the string 'Hello world\n'
+			syscall
+
+			li	$v0, 10		# v0 <- system call code for exit
+			syscall
+		
+	count:
+	
+			.data
+		count:	.word	1
+		countstr:	.asciiz	"The current count is "
+		newline:	.asciiz	"\n"
+
+			.text
+			.globl	main
+		main:	li	$t0, 0
+			sw	$t0, count         //reset count to 0
+
+		loop:	li	$v0, 4		# v0 <- system call code for print_string
+			la	$a0, countstr	# a0 -> count string
+			syscall
+
+			li	$v0, 1		# v0 <- system call code for print_int
+			lw	$a0, count	# a0 <- the current count
+			syscall
+
+			li	$v0, 4		# v0 <- system call code for print_string
+			la	$a0, newline	# a0 -> newline string
+			syscall
+
+			lw	$t0, count	# t0 <- the count
+			addi	$t0, $t0, 1
+			sw	$t0, count	# count <- count + 1
+
+			li	$t1, 10		# t1 <- max count
+			sub	$t0, $t0, $t1	# t0 <- count - max
+			blez	$t0, loop	# loop if count <= max
+
+			li	$v0, 10		# v0 <- system call code for exit
+			syscall
+
+in assembly, (src) means src is an address and i'm interested in its contents, not itself
+
+int a[10];
+i = a[j];
+
+a .word 0, 0, 0...0 // initialize a to array of 0's
+la $s0, a
+lw $s1, j
+s|| (logical shift left) $s1, $s1, 2 // multiplies by 4
+add $s2, $0, $s1 // s2 has location of a[j]
+lw $s3, 0($s2) (0 bits off s2)
+la $s4, i
+sw $s3, 0($s4)

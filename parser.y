@@ -19,24 +19,23 @@
 %token LEFT_CURLY_BRACE RIGHT_CURLY_BRACE COMMA SEMICOLON COLON 
 %token LEFT_BRACKET RIGHT_BRACKET
 %token LEFT_PAREN RIGHT_PAREN
-%token INCREMENT DECREMENT
-%token BITWISE_COMPLEMENT
-%token LOGICAL_NOT
-%token PLUS DASH
-%token AMPERSAND
-%token STAR
-%token SLASH REMAINDER
-%token BITSHIFT_LEFT BITSHIFT_RIGHT
-%token LESS_THAN GREATER_THAN LESS_THAN_OR_EQUAL GREATER_THAN_OR_EQUAL
-%token IS_EQUAL IS_NOT_EQUAL
-%token BITWISE_XOR
-%token BITWISE_OR
-%token LOGICAL_AND
-%token LOGICAL_OR        
-%token QUESTION_MARK
-%token ASSIGN ADD_AND_ASSIGN SUBTRACT_AND_ASSIGN MULTIPLY_AND_ASSIGN DIVIDE_AND_ASSIGN REMAINDER_AND_ASSIGN BITWISE_AND_AND_ASSIGN BITWISE_OR_AND_ASSIGN BITWISE_XOR_AND_ASSIGN BITSHIFT_LEFT_AND_ASSIGN BITSHIFT_RIGHT_AND_ASSIGN       
+%token INCREMENT DECREMENT // unary operations
+%token BITWISE_COMPLEMENT // unary
+%token LOGICAL_NOT // unary
+%token PLUS DASH   // unary/binary
+%token AMPERSAND // unary
+%token STAR // unary
+%token SLASH REMAINDER // binary
+%token BITSHIFT_LEFT BITSHIFT_RIGHT // binary
+%token LESS_THAN GREATER_THAN LESS_THAN_OR_EQUAL GREATER_THAN_OR_EQUAL // binary
+%token IS_EQUAL IS_NOT_EQUAL // binary
+%token BITWISE_XOR // binary
+%token BITWISE_OR // binary
+%token LOGICAL_AND // binary
+%token LOGICAL_OR         // binary
+%token QUESTION_MARK // ternary
+%token ASSIGN ADD_AND_ASSIGN SUBTRACT_AND_ASSIGN MULTIPLY_AND_ASSIGN DIVIDE_AND_ASSIGN REMAINDER_AND_ASSIGN BITWISE_AND_AND_ASSIGN BITWISE_OR_AND_ASSIGN BITWISE_XOR_AND_ASSIGN BITSHIFT_LEFT_AND_ASSIGN BITSHIFT_RIGHT_AND_ASSIGN        // binary
 %expect 1
-// %nonassoc RIGHT_PAREN ELSE
 %start root
 
 %%
@@ -133,10 +132,11 @@ initialized_declarator : declarator
 declarator : pointer_decl 
  | direct_declarator 
 ;
-pointer : STAR                   
- | STAR pointer                  {printf("*********creating pointer node\n"); $$ = create_pointer_node($2);}
-;
-pointer_decl : pointer direct_declarator                       {printf("*********creating pointer_decl node\n"); $$ = create_pointer_decl_node($1, $2);}
+// pointer : STAR                   
+//  | STAR pointer                  {printf("*********creating pointer node\n"); $$ = create_pointer_node($2);}
+// ;
+pointer_decl : STAR direct_declarator                       {printf("*********creating pointer_decl node\n"); $$ = create_pointer_decl_node($1, $2);}
+	| STAR pointer_decl 	{printf("*********creating pointer_decl node\n"); $$ = create_pointer_decl_node($1, $2);}
 ;
 direct_declarator : simple_declarator 
 	| LEFT_PAREN declarator RIGHT_PAREN     {$$ = $2;}
@@ -151,8 +151,11 @@ parameter_decl : declaration_specifiers declarator       {printf("*********creat
  | declaration_specifiers abstract_declarator  {printf("*********creating parameter_decl node\n"); $$ = create_parameter_decl_node($1, $2);}
  | declaration_specifiers
 ;
-abstract_declarator : pointer 
-	| pointer direct_abstract_declarator       {printf("*********creating abstract_declarator node\n"); $$ = create_abstract_declarator_node($1, $2);}
+pointer_abstract_declarator : STAR direct_abstract_declarator       {printf("*********creating abstract_declarator node\n"); $$ = create_abstract_declarator_node($1, $2);}
+;
+abstract_declarator : STAR 
+	| pointer_abstract_declarator
+| STAR pointer_abstract_declarator       {printf("*********creating abstract_declarator node\n"); $$ = create_abstract_declarator_node($1, $2);}
  | direct_abstract_declarator
 ;
 direct_abstract_declarator : LEFT_PAREN abstract_declarator RIGHT_PAREN      {printf("*********creating direct_abstract_declarator node\n"); $$ = create_direct_abstract_declarator_node($1, $2, $3, NULL);}

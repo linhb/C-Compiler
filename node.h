@@ -96,6 +96,8 @@ typedef struct t_node {
 		struct n_abstract_declarator *abstract_declarator;
 		struct n_comma_expr *comma_expr;
 	} data;
+	struct n_ir *ir;
+	struct n_temp *temp;
 } node;
 
 typedef struct n_number {
@@ -529,5 +531,56 @@ node *get_core_operand_from_unary_expr(node *n);
 node *get_identifier_from_node(node *n);
 int compare_arithmetic_types(type *t1, type *t2);
 void assignment_type_check(node *left, node *right);
+
+#define OP 1
+#define LOAD 2
+#define STORE 3
+typedef struct n_ir
+{
+	int ir_type;
+	int opcode;
+	union {
+		struct n_op_ir *op_ir;  // includes all instructions that don't interact with the symbol table, just temp registers
+		struct n_load_ir *load_ir; // includes all instructions that loads from the symbol table to a register, thus not including eg loadWordIndirect which doesn't touch the ST
+		struct n_store_ir *store_ir; // includes all instructions that stores into the symbol table
+	} data;
+	struct n_ir *next;
+	struct n_ir *prev;
+} ir;
+typedef struct n_op_ir {
+	struct n_temp *rd;
+	struct n_temp *rs;
+	struct n_temp *rt;
+} op_ir;
+#define WORD 4
+#define HALF 2
+#define BYTE 1
+typedef struct n_load_ir {
+	struct n_temp *rd;
+	symbol_table_identifier *rs;
+} load_ir;
+typedef struct n_store_ir {
+	symbol_table_identifier *rd;
+	struct n_temp *rs;
+} store_ir;
+typedef struct n_temp
+{
+	int id;
+	int is_lvalue;
+} temp;
+
+int temp_id;
+
+char *opcodes[100];
+#define LoadAddr 1
+#define LoadWordIndirect 2
+
+ir *generate_ir(node *n);
+ir *create_ir_node(int ir_type, int opcode);
+void print_ir(ir *ir, FILE *output);
+ir *get_last_ir_list_element(ir *list);
+ir *add_to_ir_list(ir *list, ir *new);
+ir *create_load_word_indirect_ir(temp *rs);
+void add_ir_opcodes();
 #endif
 

@@ -54,6 +54,10 @@ int main(int argc, char **argv) {
 		fputs("\n****** PARSE TREE ********\n", output);
 		print_node(output, root);
 		fputs("\n", output);
+		ir *ir_list = generate_ir(root);
+		add_ir_opcodes();
+		fputs("\n****** INTERMEDIATE REPRESENTATION ********\n", output);
+		print_ir(ir_list, output);
 		break;
 	case 1:
 		fprintf(stderr, "Number of errors: %d", yynerrs);
