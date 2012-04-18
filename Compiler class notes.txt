@@ -1337,3 +1337,43 @@ add $s2, $0, $s1 // s2 has location of a[j]
 lw $s3, 0($s2) (0 bits off s2)
 la $s4, i
 sw $s3, 0($s4)
+
+4/17/12
+
+TA:
+
+stick to IR structs i have now. 
+
+when in binary expr, don't modify children eg to load their values, just update parent
+
+when loadAddr a, a will be some memory address on the stack (if local) or heap (if global), that's what loadAddr will load.
+
+consider using enums for instruction opcodes?
+
+
+SPIM:
+
+argc and argv will be put into a0 and a1 registers, but not pushed on the stack. you have to do that manually.
+
+Lecture:
+
+Small optimizations:
+	look at as few as 4 instructions at a time
+	don't change the semantics at all
+	can't have branches
+	groups of instructions are called basic blocks
+	in a block, a variable is 'live' if its value has been used. a variable is 'killed' if it's overwritten in the block.
+	use/def: things you can do with variables
+	int i, a[100];
+	int i, *p;
+	f()
+	= a[i]
+	= *(a + i)
+	= p[i]
+	
+	b[j] = a[i]
+	q[j] = p[i]
+	
+	to reach def and next use:
+	within the basic block, start at the last statement that's "x = y + z" form
+	label 

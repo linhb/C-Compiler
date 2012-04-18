@@ -535,6 +535,7 @@ void assignment_type_check(node *left, node *right);
 #define OP 1
 #define LOAD 2
 #define STORE 3
+#define LOAD_CONST 4
 typedef struct n_ir
 {
 	int ir_type;
@@ -543,6 +544,7 @@ typedef struct n_ir
 		struct n_op_ir *op_ir;  // includes all instructions that don't interact with the symbol table, just temp registers
 		struct n_load_ir *load_ir; // includes all instructions that loads from the symbol table to a register, thus not including eg loadWordIndirect which doesn't touch the ST
 		struct n_store_ir *store_ir; // includes all instructions that stores into the symbol table
+		struct n_load_const_ir *load_const_ir;
 	} data;
 	struct n_ir *next;
 	struct n_ir *prev;
@@ -559,6 +561,11 @@ typedef struct n_load_ir {
 	struct n_temp *rd;
 	symbol_table_identifier *rs;
 } load_ir;
+typedef struct n_load_const_ir
+{
+	struct n_temp *rd;
+	node *rs;
+} load_const_ir;
 typedef struct n_store_ir {
 	symbol_table_identifier *rd;
 	struct n_temp *rs;
@@ -574,13 +581,43 @@ int temp_id;
 char *opcodes[100];
 #define LoadAddr 1
 #define LoadWordIndirect 2
+#define MultSigned 3
+#define MultUnsigned 4
+#define AddSigned 5
+#define AddUnsigned 6
+#define MinusSigned 7
+#define MinusUnsigned 8
+#define DivideSigned 9
+#define DivideUnsigned 10
+#define RemainderSigned 11
+#define RemainderUnsigned 12
+#define BitshiftLeftSigned 13
+#define BitshiftLeftUnsigned 14
+#define BitshiftRightSigned 15
+#define BitshiftRightUnsigned 16
+#define LoadConst 17
+#define seq 18
+#define sgt 19
+#define sgtu 20
+#define slt 21
+#define sltu 22
+#define sge 23
+#define sgeu 24
+#define sle 25
+#define sleu 26
+#define sne 27
+
 
 ir *generate_ir(node *n);
 ir *create_ir_node(int ir_type, int opcode);
 void print_ir(ir *ir, FILE *output);
 ir *get_last_ir_list_element(ir *list);
 ir *add_to_ir_list(ir *list, ir *new);
-ir *create_load_word_indirect_ir(temp *rs);
+// create_ir functions that take a node will attach the created IR to the IR of that node
+ir *create_load_word_indirect_ir(node *n, temp *rs);
 void add_ir_opcodes();
+ir *create_load_addr_ir(node *n);
+ir *create_simple_binary_ir(node *n, int op, temp *rs, temp *rt, type *type);
+ir *create_load_const_ir(node *n);
 #endif
 

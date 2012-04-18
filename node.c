@@ -1993,40 +1993,49 @@ ir *generate_ir(node *n) {
 			// copy instructions for left
 			// if left's temp is lvalue, dereference
 			// copy instructions for right
-			// if left's temp is lvalue, dereference
+			// if right's temp is lvalue, dereference
 			// generate op IR for left-op-right
-			n->data.binary_expression->left->ir = generate_ir(n->data.binary_expression->left);
-			n->ir = add_to_ir_list(n->ir, n->data.binary_expression->left->ir);
+			n->ir = add_to_ir_list(n->ir, generate_ir(n->data.binary_expression->left));
+			temp *left_temp, *right_temp;
 			if (n->data.binary_expression->left->temp->is_lvalue) {
-				n->ir = add_to_ir_list(n->ir, create_load_word_indirect_ir(n->data.binary_expression->left->temp));
+				left_temp = create_load_word_indirect_ir(n, n->data.binary_expression->left->temp)->data.op_ir->rd;
 			}
-			n->data.binary_expression->right->ir = generate_ir(n->data.binary_expression->right);
-			n->ir = add_to_ir_list(n->ir, n->data.binary_expression->right->ir);
+			else {
+				left_temp = n->data.binary_expression->left->temp;
+			}
+			n->ir = add_to_ir_list(n->ir, generate_ir(n->data.binary_expression->right));
 			if (n->data.binary_expression->right->temp->is_lvalue) {
-				n->ir = add_to_ir_list(n->ir, create_load_word_indirect_ir(n->data.binary_expression->right->temp));
+				right_temp = create_load_word_indirect_ir(n, n->data.binary_expression->right->temp)->data.op_ir->rd;
 			}
-			// switch (n->data.binary_expression->op->data.operator->value) {
-			// 	case SLASH: {
-			// 		
-			// 	}
-			// }
+			else {
+				right_temp = n->data.binary_expression->right->temp;
+			}
+			switch (n->data.binary_expression->op->data.operator->value) {
+				case PLUS:
+				case DASH:
+				case STAR:
+				case SLASH: 
+				case REMAINDER: 
+				case BITSHIFT_LEFT:
+				case BITSHIFT_RIGHT:
+				case LESS_THAN: 
+				case GREATER_THAN: 
+				case LESS_THAN_OR_EQUAL:
+				case GREATER_THAN_OR_EQUAL:
+				case IS_EQUAL:
+				case IS_NOT_EQUAL:
+					create_simple_binary_ir(n, n->data.binary_expression->op->data.operator->value, left_temp, right_temp, type_of_expr(n));
+					break;
+			}
 			break;
 		}
 		case IDENTIFIER_NODE:   {
 		// load address into a temp, mark that temp as lvalue
-			ir *identifier_ir = create_ir_node(LOAD, LoadAddr);
-			load_ir *l = identifier_ir->data.load_ir;
-			l->rd = malloc(sizeof(*l->rd));
-			l->rd->id = temp_id;
-			temp_id++;
-			l->rd->is_lvalue = 1;
-			l->rs = n->data.identifier->symbol_table_identifier;
-			n->ir = identifier_ir;
-			n->temp = l->rd;
+			create_load_addr_ir(n);
 			break;      
 		}
 		case NUMBER_NODE: {
-			printf("number IR\n");
+			create_load_const_ir(n);
 			break;
 		}
 		case FUNCTION_DEFINITION_NODE: {
@@ -2065,16 +2074,209 @@ ir *create_ir_node(int ir_type, int opcode) {
 	case STORE:
 		ir_node->data.store_ir = malloc(sizeof(*ir_node->data.store_ir));
 		break;
+	case LOAD_CONST:
+		ir_node->data.load_const_ir = malloc(sizeof(*ir_node->data.load_const_ir));
+		break;
 	}
 	return ir_node;
 } 
-ir *create_load_word_indirect_ir(temp *rs) {
+ir *create_load_addr_ir(node *n) {
+	assert(n->node_type == IDENTIFIER_NODE);
+	ir *identifier_ir = create_ir_node(LOAD, LoadAddr);
+	load_ir *l = identifier_ir->data.load_ir;
+	l->rd = malloc(sizeof(*l->rd));
+	l->rd->id = temp_id;
+	temp_id++;
+	l->rd->is_lvalue = 1;
+	l->rs = n->data.identifier->symbol_table_identifier;
+	n->ir = add_to_ir_list(n->ir, identifier_ir);
+	n->temp = l->rd;
+	return identifier_ir;
+}
+ir *create_load_word_indirect_ir(node *n, temp *rs) {
 	ir *ir = create_ir_node(OP, LoadWordIndirect);
 	ir->data.op_ir->rd = malloc(sizeof(temp));
 	ir->data.op_ir->rd->id = temp_id;
 	temp_id++;
 	ir->data.op_ir->rd->is_lvalue = 0;
 	ir->data.op_ir->rs = rs;
+	n->ir = add_to_ir_list(n->ir, ir);
+	n->temp = ir->data.op_ir->rd;
+	return ir;
+}
+ir *create_simple_binary_ir(node *n, int op, temp *rs, temp *rt, type *type) {
+	ir *ir;
+	switch(op) {
+		case PLUS: {
+			switch (type->data.arithmetic_type->is_unsigned) {
+				case 1: {
+					ir = create_ir_node(OP, AddUnsigned);
+					break;
+				}
+				case 0: {
+					ir = create_ir_node(OP, AddSigned);
+					break;
+				}
+			}
+			break;
+		}
+		case DASH: {
+			switch (type->data.arithmetic_type->is_unsigned) {
+				case 1: {
+					ir = create_ir_node(OP, MinusUnsigned);
+					break;
+				}
+				case 0: {
+					ir = create_ir_node(OP, MinusSigned);
+					break;
+				}
+			}
+			break;
+		}
+		case STAR: {
+			switch (type->data.arithmetic_type->is_unsigned) {
+				case 1: {
+					ir = create_ir_node(OP, MultUnsigned);
+					break;
+				}
+				case 0: {
+					ir = create_ir_node(OP, MultSigned);
+					break;
+				}
+			}
+			break;
+		}
+		case SLASH: {
+			switch (type->data.arithmetic_type->is_unsigned) {
+				case 1: {
+					ir = create_ir_node(OP, DivideUnsigned);
+					break;
+				}
+				case 0: {
+					ir = create_ir_node(OP, DivideSigned);
+					break;
+				}
+			}
+			break;
+		}
+		case REMAINDER: {
+			switch (type->data.arithmetic_type->is_unsigned) {
+				case 1: {
+					ir = create_ir_node(OP, RemainderUnsigned);
+					break;
+				}
+				case 0: {
+					ir = create_ir_node(OP, RemainderSigned);
+					break;
+				}
+			}
+			break;
+		}
+		case BITSHIFT_LEFT: {
+			switch (type->data.arithmetic_type->is_unsigned) {
+				case 1: {
+					ir = create_ir_node(OP, BitshiftLeftUnsigned);
+					break;
+				}
+				case 0: {
+					ir = create_ir_node(OP, BitshiftLeftUnsigned);
+					break;
+				}
+			}
+			break;
+		}
+		case BITSHIFT_RIGHT: {
+			switch (type->data.arithmetic_type->is_unsigned) {
+				case 1: {
+					ir = create_ir_node(OP, BitshiftRightUnsigned);
+					break;
+				}
+				case 0: {
+					ir = create_ir_node(OP, BitshiftRightSigned);
+					break;
+				}
+			}
+			break;
+		}
+		case LESS_THAN: {
+			switch (type->data.arithmetic_type->is_unsigned) {
+				case 1: {
+					ir = create_ir_node(OP, sltu);
+					break;
+				}
+				case 0: {
+					ir = create_ir_node(OP, slt);
+					break;
+				}
+			}
+			break;
+		}
+		case GREATER_THAN: {
+			switch (type->data.arithmetic_type->is_unsigned) {
+				case 1: {
+					ir = create_ir_node(OP, sgtu);
+					break;
+				}
+				case 0: {
+					ir = create_ir_node(OP, sgt);
+					break;
+				}
+			}
+			break;
+		}
+		case LESS_THAN_OR_EQUAL: {
+			switch (type->data.arithmetic_type->is_unsigned) {
+				case 1: {
+					ir = create_ir_node(OP, sleu);
+					break;
+				}
+				case 0: {
+					ir = create_ir_node(OP, sle);
+					break;
+				}
+			}
+			break;
+		}
+		case GREATER_THAN_OR_EQUAL: {
+			switch (type->data.arithmetic_type->is_unsigned) {
+				case 1: {
+					ir = create_ir_node(OP, sgeu);
+					break;
+				}
+				case 0: {
+					ir = create_ir_node(OP, sge);
+					break;
+				}
+			}
+			break;
+		}
+		case IS_EQUAL: {
+			ir = create_ir_node(OP, seq);
+		}
+		case IS_NOT_EQUAL: {
+			ir = create_ir_node(OP, sne);
+		}
+	}
+	ir->data.op_ir = malloc(sizeof(*ir->data.op_ir));
+	ir->data.op_ir->rd = malloc(sizeof(temp));
+	ir->data.op_ir->rd->id = temp_id;
+	temp_id++;
+	ir->data.op_ir->rd->is_lvalue = 0;
+	ir->data.op_ir->rs = rs;
+	ir->data.op_ir->rt = rt;
+	n->ir = add_to_ir_list(n->ir, ir);
+	n->temp = ir->data.op_ir->rd;
+	return ir;
+}
+ir *create_load_const_ir(node *n) {
+	ir *ir = create_ir_node(LOAD_CONST, LoadConst);
+	ir->data.load_const_ir->rd = malloc(sizeof(temp));
+	ir->data.load_const_ir->rd->id = temp_id;
+	temp_id++;
+	ir->data.load_const_ir->rd->is_lvalue = 0;
+	ir->data.load_const_ir->rs = n;
+	n->ir = add_to_ir_list(n->ir, ir);
+	n->temp = ir->data.load_const_ir->rd;
 	return ir;
 }
 ir *get_last_ir_list_element(ir *list) {
@@ -2110,36 +2312,67 @@ ir *add_to_ir_list(ir *list, ir *new) {
 	return list;
 }
 void print_ir(ir *ir, FILE *output) {
-	// op_ir: opcode, temp rd, temp rs, temp rt
-	// load_ir: opcode, temp rd, symbol rs
-	// store_ir: opcode, symbol rd, temp rs
-	fprintf(output, "%s(", opcodes[ir->opcode]);
-	switch (ir->ir_type) {
-		case OP:
-			fprintf(output, "t_%d", ir->data.op_ir->rd->id);
-			fprintf(output, ", t_%d", ir->data.op_ir->rs->id);
-			if (ir->data.op_ir->rt != NULL) {
-				fprintf(output, ", t_%d", ir->data.op_ir->rt->id);			
-			}
-			break;
-		case LOAD:
-			fprintf(output, "t_%d, ", ir->data.load_ir->rd->id);
-			fprintf(output, "%s", ir->data.load_ir->rs->name);
-			break;
-		case STORE:
-			fprintf(output, "%s, ", ir->data.store_ir->rd->name);
-			fprintf(output, "t_%d", ir->data.store_ir->rs->id);
-			break;
-		default:
-			fprintf(output, "ERROR: unknown IR node type: %d\n", ir->ir_type);
-	}
-	fputs(")\n", output);
-	if (ir->next != NULL) {
-		print_ir(ir->next, output);
+	if (ir != NULL) {
+		// op_ir: opcode, temp rd, temp rs, temp rt
+		// load_ir: opcode, temp rd, symbol rs
+		// store_ir: opcode, symbol rd, temp rs
+		fprintf(output, "%s(", opcodes[ir->opcode]);
+		switch (ir->ir_type) {
+			case OP:
+				fprintf(output, "t_%d", ir->data.op_ir->rd->id);
+				fprintf(output, ", t_%d", ir->data.op_ir->rs->id);
+				if (ir->data.op_ir->rt != NULL) {
+					fprintf(output, ", t_%d", ir->data.op_ir->rt->id);			
+				}
+				break;
+			case LOAD:
+				fprintf(output, "t_%d, ", ir->data.load_ir->rd->id);
+				fprintf(output, "%s", ir->data.load_ir->rs->name);
+				break;
+			case STORE:
+				fprintf(output, "%s, ", ir->data.store_ir->rd->name);
+				fprintf(output, "t_%d", ir->data.store_ir->rs->id);
+				break;
+			case LOAD_CONST:
+				fprintf(output, "t_%d, ", ir->data.load_const_ir->rd->id);
+				fprintf(output, "%lu", ir->data.load_const_ir->rs->data.number->value);
+				break;
+			default:
+				fprintf(output, "ERROR: unknown IR node type: %d\n", ir->ir_type);
+		}
+		fputs(")\n", output);
+		if (ir->next != NULL) {
+			print_ir(ir->next, output);
+		}                 
 	}
 }
 
 void add_ir_opcodes() {
 	opcodes[LoadAddr] = "LoadAddr";
 	opcodes[LoadWordIndirect] = "LoadWordIndirect";
+	opcodes[MultSigned] = "MultSigned";
+	opcodes[MultUnsigned] = "MultUnsigned";
+	opcodes[AddSigned] = "AddSigned";
+	opcodes[AddUnsigned] = "AddUnsigned";
+	opcodes[MinusSigned] = "MinusSigned";
+	opcodes[MinusUnsigned] = "MinusUnsigned";
+	opcodes[DivideSigned] = "DivideSigned";
+	opcodes[DivideUnsigned] = "DivideUnsigned";
+	opcodes[RemainderSigned] = "RemainderSigned";
+	opcodes[RemainderUnsigned] = "RemainderUnsigned";
+	opcodes[BitshiftLeftSigned] = "BitshiftLeftSigned";
+	opcodes[BitshiftLeftUnsigned] = "BitshiftLeftUnsigned";
+	opcodes[BitshiftRightSigned] = "BitshiftRightSigned";
+	opcodes[BitshiftRightUnsigned] = "BitshiftRightUnsigned";
+	opcodes[LoadConst] = "LoadConst";
+	opcodes[seq] = "IsEqual";
+	opcodes[sgt] = "IsGreaterThan";
+	opcodes[sgtu] = "IsGreaterThanUnsigned";
+	opcodes[slt] = "IsLessThan";
+	opcodes[sltu] = "IsLessThanUnsigned";
+	opcodes[sge] = "IsGreaterThanOrEqual";
+	opcodes[sgeu] = "IsGreaterThanOrEqualUnsigned";
+	opcodes[sle] = "IsLessThanOrEqual";
+	opcodes[sleu] = "IsLessThanOrEqualUnsigned";
+	opcodes[sne] = "IsNotEqual";
 }
