@@ -323,7 +323,66 @@ node *create_binary_expr_node(node *left, node *op, node *right) {
 	n->data.binary_expression->left = left;
 	n->data.binary_expression->op = op;
 	n->data.binary_expression->right = right;
+	break_down_compound_assignment_if_needed(n);
 	return n;				
+}
+void break_down_compound_assignment_if_needed(node *binary_expr) {
+	// if binary_expr is a += b, turn b into a binary expr with op = +, left = a, right = b, then change binary_expr's op to =
+	assert(binary_expr->node_type == BINARY_EXPRESSION_NODE);
+	node *original_op = binary_expr->data.binary_expression->op;
+	node *new_op;
+	switch (original_op->data.operator->value) {
+		case ADD_AND_ASSIGN:
+			new_op = create_operator_node("+", PLUS);
+			break;
+		case SUBTRACT_AND_ASSIGN:
+			new_op = create_operator_node("-", DASH);
+			break;
+		case MULTIPLY_AND_ASSIGN:
+			new_op = create_operator_node("*", STAR);
+			break;
+		case DIVIDE_AND_ASSIGN:
+			new_op = create_operator_node("/", SLASH);
+			break;
+		case REMAINDER_AND_ASSIGN:
+			new_op = create_operator_node("%", REMAINDER);
+			break;
+		case BITWISE_AND_AND_ASSIGN:
+			new_op = create_operator_node("&", AMPERSAND);
+			break;
+		case BITWISE_OR_AND_ASSIGN:
+			new_op = create_operator_node("|", BITWISE_OR);
+			break;
+		case BITWISE_XOR_AND_ASSIGN:
+			new_op = create_operator_node("^", BITWISE_XOR);
+			break;
+		case BITSHIFT_LEFT_AND_ASSIGN:
+			new_op = create_operator_node("<<", BITSHIFT_LEFT);
+			break;
+		case BITSHIFT_RIGHT_AND_ASSIGN: {
+			new_op = create_operator_node(">>", BITSHIFT_RIGHT);
+			break;
+		}
+	}
+	switch (original_op->data.operator->value) {
+		case ADD_AND_ASSIGN:
+		case SUBTRACT_AND_ASSIGN:
+		case MULTIPLY_AND_ASSIGN:
+		case DIVIDE_AND_ASSIGN:
+		case REMAINDER_AND_ASSIGN:
+		case BITWISE_AND_AND_ASSIGN:
+		case BITWISE_OR_AND_ASSIGN:
+		case BITWISE_XOR_AND_ASSIGN:
+		case BITSHIFT_LEFT_AND_ASSIGN:
+		case BITSHIFT_RIGHT_AND_ASSIGN: {
+			original_op->data.operator->text = "=";
+			original_op->data.operator->value = ASSIGN;
+			node *new_right = malloc(sizeof(node));
+			*new_right = *binary_expr->data.binary_expression->right;
+			node *new_binary = create_binary_expr_node(create_identifier_node(binary_expr->data.binary_expression->left->data.identifier->name), new_op,  new_right);
+			binary_expr->data.binary_expression->right = new_binary;
+		}
+	}
 }
 node *create_subscript_expr_node(node *postfix_expr, node *expr) {
 	node *n = create_node(SUBSCRIPT_EXPR_NODE);
@@ -346,7 +405,32 @@ node *create_unary_expr_node(node *left, node *right, int op_first) {
 		n->data.unary_expression->operator = right;
 		n->data.unary_expression->operand = left;		
 	}
+	n = break_down_increment_if_needed(n);   // turns eg a++ into a = a + 1                                                                                                                                                                                        
 	return n;				
+}
+node *break_down_increment_if_needed(node *unary_expression) {
+	if (unary_expression->node_type == UNARY_EXPRESSION_NODE
+			&& (unary_expression->data.unary_expression->operator->data.operator->value == INCREMENT
+			|| unary_expression->data.unary_expression->operator->data.operator->value == DECREMENT)) {
+		node *operand = unary_expression->data.unary_expression->operand;
+		node *assignment_op = create_operator_node("=", ASSIGN);
+		node *new_op;
+		node *new_add_expr;
+		node *number_1 = create_number_node("1");
+		switch (unary_expression->data.unary_expression->operator->data.operator->value) {
+			case INCREMENT: {
+				new_op = create_operator_node("+", PLUS);
+				break;
+			}
+			case DECREMENT: {
+				new_op = create_operator_node("-", DASH);
+				break;
+			}
+		}
+		new_add_expr = create_binary_expr_node(operand, new_op, number_1);
+		unary_expression = create_binary_expr_node(operand, assignment_op, new_add_expr);
+	}
+	return unary_expression;
 }
 node *create_statement_node(node *statement) {
 	node *n = create_node(STATEMENT_NODE);
@@ -1071,9 +1155,7 @@ void create_symbol_table(node *n, symbol_table *st) {
 			break;
 		case TRANSLATION_UNIT_NODE: 
 			create_symbol_table(n->data.translation_unit->translation_unit, st);
-			// printf("made ST for type %d", n->data.translation_unit->translation_unit->node_type);
 			create_symbol_table(n->data.translation_unit->top_level_decl, st);
-			// printf("made ST for type %d", n->data.translation_unit->top_level_decl->node_type);
 			break;
 		case FUNCTION_DEFINITION_NODE:
 			create_function_def_specifier_node_symbol_table(n->data.function_definition->function_def_specifier, st, n->data.function_definition->compound_statement);
@@ -1100,7 +1182,7 @@ void create_symbol_table(node *n, symbol_table *st) {
 		case STATEMENT_NODE:
 			create_symbol_table(n->data.statement->statement, st);
 			break;
-			case IDENTIFIER_NODE: // if seeing an identifier here, it wasn't part of a declaration, so just have to add its ST entry to it
+		case IDENTIFIER_NODE: // if seeing an identifier here, it wasn't part of a declaration, so just have to add its ST entry to it
 			create_identifier_node_symbol_table(n, st);
 			break;
 		case IF_ELSE_STATEMENT_NODE:
@@ -1333,7 +1415,8 @@ void create_subscript_expr_node_symbol_table(node *n, symbol_table *st)  {
 	}
 	else {
 		create_symbol_table(postfix_expr, st);
-	}	
+	}
+	create_symbol_table(n->data.subscript_expr->expr, st);
 }
 
 void create_identifier_node_symbol_table(node *n, symbol_table *st)  {
@@ -1768,13 +1851,22 @@ void do_unary_conversion(node *n) {
 		}
 	}
 	else if (n->node_type == ARRAY_DECLARATOR_NODE) {
-		
+		// get element type from n's direct declarator
+		// insert cast to pointer whose base type is element type
+		// type *element_type = n->data.array_declarator->direct_declarator->data.identifier->symbol_table_identifier->type->data.array_type->element_type;
+		// type *pointer_type = create_pointer_type(pointer_type);
+		// n = insert_cast(pointer_type, n);
 	}
 	else if (n->node_type == CAST_EXPR_NODE) {
 		do_unary_conversion(n->data.cast_expr->cast_expr);
 	}
 }
-
+type *create_pointer_type(type *base_type) {
+	type *t = create_type(POINTER_TYPE);
+	t->data.pointer_type = malloc(sizeof(*t->data.pointer_type));
+	t->data.pointer_type->base_type = base_type;
+	return t;
+}
 int str_equals(char *str1, char *str2) {
 	return strcmp(str1, str2) == 0;
 }
@@ -1813,6 +1905,7 @@ int get_num_type_from_string(char *str) {
 node *insert_cast(type *type, node *n) {	
 	node *cast;
 	if (type->type == ARITHMETIC_TYPE) {
+		// cast = 
 		char *type_str = types[type->data.arithmetic_type->number_type];
 		node *sign;
 		node *num_type = create_reserved_word_node(type_str, type->data.arithmetic_type->number_type);
@@ -1826,7 +1919,23 @@ node *insert_cast(type *type, node *n) {
 			cast = create_compound_number_type_specifier_node(words);		
 		}
 	}
+	else if (type->type == POINTER_TYPE) {
+		// make a pointer decl with the direct declarator created as below:
+		// type can only be either array or arithmetic or pointer
+		// if arithmetic, the desired cast is eg (int *), so create a type_name node. its declaration_specifiers is  a compound number specifier like above, extracted from the type. its abstract_declarator is STAR
+		// if array, create type_name node like above, but abstract_declarator is a direct_abstract_declarator of LEFT_BRACKET constant_expr RIGHT_BRACKET format. declaration_specifiers is a compound_number_type_specifier extracted from 
+		switch (type->data.pointer_type->base_type->type) {
+			case ARITHMETIC_TYPE: {
+				
+				// node *type_name = create_type_name_node()
+				// cast = 
+			}
+		}
+	}
 	return create_cast_expr_node(cast, n);
+}
+node *create_cast_node_from_type(type *type) {
+	
 }
 node *insert_cast_from_string(char *cast_type, int is_unsigned, node *n) {
 	type *int_type = malloc(sizeof(*int_type));
@@ -1985,82 +2094,127 @@ int rank(type *t) {
 		return NULL;
 	}
 }
-ir *generate_ir(node *n) {
+int size_of_type(type *t) {
+	switch (t->type) {
+		case POINTER_TYPE:
+		case ARRAY_TYPE:
+			return 4;
+		case ARITHMETIC_TYPE: {
+			switch (t->data.arithmetic_type->number_type) {
+			case INT:
+			case LONG:
+				return 4;
+			case CHAR:
+				return 1;
+			case SHORT:
+				return 2;
+			}
+		} 
+		case FUNCTION_TYPE:
+			printf("ERROR: function variables are not supported\n");
+	}
+	printf("ERROR: can't determine size of unknown type %d\n", t->type);
+	return 9999;
+}
+temp *load_lvalue_from_rvalue_ir_if_needed(node *n, temp *may_be_address) {
+	if (may_be_address->is_lvalue) {
+		return create_load_indirect_ir(n, may_be_address)->data.op_ir->rd;
+	}
+	else {
+		return may_be_address;
+	}
+}
+ir *generate_ir_from_node(node *n) {
 	// if binary, copy children's IR then 
 	// if not, eg identifier
 	switch (n->node_type) {
 		case BINARY_EXPRESSION_NODE: {
-			// copy instructions for left
-			// if left's temp is lvalue, dereference
-			// copy instructions for right
-			// if right's temp is lvalue, dereference
-			// generate op IR for left-op-right
-			n->ir = add_to_ir_list(n->ir, generate_ir(n->data.binary_expression->left));
-			temp *left_temp, *right_temp;
-			if (n->data.binary_expression->left->temp->is_lvalue) {
-				left_temp = create_load_word_indirect_ir(n, n->data.binary_expression->left->temp)->data.op_ir->rd;
-			}
-			else {
-				left_temp = n->data.binary_expression->left->temp;
-			}
-			n->ir = add_to_ir_list(n->ir, generate_ir(n->data.binary_expression->right));
-			if (n->data.binary_expression->right->temp->is_lvalue) {
-				right_temp = create_load_word_indirect_ir(n, n->data.binary_expression->right->temp)->data.op_ir->rd;
-			}
-			else {
-				right_temp = n->data.binary_expression->right->temp;
-			}
-			switch (n->data.binary_expression->op->data.operator->value) {
-				case PLUS:
-				case DASH:
-				case STAR:
-				case SLASH: 
-				case REMAINDER: 
-				case BITSHIFT_LEFT:
-				case BITSHIFT_RIGHT:
-				case LESS_THAN: 
-				case GREATER_THAN: 
-				case LESS_THAN_OR_EQUAL:
-				case GREATER_THAN_OR_EQUAL:
-				case IS_EQUAL:
-				case IS_NOT_EQUAL:
-					create_simple_binary_ir(n, n->data.binary_expression->op->data.operator->value, left_temp, right_temp, type_of_expr(n));
-					break;
+			create_binary_expr_ir(n);
+			break;
+		}
+		case UNARY_EXPRESSION_NODE: {
+			n->ir = add_to_ir_list(n->ir, generate_ir_from_node(n->data.unary_expression->operand));
+			temp *operand_temp = load_lvalue_from_rvalue_ir_if_needed(n, n->data.unary_expression->operand->temp);
+			switch (n->data.unary_expression->operator->data.operator->value) {
+			case AMPERSAND:
+				create_load_addr_ir(n, n->data.unary_expression->operand);
+				break;
+			case STAR:
+				create_load_indirect_ir(n, operand_temp);
+				break;
+			default:
+				create_unary_ir(n, operand_temp);
+				break;
 			}
 			break;
 		}
 		case IDENTIFIER_NODE:   {
 		// load address into a temp, mark that temp as lvalue
-			create_load_addr_ir(n);
+			create_load_addr_ir(n, n);
 			break;      
 		}
 		case NUMBER_NODE: {
-			create_load_const_ir(n);
+			create_load_const_ir(n, n->data.number->value);
+			break;
+		}
+		case SUBSCRIPT_EXPR_NODE: {
+			create_subscript_expr_ir(n);
 			break;
 		}
 		case FUNCTION_DEFINITION_NODE: {
 			// n->ir = generate_ir(n->data.function_definition->function_def_specifier);
-			n->ir = add_to_ir_list(n->ir, generate_ir(n->data.function_definition->compound_statement));
+			n->ir = add_to_ir_list(n->ir, generate_ir_from_node(n->data.function_definition->compound_statement));
 			break;
 		}
 		case COMPOUND_STATEMENT_NODE: {
-			n->ir = add_to_ir_list(n->ir, generate_ir(n->data.compound_statement->declaration_or_statement_list));
+			n->ir = add_to_ir_list(n->ir, generate_ir_from_node(n->data.compound_statement->declaration_or_statement_list));
 			break;
 		}
 		case DECLARATION_OR_STATEMENT_LIST_NODE: {
-			n->ir = add_to_ir_list(n->ir, generate_ir(n->data.declaration_or_statement_list->declaration_or_statement_list));
-			n->ir = add_to_ir_list(n->ir, generate_ir(n->data.declaration_or_statement_list->declaration_or_statement));
+			n->ir = add_to_ir_list(n->ir, generate_ir_from_node(n->data.declaration_or_statement_list->declaration_or_statement_list));
+			n->ir = add_to_ir_list(n->ir, generate_ir_from_node(n->data.declaration_or_statement_list->declaration_or_statement));
 			break;
 		}
 		case STATEMENT_NODE: {
-			n->ir = add_to_ir_list(n->ir, generate_ir(n->data.statement->statement));
+			n->ir = add_to_ir_list(n->ir, generate_ir_from_node(n->data.statement->statement));
+			break;
+		}
+		case TRANSLATION_UNIT_NODE: {
+			n->ir = add_to_ir_list(n->ir, generate_ir_from_node(n->data.translation_unit->translation_unit));
+			n->ir = add_to_ir_list(n->ir, generate_ir_from_node(n->data.translation_unit->top_level_decl));
+			break;
+		}
+		case IF_ELSE_STATEMENT_NODE: {
+			// if (a < b) {
+			// 			c = d;
+			// 		}
+			// 		else {
+			// 			e = f * g;
+			// 		}
+			// 
+			// 		{loadWord, t18, a}
+			// 		(loadWord, t19, b)
+			// 		(lessThanSigned, t20, t18, t19)
+			// 		(ifFalse, t20, labeltemp_1)
+			// 		(LW, t21, d)
+			// 		(sw, c, t21)
+			// 		(goto, labeltemp_2)
+			// 		labeltemp_1: (nop)     	
+			// 		(lw, t22, f)
+			// 		(lw, t23, g)                                                    
+			// 		(multSigned, t24, t22, t23)
+			// 		(sw, e, t24)
+			// 		labeltemp_2: (nop)   
+			// parts of if-else statement: expr, if_statement, else_statement
+			// load expr which will be in a register
+			// 
 			break;
 		}
 	}
 	return n->ir;
 }
 
-ir *create_ir_node(int ir_type, int opcode) {
+ir *create_ir(int ir_type, int opcode) {
 	ir *ir_node = malloc(sizeof(*ir_node));
 	ir_node->ir_type = ir_type;
 	ir_node->opcode = opcode;
@@ -2080,54 +2234,134 @@ ir *create_ir_node(int ir_type, int opcode) {
 	}
 	return ir_node;
 } 
-ir *create_load_addr_ir(node *n) {
-	assert(n->node_type == IDENTIFIER_NODE);
-	ir *identifier_ir = create_ir_node(LOAD, LoadAddr);
+void create_subscript_expr_ir(node *node_to_attach_ir_to) {
+	assert(node_to_attach_ir_to->node_type == SUBSCRIPT_EXPR_NODE);
+			// int a[]; a[3]; -> load addr of postfix expr, load expr, load size of postfix expr's element type, multiply last 2, add that to 1, load word (half/byte) there
+			//load addr of postfix expr
+	node_to_attach_ir_to->ir = add_to_ir_list(node_to_attach_ir_to->ir, generate_ir_from_node(node_to_attach_ir_to->data.subscript_expr->postfix_expr));
+	// load expr
+	node_to_attach_ir_to->ir = add_to_ir_list(node_to_attach_ir_to->ir, generate_ir_from_node(node_to_attach_ir_to->data.subscript_expr->expr));  
+	load_lvalue_from_rvalue_ir_if_needed(node_to_attach_ir_to, get_rd_register_from_ir(get_last_ir_list_element(node_to_attach_ir_to->ir)));
+	// load size of postfix expr's element type
+	create_load_const_ir(node_to_attach_ir_to, size_of_type(node_to_attach_ir_to->data.subscript_expr->postfix_expr->data.identifier->symbol_table_identifier->type));
+	ir *last_ir = get_last_ir_list_element(node_to_attach_ir_to->ir);
+	type *signed_arithmetic_type = create_type(ARITHMETIC_TYPE);
+	signed_arithmetic_type->data.arithmetic_type->is_unsigned = 0;
+	signed_arithmetic_type->data.arithmetic_type->number_type = INT;
+	// multiply last 2
+	ir *mult_ir = create_simple_binary_ir(node_to_attach_ir_to, STAR, last_ir->data.load_const_ir->rd, get_rd_register_from_ir(last_ir->prev), signed_arithmetic_type);
+	 // add that to 1
+	ir *add_ir = create_simple_binary_ir(node_to_attach_ir_to, PLUS, get_rd_register_from_ir(mult_ir), node_to_attach_ir_to->data.subscript_expr->postfix_expr->temp, signed_arithmetic_type);
+	// load word (half/byte) there
+	create_load_indirect_ir(node_to_attach_ir_to, get_rd_register_from_ir(add_ir));	
+}
+type *create_type(int type_type) {
+	type *t = malloc(sizeof(type));
+	t->type = type_type;
+	switch (type_type) {
+	case ARITHMETIC_TYPE:
+		t->data.arithmetic_type = malloc(sizeof(*t->data.arithmetic_type));
+		break;
+	case POINTER_TYPE:
+		t->data.pointer_type = malloc(sizeof(*t->data.pointer_type));
+		break;
+	case ARRAY_TYPE:
+		t->data.array_type = malloc(sizeof(*t->data.array_type));
+		break;
+	case FUNCTION_TYPE:
+		t->data.function_type = malloc(sizeof(*t->data.function_type));
+		break;
+	}
+	return t;
+}
+temp *get_rd_register_from_ir(ir *ir) {
+	switch (ir->ir_type) {
+	case OP:
+		return ir->data.op_ir->rd;
+	case LOAD:
+		return ir->data.load_ir->rd;
+	case LOAD_CONST:
+		return ir->data.load_const_ir->rd;
+	default:
+		printf("ERROR: no destination register for this type of IR node\n");
+	}
+}
+void create_binary_expr_ir(node *node_to_attach_ir_to) { 
+	// copy instructions for left
+	// if left's temp is lvalue, dereference
+	// copy instructions for right
+	// if right's temp is lvalue, dereference
+	// generate op IR for left-op-right
+	assert (node_to_attach_ir_to->node_type == BINARY_EXPRESSION_NODE);
+	temp *left_temp, *right_temp;
+	node_to_attach_ir_to->ir = add_to_ir_list(node_to_attach_ir_to->ir, generate_ir_from_node(node_to_attach_ir_to->data.binary_expression->left));
+	node_to_attach_ir_to->ir = add_to_ir_list(node_to_attach_ir_to->ir, generate_ir_from_node(node_to_attach_ir_to->data.binary_expression->right));
+	right_temp = load_lvalue_from_rvalue_ir_if_needed(node_to_attach_ir_to, node_to_attach_ir_to->data.binary_expression->right->temp);
+	switch (node_to_attach_ir_to->data.binary_expression->op->data.operator->value) {
+		case ASSIGN: // a = b; load addr of a, load addr of b, load value of b into t1, store into a from t1
+			create_store_ir(node_to_attach_ir_to, node_to_attach_ir_to->data.binary_expression->left, right_temp);
+			break;
+		default: {
+			left_temp = load_lvalue_from_rvalue_ir_if_needed(node_to_attach_ir_to, node_to_attach_ir_to->data.binary_expression->left->temp);
+			create_simple_binary_ir(node_to_attach_ir_to, node_to_attach_ir_to->data.binary_expression->op->data.operator->value, left_temp, right_temp, type_of_expr(node_to_attach_ir_to));
+		}
+	}
+}
+ir *create_load_addr_ir(node *node_to_attach_ir_to, node *id) {
+	assert(id->node_type == IDENTIFIER_NODE);
+	ir *identifier_ir = create_ir(LOAD, LoadAddr);
 	load_ir *l = identifier_ir->data.load_ir;
-	l->rd = malloc(sizeof(*l->rd));
-	l->rd->id = temp_id;
-	temp_id++;
+	l->rd = create_temp();
 	l->rd->is_lvalue = 1;
-	l->rs = n->data.identifier->symbol_table_identifier;
-	n->ir = add_to_ir_list(n->ir, identifier_ir);
-	n->temp = l->rd;
+	l->rs = id->data.identifier->symbol_table_identifier;
+	node_to_attach_ir_to->ir = add_to_ir_list(node_to_attach_ir_to->ir, identifier_ir);
+	node_to_attach_ir_to->temp = l->rd;
 	return identifier_ir;
 }
-ir *create_load_word_indirect_ir(node *n, temp *rs) {
-	ir *ir = create_ir_node(OP, LoadWordIndirect);
-	ir->data.op_ir->rd = malloc(sizeof(temp));
-	ir->data.op_ir->rd->id = temp_id;
-	temp_id++;
+ir *create_load_indirect_ir(node *node_to_attach_ir_to, temp *rs) {
+	ir *ir = create_ir(OP, LoadWordIndirect);
+	ir->data.op_ir->rd = create_temp();
 	ir->data.op_ir->rd->is_lvalue = 0;
 	ir->data.op_ir->rs = rs;
-	n->ir = add_to_ir_list(n->ir, ir);
-	n->temp = ir->data.op_ir->rd;
+	node_to_attach_ir_to->ir = add_to_ir_list(node_to_attach_ir_to->ir, ir);
+	node_to_attach_ir_to->temp = ir->data.op_ir->rd;
 	return ir;
 }
-ir *create_simple_binary_ir(node *n, int op, temp *rs, temp *rt, type *type) {
+ir *create_simple_binary_ir(node *node_to_attach_ir_to, int op, temp *rs, temp *rt, type *type) {
 	ir *ir;
 	switch(op) {
 		case PLUS: {
-			switch (type->data.arithmetic_type->is_unsigned) {
-				case 1: {
-					ir = create_ir_node(OP, AddUnsigned);
-					break;
-				}
-				case 0: {
-					ir = create_ir_node(OP, AddSigned);
-					break;
+			switch (type->type) {
+			case ARITHMETIC_TYPE:
+				switch (type->data.arithmetic_type->is_unsigned) {
+					case 1: {
+						ir = create_ir(OP, AddUnsigned);
+						break;
+					}
+					case 0: {
+						ir = create_ir(OP, AddSigned);
+						break;
+					}
 				}
 			}
 			break;
+			case POINTER_TYPE:
+				switch (type->data.pointer_type->base_type->type) {
+				// case POINTER_TYPE:
+				// 	node_to_attach_ir_to->ir = add_to_ir_list(node_to_attach_ir_to->ir, );
+				// 	break;
+				// }
+			break;
+			}
 		}
 		case DASH: {
 			switch (type->data.arithmetic_type->is_unsigned) {
 				case 1: {
-					ir = create_ir_node(OP, MinusUnsigned);
+					ir = create_ir(OP, MinusUnsigned);
 					break;
 				}
 				case 0: {
-					ir = create_ir_node(OP, MinusSigned);
+					ir = create_ir(OP, MinusSigned);
 					break;
 				}
 			}
@@ -2136,11 +2370,11 @@ ir *create_simple_binary_ir(node *n, int op, temp *rs, temp *rt, type *type) {
 		case STAR: {
 			switch (type->data.arithmetic_type->is_unsigned) {
 				case 1: {
-					ir = create_ir_node(OP, MultUnsigned);
+					ir = create_ir(OP, MultUnsigned);
 					break;
 				}
 				case 0: {
-					ir = create_ir_node(OP, MultSigned);
+					ir = create_ir(OP, MultSigned);
 					break;
 				}
 			}
@@ -2149,11 +2383,11 @@ ir *create_simple_binary_ir(node *n, int op, temp *rs, temp *rt, type *type) {
 		case SLASH: {
 			switch (type->data.arithmetic_type->is_unsigned) {
 				case 1: {
-					ir = create_ir_node(OP, DivideUnsigned);
+					ir = create_ir(OP, DivideUnsigned);
 					break;
 				}
 				case 0: {
-					ir = create_ir_node(OP, DivideSigned);
+					ir = create_ir(OP, DivideSigned);
 					break;
 				}
 			}
@@ -2162,11 +2396,11 @@ ir *create_simple_binary_ir(node *n, int op, temp *rs, temp *rt, type *type) {
 		case REMAINDER: {
 			switch (type->data.arithmetic_type->is_unsigned) {
 				case 1: {
-					ir = create_ir_node(OP, RemainderUnsigned);
+					ir = create_ir(OP, RemainderUnsigned);
 					break;
 				}
 				case 0: {
-					ir = create_ir_node(OP, RemainderSigned);
+					ir = create_ir(OP, RemainderSigned);
 					break;
 				}
 			}
@@ -2175,11 +2409,11 @@ ir *create_simple_binary_ir(node *n, int op, temp *rs, temp *rt, type *type) {
 		case BITSHIFT_LEFT: {
 			switch (type->data.arithmetic_type->is_unsigned) {
 				case 1: {
-					ir = create_ir_node(OP, BitshiftLeftUnsigned);
+					ir = create_ir(OP, BitshiftLeftUnsigned);
 					break;
 				}
 				case 0: {
-					ir = create_ir_node(OP, BitshiftLeftUnsigned);
+					ir = create_ir(OP, BitshiftLeftUnsigned);
 					break;
 				}
 			}
@@ -2188,11 +2422,11 @@ ir *create_simple_binary_ir(node *n, int op, temp *rs, temp *rt, type *type) {
 		case BITSHIFT_RIGHT: {
 			switch (type->data.arithmetic_type->is_unsigned) {
 				case 1: {
-					ir = create_ir_node(OP, BitshiftRightUnsigned);
+					ir = create_ir(OP, BitshiftRightUnsigned);
 					break;
 				}
 				case 0: {
-					ir = create_ir_node(OP, BitshiftRightSigned);
+					ir = create_ir(OP, BitshiftRightSigned);
 					break;
 				}
 			}
@@ -2201,11 +2435,11 @@ ir *create_simple_binary_ir(node *n, int op, temp *rs, temp *rt, type *type) {
 		case LESS_THAN: {
 			switch (type->data.arithmetic_type->is_unsigned) {
 				case 1: {
-					ir = create_ir_node(OP, sltu);
+					ir = create_ir(OP, sltu);
 					break;
 				}
 				case 0: {
-					ir = create_ir_node(OP, slt);
+					ir = create_ir(OP, slt);
 					break;
 				}
 			}
@@ -2214,11 +2448,11 @@ ir *create_simple_binary_ir(node *n, int op, temp *rs, temp *rt, type *type) {
 		case GREATER_THAN: {
 			switch (type->data.arithmetic_type->is_unsigned) {
 				case 1: {
-					ir = create_ir_node(OP, sgtu);
+					ir = create_ir(OP, sgtu);
 					break;
 				}
 				case 0: {
-					ir = create_ir_node(OP, sgt);
+					ir = create_ir(OP, sgt);
 					break;
 				}
 			}
@@ -2227,11 +2461,11 @@ ir *create_simple_binary_ir(node *n, int op, temp *rs, temp *rt, type *type) {
 		case LESS_THAN_OR_EQUAL: {
 			switch (type->data.arithmetic_type->is_unsigned) {
 				case 1: {
-					ir = create_ir_node(OP, sleu);
+					ir = create_ir(OP, sleu);
 					break;
 				}
 				case 0: {
-					ir = create_ir_node(OP, sle);
+					ir = create_ir(OP, sle);
 					break;
 				}
 			}
@@ -2240,43 +2474,101 @@ ir *create_simple_binary_ir(node *n, int op, temp *rs, temp *rt, type *type) {
 		case GREATER_THAN_OR_EQUAL: {
 			switch (type->data.arithmetic_type->is_unsigned) {
 				case 1: {
-					ir = create_ir_node(OP, sgeu);
+					ir = create_ir(OP, sgeu);
 					break;
 				}
 				case 0: {
-					ir = create_ir_node(OP, sge);
+					ir = create_ir(OP, sge);
 					break;
 				}
 			}
 			break;
 		}
 		case IS_EQUAL: {
-			ir = create_ir_node(OP, seq);
+			ir = create_ir(OP, seq);
 		}
 		case IS_NOT_EQUAL: {
-			ir = create_ir_node(OP, sne);
+			ir = create_ir(OP, sne);
+		}
+		case BITWISE_OR: {
+			ir = create_ir(OP, BitwiseOr);
+			break;
+		}
+		case BITWISE_XOR: {
+			ir = create_ir(OP, xor);
+			break;
+		}
+		case LOGICAL_OR: {
+			ir = create_ir(OP, or);
+			break;
+		}
+		case LOGICAL_AND: {
+			ir = create_ir(OP, and);
+			break;
 		}
 	}
-	ir->data.op_ir = malloc(sizeof(*ir->data.op_ir));
-	ir->data.op_ir->rd = malloc(sizeof(temp));
-	ir->data.op_ir->rd->id = temp_id;
-	temp_id++;
+	ir->data.op_ir->rd = create_temp();
 	ir->data.op_ir->rd->is_lvalue = 0;
 	ir->data.op_ir->rs = rs;
 	ir->data.op_ir->rt = rt;
-	n->ir = add_to_ir_list(n->ir, ir);
-	n->temp = ir->data.op_ir->rd;
+	node_to_attach_ir_to->ir = add_to_ir_list(node_to_attach_ir_to->ir, ir);
+	node_to_attach_ir_to->temp = ir->data.op_ir->rd;
 	return ir;
 }
-ir *create_load_const_ir(node *n) {
-	ir *ir = create_ir_node(LOAD_CONST, LoadConst);
-	ir->data.load_const_ir->rd = malloc(sizeof(temp));
-	ir->data.load_const_ir->rd->id = temp_id;
-	temp_id++;
+ir *create_load_const_ir(node *node_to_attach_ir_to, int number) {
+	ir *ir = create_ir(LOAD_CONST, LoadConst);
+	ir->data.load_const_ir->rd = create_temp();
 	ir->data.load_const_ir->rd->is_lvalue = 0;
-	ir->data.load_const_ir->rs = n;
-	n->ir = add_to_ir_list(n->ir, ir);
-	n->temp = ir->data.load_const_ir->rd;
+	ir->data.load_const_ir->rs = number;
+	node_to_attach_ir_to->ir = add_to_ir_list(node_to_attach_ir_to->ir, ir);
+	node_to_attach_ir_to->temp = ir->data.load_const_ir->rd;
+	return ir;
+}
+ir *create_store_ir(node *current, node *stored_to, temp *from_register) {
+	assert(stored_to->node_type == IDENTIFIER_NODE);
+	type *type = stored_to->data.identifier->symbol_table_identifier->type;
+	// store byte/halfword if arithmetic and number type = char/short
+	// otherwise store word
+	ir *ir;
+	switch (type->type) {
+		case ARITHMETIC_TYPE: {
+			switch (type->data.arithmetic_type->number_type) {
+			case SHORT:
+				ir = create_ir(STORE, sh);
+			case CHAR:
+				ir = create_ir(STORE, sb);
+			default:
+				ir = create_ir(STORE, sw);
+			}
+		}
+		default: {
+			ir = create_ir(STORE, sw);
+		}
+	}
+	ir->data.store_ir->rd = stored_to->data.identifier->symbol_table_identifier;
+	ir->data.store_ir->rs = from_register;
+	current->ir = add_to_ir_list(current->ir, ir);
+	return ir;
+}
+ir *create_unary_ir(node *node_to_attach_ir_to, temp *t) {
+	ir *ir;
+	assert(node_to_attach_ir_to->node_type == UNARY_EXPRESSION_NODE);
+	switch (node_to_attach_ir_to->data.unary_expression->operator->data.operator->value) {
+	case BITWISE_COMPLEMENT:
+		ir = create_ir(OP, not);
+		break;
+	case LOGICAL_NOT:
+		ir = create_ir(OP, LogicalNot);
+		break;
+	case DASH:
+		ir = create_ir(OP, neg);
+		break;
+	}
+	ir->data.op_ir->rd = create_temp();
+	ir->data.op_ir->rd->is_lvalue = 0;
+	ir->data.op_ir->rs = t;
+	node_to_attach_ir_to->temp = ir->data.op_ir->rd;
+	node_to_attach_ir_to->ir = add_to_ir_list(node_to_attach_ir_to->ir, ir);
 	return ir;
 }
 ir *get_last_ir_list_element(ir *list) {
@@ -2307,9 +2599,16 @@ ir *add_to_ir_list(ir *list, ir *new) {
 		}
 		else {
 			old->next = new;
+			new->prev = old;
 		}
 	}
 	return list;
+}
+temp *create_temp() {
+	temp *t = malloc(sizeof(temp));
+	t->id = temp_id;
+	temp_id++;
+	return t;
 }
 void print_ir(ir *ir, FILE *output) {
 	if (ir != NULL) {
@@ -2335,7 +2634,7 @@ void print_ir(ir *ir, FILE *output) {
 				break;
 			case LOAD_CONST:
 				fprintf(output, "t_%d, ", ir->data.load_const_ir->rd->id);
-				fprintf(output, "%lu", ir->data.load_const_ir->rs->data.number->value);
+				fprintf(output, "%d", ir->data.load_const_ir->rs);
 				break;
 			default:
 				fprintf(output, "ERROR: unknown IR node type: %d\n", ir->ir_type);
@@ -2375,4 +2674,14 @@ void add_ir_opcodes() {
 	opcodes[sle] = "IsLessThanOrEqual";
 	opcodes[sleu] = "IsLessThanOrEqualUnsigned";
 	opcodes[sne] = "IsNotEqual";
+	opcodes[and] = "LogicalAnd";
+	opcodes[or] = "LogicalOr";
+	opcodes[xor] = "BitwiseXor";
+	opcodes[BitwiseOr] = "BitwiseOr";
+	opcodes[sw] = "StoreWord";
+	opcodes[sh] = "StoreHalfword";
+	opcodes[sb] = "StoreByte";
+	opcodes[not] = "BitwiseNot";
+	opcodes[LogicalNot] = "LogicalNot";
+	opcodes[neg] = "Negative";
 }

@@ -334,7 +334,9 @@ node *create_parameter_list_node(node *parameter_list, node *parameter_decl);
 node *create_parameter_decl_node(node *declaration_specifiers, node *declarator);
 node *create_array_declarator_node(node *direct_declarator, node *constant_expr);
 node *create_binary_expr_node(node *left, node *op, node *right);
+void break_down_compound_assignment_if_needed(node *binary_expr);
 node *create_unary_expr_node(node *left, node *right, int op_first);
+node *break_down_increment_if_needed(node *unary_expression);
 node *create_subscript_expr_node(node *postfix_expr, node *expr);
 node *create_statement_node(node *statement);
 node *create_labeled_statement_node(node *label, node *statement);
@@ -460,6 +462,8 @@ typedef struct t_array_type
 	int size; // can be null if size isn't specified or can't be determined at compile time
 } array_type;
 
+type *create_type(int type_number);
+type *create_pointer_type(type *base_type);
 void add_types();
 
 typedef struct t_pointer_type
@@ -531,6 +535,8 @@ node *get_core_operand_from_unary_expr(node *n);
 node *get_identifier_from_node(node *n);
 int compare_arithmetic_types(type *t1, type *t2);
 void assignment_type_check(node *left, node *right);
+node *create_decl_node_from_type(type *type);
+int size_of_type(type *t);
 
 #define OP 1
 #define LOAD 2
@@ -564,7 +570,7 @@ typedef struct n_load_ir {
 typedef struct n_load_const_ir
 {
 	struct n_temp *rd;
-	node *rs;
+	int rs;
 } load_const_ir;
 typedef struct n_store_ir {
 	symbol_table_identifier *rd;
@@ -606,18 +612,34 @@ char *opcodes[100];
 #define sle 25
 #define sleu 26
 #define sne 27
+#define and 28
+#define or 29
+#define BitwiseOr 30
+#define xor 31
+#define sw 32
+#define sh 33
+#define sb 34
+#define not 35
+#define LogicalNot 36
+#define neg 37
 
-
-ir *generate_ir(node *n);
-ir *create_ir_node(int ir_type, int opcode);
+temp *load_lvalue_from_rvalue_ir_if_needed(node *n, temp *may_be_address);
+ir *generate_ir_from_node(node *n);
+ir *create_ir(int ir_type, int opcode);
 void print_ir(ir *ir, FILE *output);
 ir *get_last_ir_list_element(ir *list);
 ir *add_to_ir_list(ir *list, ir *new);
 // create_ir functions that take a node will attach the created IR to the IR of that node
-ir *create_load_word_indirect_ir(node *n, temp *rs);
+ir *create_load_indirect_ir(node *n, temp *rs);
 void add_ir_opcodes();
-ir *create_load_addr_ir(node *n);
+ir *create_load_addr_ir(node *n, node *id);
 ir *create_simple_binary_ir(node *n, int op, temp *rs, temp *rt, type *type);
-ir *create_load_const_ir(node *n);
+ir *create_load_const_ir(node *node_to_attach_ir_to, int number);
+ir *create_store_ir(node *current, node *stored_to, temp *from_register);
+ir *create_unary_ir(node *n, temp *t);
+void create_subscript_expr_ir(node *node_to_attach_ir_to);
+void create_binary_expr_ir(node *n);
+temp *create_temp();
+temp *get_rd_register_from_ir(ir *ir);
 #endif
 

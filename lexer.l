@@ -94,8 +94,8 @@ while				 printf("*********creating reserved_word node\n"); yylval = create_rese
 "%" printf("*********creating operator node\n"); yylval = create_operator_node(yytext, REMAINDER); return REMAINDER;
 "++" printf("*********creating operator node\n"); yylval = create_operator_node(yytext, INCREMENT); return INCREMENT;
 "--" printf("*********creating operator node\n"); yylval = create_operator_node(yytext, DECREMENT); return DECREMENT;
-">>" printf("*********creating operator node\n"); yylval = create_operator_node(yytext, BITSHIFT_LEFT); return BITSHIFT_LEFT;
-"<<" printf("*********creating operator node\n"); yylval = create_operator_node(yytext, BITSHIFT_RIGHT); return BITSHIFT_RIGHT;
+">>" printf("*********creating operator node\n"); yylval = create_operator_node(yytext, BITSHIFT_RIGHT); return BITSHIFT_RIGHT;
+"<<" printf("*********creating operator node\n"); yylval = create_operator_node(yytext, BITSHIFT_LEFT); return BITSHIFT_LEFT;
 "?" printf("*********creating operator node\n"); yylval = create_operator_node(yytext, QUESTION_MARK); return QUESTION_MARK;
 
 "("                          return LEFT_PAREN;

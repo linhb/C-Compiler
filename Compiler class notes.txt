@@ -1377,3 +1377,113 @@ Small optimizations:
 	to reach def and next use:
 	within the basic block, start at the last statement that's "x = y + z" form
 	label 
+	
+4/24/12
+
+TA:
+
+Always cast array to pointer to element type
+	in unary expr
+	in function parameters
+		eg 
+		void f(int a[4]) {} -> function, void, [pointer(int)]
+		void f(int a[4][5]) {} -> function, void, [pointer(array(4, int))]
+The first function has to prepare the stack just like other functions b/c it's called by the OS.
+Need a main function to run in SPIM.
+
+Example code generation:
+
+C code:
+
+int add(int a, short b) {
+	return a+b;
+}
+
+int mult(short a, short b) {
+	int c;
+	short d;
+	c = 0;
+	for (d = 0; d< b; d++) {
+		int e;
+		e = add(c, a);
+		c = e;
+	}
+	return c;
+}
+
+Symbol table:
+
+glob
+	add (function, int, 2, [int, short])
+		a (int), offset 0
+		b (short), offset 4
+	mult (function, int, 2, [short, short])
+		a (short), offset 0
+		b (short), offset 2
+		c (int), offset 0 (local vars are in a different place than params)
+		d (short), offset 4
+			for_1
+				e (int), offset 8
+	allocate 12 bytes for mult (10 for the vars, 2 wasted to align)
+
+IR:
+
+LABEL add (could do mult first too, doesn't matter)
+ENTRY add
+
++
+	a (type int, lvalue)
+	(int) (type int, not lvalue because just a cast)
+		b (short, lvalue)
+
+LA t0, a
+LW t1, t0
+LA t2, b
+LH t3, t2 // also need an unsigned version LHU
+// need to cast b into an int, which requires extending the sign bit
+CASTSSS t4, t3 // cast signed short to int
+ADD t5, t4, t1
+RETURN t5
+
+LABEL mult
+ENTRY mult
+
+= (int, not lvalue)
+	c (int, lvalue)
+	0 (int, not lvalue)
+	
+LA t6, c
+LC t7, 0
+SW t6, t7
+LA t8, d
+LC t9, 0
+// assigning 0 which is an int to d which is a short, so have to cast 0 to short
+CASTSISS t10, t9 // signed int to signed short
+SW t8, t10
+LABEL for_0
+LA t11, d
+
+< (int, rv)
+	(int, rv)
+		d (short, lv)
+	(int)
+		b (short, lv)
+		
+LH t12, t11
+CASTSSSI t13, t12
+
+LA t14, b
+LH t15, t14
+CASTSSSI t16, t15
+LESS t17, t13, t16
+IFFALSE t17, for_1 // make up label here, insert where it is later
+LA t18, a
+LH t19, t18
+LA t20, c
+LW t21, t20
+PARAM t19
+PARAM t21
+CALL add
+
+Lecture:
+
