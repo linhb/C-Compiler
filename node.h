@@ -97,7 +97,7 @@ typedef struct t_node {
 		struct n_comma_expr *comma_expr;
 	} data;
 	struct n_ir *ir;
-	struct n_temp *temp;
+	struct n_temp *temp; // only meaningful for nodes that have a value, eg identifiers, expr. Meaningless for eg function_definition. Shouldn't be used even if populated.
 } node;
 
 typedef struct n_number {
@@ -493,6 +493,8 @@ node *get_identifier_from_declarator(node *n);
 void create_decl_node_symbol_table(node *n, symbol_table *st);
 symbol_table_identifier *create_decl_identifier(node *parent, node *decl_spec, node *declarator, symbol_table_identifier *current, symbol_table *st);
 void create_function_def_specifier_node_symbol_table(node *n, symbol_table *st, node *compound_statement);
+node *get_parameter_type_list_from_declarator(node *declarator);
+symbol_table *create_child_symbol_table(symbol_table *parent_st, node *compound_statement, symbol_table_identifier *fn_symbol);
 void create_compound_statement_node_symbol_table(node *n, symbol_table *st, int create_new_symbol_table);
 void create_declaration_or_statement_list_node_symbol_table(node *n, symbol_table *st);
 void create_parameter_list_node_symbol_table(node *n, symbol_table *st);
@@ -541,7 +543,10 @@ int size_of_type(type *t);
 #define OP 1
 #define LOAD 2
 #define STORE 3
-#define LOAD_CONST 4
+#define LOAD_CONST 4 
+#define NOP 5
+#define JUMP 6
+
 typedef struct n_ir
 {
 	int ir_type;
@@ -551,9 +556,12 @@ typedef struct n_ir
 		struct n_load_ir *load_ir; // includes all instructions that loads from the symbol table to a register, thus not including eg loadWordIndirect which doesn't touch the ST
 		struct n_store_ir *store_ir; // includes all instructions that stores into the symbol table
 		struct n_load_const_ir *load_const_ir;
+		struct n_jump_ir *jump_ir;
 	} data;
 	struct n_ir *next;
 	struct n_ir *prev;
+	// struct n_ir_label *ir_label;
+	char *ir_label;
 } ir;
 typedef struct n_op_ir {
 	struct n_temp *rd;
@@ -576,6 +584,13 @@ typedef struct n_store_ir {
 	symbol_table_identifier *rd;
 	struct n_temp *rs;
 } store_ir;
+typedef struct n_jump_ir	
+{
+	// all 3 fields can be NULL
+	struct n_temp *s1;
+	struct n_temp *s2;
+	struct n_ir *label_ir;
+} jump_ir;
 typedef struct n_temp
 {
 	int id;
@@ -583,6 +598,15 @@ typedef struct n_temp
 } temp;
 
 int temp_id;
+
+// typedef struct n_ir_label
+// {
+// 	int id;
+// 	char *name;
+// 	ir *ir;
+// } ir_label;
+
+int ir_label_id; 
 
 char *opcodes[100];
 #define LoadAddr 1
@@ -622,6 +646,9 @@ char *opcodes[100];
 #define not 35
 #define LogicalNot 36
 #define neg 37
+#define nop 38
+#define beqz 39
+#define Jump 40
 
 temp *load_lvalue_from_rvalue_ir_if_needed(node *n, temp *may_be_address);
 ir *generate_ir_from_node(node *n);
@@ -639,7 +666,13 @@ ir *create_store_ir(node *current, node *stored_to, temp *from_register);
 ir *create_unary_ir(node *n, temp *t);
 void create_subscript_expr_ir(node *node_to_attach_ir_to);
 void create_binary_expr_ir(node *n);
+void create_if_else_statement_ir(node *node_to_attach_ir_to);
+ir *create_jump_ir(node *node_to_attach_ir_to, int op, temp *src1, temp *src2, ir *label_ir);
+ir *create_nop_ir(char *name);
 temp *create_temp();
+char *num_to_s(int num);
 temp *get_rd_register_from_ir(ir *ir);
+// ir_label *create_ir_label(char *name, ir *ir_to_attach_label_to);
+// char *ir_label_to_s(ir_label *irl);
 #endif
 

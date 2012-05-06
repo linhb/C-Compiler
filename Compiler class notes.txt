@@ -1487,3 +1487,24 @@ CALL add
 
 Lecture:
 
+5/1/12
+
+TA:
+
+In ternary expr, type of expr is a composite type. 
+In
+ 	int a, b[4], c[5];
+	a ? b : c
+	
+	if both b and c are arrays, they're only compatible if at least one doesn't have size. the type will be array of the size of the one that has size.
+	
+sbrk: system call that sets top of stack, can be used to malloc 
+
+Lecture:
+
+Assertion: done at runtime
+Assumption: can't verify at runtime
+	eg assumption that no loop carries dependencies so all instructions in all loops can run in parallel
+	Without this, there must be an ordering constraint - can't do things in parallel
+	
+	

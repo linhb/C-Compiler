@@ -1251,7 +1251,9 @@ node *get_identifier_from_declarator(node *n) {
 	case POINTER_DECL_NODE:
 		return get_identifier_from_declarator(n->data.pointer_decl->direct_declarator);
 	case FUNCTION_DEF_SPECIFIER_NODE:
-		return get_identifier_from_declarator(n->data.function_def_specifier->declarator->data.direct_declarator->declarator);
+		return get_identifier_from_declarator(n->data.function_def_specifier->declarator);
+	case FUNCTION_DECLARATOR_NODE:
+		return get_identifier_from_declarator(n->data.function_declarator->direct_declarator);
 	default:
 		printf("ERROR: tried to get name from unknown node %d\n", n->node_type);
 	}
@@ -1271,29 +1273,18 @@ void create_decl_node_symbol_table(node *n, symbol_table *st) {
 }
 symbol_table_identifier *create_decl_identifier(node *parent, node *decl_spec, node *declarator, symbol_table_identifier *current, symbol_table *st) {
 	int declarator_node_type =  declarator->node_type;
-	if (declarator_node_type == POINTER_DECL_NODE) {
-		node *id = get_identifier_from_declarator(declarator->data.pointer_decl->direct_declarator);
-		current->name = id->data.identifier->name;
-		id->data.identifier->symbol_table_identifier = current;
-	}
-	else if (declarator_node_type == ARRAY_DECLARATOR_NODE) {
-		node *id = get_identifier_from_declarator(declarator->data.array_declarator->direct_declarator);
-		current->name = id->data.identifier->name;			
-		id->data.identifier->symbol_table_identifier = current;
-	}
-	else if (decl_spec->node_type == COMPOUND_NUMBER_TYPE_SPECIFIER_NODE) { // vanilla primitive type
-		node *id = get_identifier_from_declarator(declarator);
-		current->name = id->data.identifier->name;
-		id->data.identifier->symbol_table_identifier = current;
-	}
-	else if (decl_spec->node_type == RESERVED_WORD_NODE && !strcmp(decl_spec->data.reserved_word->text, "void")) {
+	node *id = get_identifier_from_declarator(declarator);
+	current->name = id->data.identifier->name;
+	id->data.identifier->symbol_table_identifier = current;
+	if (decl_spec->node_type == RESERVED_WORD_NODE && !strcmp(decl_spec->data.reserved_word->text, "void") && declarator_node_type != POINTER_DECL_NODE) {
+		// TODO deal with void * as a valid type, add to symbol_table, etc
 		current->name = get_identifier_from_declarator(declarator)->data.identifier->name;
 		printf("ERROR: variable %s: void is not a valid type\n", current->name);
 		current = NULL;
 	}
-	else {
-		printf("ERROR: unknown decl type %d\n", declarator_node_type);
-	}
+	// else {
+	// 	printf("ERROR: unknown decl type %d\n", declarator_node_type);
+	// }
 	if (current != NULL && redeclared_variable(st, current->name)) {
 		current = NULL;
 	}
@@ -1306,74 +1297,53 @@ symbol_table_identifier *create_decl_identifier(node *parent, node *decl_spec, n
 
 void create_function_def_specifier_node_symbol_table(node *n, symbol_table *st, node *compound_statement) {
 	symbol_table_identifier *current = create_identifier(st);
-	current->name = get_identifier_from_declarator(n->data.function_def_specifier->declarator->data.direct_declarator->declarator)->data.identifier->name;
-	if (redeclared_variable(st, current->name)) {
-		current = NULL;
-	}
-	else {
+	current->name = get_identifier_from_declarator(n)->data.identifier->name;
+	if (!redeclared_variable(st, current->name)) {
 		current->type = get_type_from_decl_node(n);
-		n->data.function_def_specifier->declarator->data.direct_declarator->declarator->data.identifier->symbol_table_identifier = current;
-		//now prepare the function scope ST then add the arguments to it
-		node *parameter_type_list = n->data.function_def_specifier->declarator->data.function_declarator->parameter_type_list;
-		if (st->children == NULL) {
-			st->children = malloc(sizeof(*st->children));
-			assert(st->children != NULL);
-			current_scope_level++;
-			st->children->scope_level = current_scope_level;
-			st_id++;
-			st->children->st_id = st_id;
-			st->children->parent = st;
-			create_compound_statement_node_symbol_table(compound_statement, st->children, 0);
-			current_scope_level--;
-			st->children->parent_function_identifier = current;
-			create_symbol_table(parameter_type_list, st->children);
-		}
-		else {
-			symbol_table *new = malloc(sizeof(symbol_table));
-			assert(new != NULL);
-			current_scope_level++;
-			new->scope_level = current_scope_level;
-			st_id++;
-			new->st_id = st_id;
-			st->children = add_to_symbol_table_list(st->children, new);
-			new->parent = st;
-			create_compound_statement_node_symbol_table(compound_statement, new, 0);
-			current_scope_level--;
-			new->parent_function_identifier = current;
-			create_symbol_table(parameter_type_list, new);
-		} 
-	}
-	if (current != NULL) {
 		st->identifiers = add_to_symbol_table_identifier_list(st->identifiers, current); 
+		get_identifier_from_declarator(n)->data.identifier->symbol_table_identifier = current;
+		//now prepare the function scope ST then add the arguments to it
+		node *parameter_type_list = get_parameter_type_list_from_declarator(n->data.function_def_specifier->declarator);
+		// need to create the child ST, then add parameter_type_list to it, then deal with the function contents
+		symbol_table *child_st = create_child_symbol_table(st, compound_statement, current);
+		create_symbol_table(parameter_type_list, child_st);
+		create_compound_statement_node_symbol_table(compound_statement, child_st, 0);
 	}
 }
-
+node *get_parameter_type_list_from_declarator(node *declarator) {
+	// main job is to extract the parameter list from a function_def_specifier of a function that returns arbitrary levels of pointers
+	// assert(function_def_specifier->node_type == FUNCTION_DEF_SPECIFIER_NODE);
+	int declarator_node_type = declarator->node_type;
+	if (declarator->node_type == POINTER_DECL_NODE) {
+		return get_parameter_type_list_from_declarator(declarator->data.pointer_decl->direct_declarator);
+	}
+	else if (declarator_node_type == FUNCTION_DECLARATOR_NODE) {
+		return declarator->data.function_declarator->parameter_type_list;
+	}
+	else {
+		printf("ERROR: node type %d doesn't have parameters\n", declarator->node_type);
+	}
+}
+symbol_table *create_child_symbol_table(symbol_table *parent_st, node *compound_statement, symbol_table_identifier *fn_symbol) {
+	symbol_table *new = malloc(sizeof(symbol_table));
+	assert(new != NULL);
+	current_scope_level++;
+	new->scope_level = current_scope_level;
+	st_id++;
+	new->st_id = st_id;
+	parent_st->children = add_to_symbol_table_list(parent_st->children, new);
+	new->parent = parent_st;
+	current_scope_level--;
+	if (fn_symbol != NULL) {
+		new->parent_function_identifier = fn_symbol;
+	}
+	return new;	
+}
 void create_compound_statement_node_symbol_table(node *n, symbol_table *st, int create_new_symbol_table) {
 	if (n->data.compound_statement->declaration_or_statement_list != NULL) {
-	// if create_new_symbol_table is 0, which is only in a function definition, then just 
+	// if create_new_symbol_table is 0, which is only in a function definition, then just deal with the declaration_or_statement_list
 		if (create_new_symbol_table) {
-			if (st->children == NULL) {
-				st->children = malloc(sizeof(*st->children));
-				assert(st->children != NULL);
-				current_scope_level++;
-				st->children->scope_level = current_scope_level;
-				st_id++;
-				st->children->st_id = st_id;
-				st->children->parent = st;
-				create_symbol_table(n->data.compound_statement->declaration_or_statement_list, st->children);
-			}
-			else {
-				symbol_table *new = malloc(sizeof(symbol_table));
-				assert(new != NULL);
-				current_scope_level++;
-				new->scope_level = current_scope_level;
-				st_id++;
-				new->st_id = st_id;
-				new->parent = st;
-				st->children = add_to_symbol_table_list(st->children, new);
-				create_symbol_table(n->data.compound_statement->declaration_or_statement_list, new);
-			}
-			current_scope_level--;
+			create_symbol_table(n->data.compound_statement->declaration_or_statement_list, create_child_symbol_table(st, n, NULL));
 		}
 		else {
 			create_symbol_table(n->data.compound_statement->declaration_or_statement_list, st);
@@ -1398,20 +1368,9 @@ void create_parameter_decl_node_symbol_table(node *n, symbol_table *st)  {
 	current = create_decl_identifier(n, decl_spec, declarator, current, st);
 }
 void create_subscript_expr_node_symbol_table(node *n, symbol_table *st)  {
-	// search the current ST and its parents for the closest matching ID name; 
-	// if found, attach it to the id of the expr; 
-	// if not found, print error
 	node *postfix_expr = n->data.subscript_expr->postfix_expr;
 	if (postfix_expr->node_type == IDENTIFIER_NODE) {
-		node *identifier = postfix_expr;
-		char *name = identifier->data.identifier->name;
-		symbol_table_identifier *i = find_identifier_in_symbol_table(st, name);
-		if (i != NULL) {
-			identifier->data.identifier->symbol_table_identifier = i;
-		}
-		else {
-			fprintf(stderr, "ERROR: Variable %s undeclared\n", name);
-		}
+		create_identifier_node_symbol_table(postfix_expr, st);
 	}
 	else {
 		create_symbol_table(postfix_expr, st);
@@ -1420,6 +1379,9 @@ void create_subscript_expr_node_symbol_table(node *n, symbol_table *st)  {
 }
 
 void create_identifier_node_symbol_table(node *n, symbol_table *st)  {
+	// search the current ST and its parents for the closest matching ID name; 
+	// if found, attach it to the id of the expr; 
+	// if not found, print error
 	char *name = n->data.identifier->name;
 	symbol_table_identifier *i = find_identifier_in_symbol_table(st, name);
 	if (i != NULL) {
@@ -1481,7 +1443,7 @@ type *get_type_from_decl_node(node *n) {
 		node *decl_spec = n->data.function_def_specifier->declaration_specifiers;
 		id_type->data.function_type = malloc(sizeof(function_type));
 		if (decl_spec->node_type == RESERVED_WORD_NODE && !strcmp(decl_spec->data.reserved_word->text, "void")) {
-			id_type->data.function_type = NULL;
+			id_type->data.function_type->return_type = NULL;
 		}
 		else {
 			node *reduced_node = create_node(DECL_NODE);
@@ -1766,7 +1728,12 @@ char *type_to_s(type *t) {
 					strcat(args, type_to_s(t->data.function_type->arg_types[i]));
 				} 
 			}
-			sprintf(str, "function (%s, %d, [%s])", type_to_s(t->data.function_type->return_type), t->data.function_type->argc, args);
+			if (t->data.function_type->return_type != NULL) {
+				sprintf(str, "function (%s, %d, [%s])", type_to_s(t->data.function_type->return_type), t->data.function_type->argc, args);
+			}
+			else {
+				sprintf(str, "function (void, %d, [%s])", t->data.function_type->argc, args);
+			}
 			break;
 		default:
 			printf("ERROR: Can't print ST entry of type %d\n", type);
@@ -2185,35 +2152,23 @@ ir *generate_ir_from_node(node *n) {
 			break;
 		}
 		case IF_ELSE_STATEMENT_NODE: {
-			// if (a < b) {
-			// 			c = d;
-			// 		}
-			// 		else {
-			// 			e = f * g;
-			// 		}
-			// 
-			// 		{loadWord, t18, a}
-			// 		(loadWord, t19, b)
-			// 		(lessThanSigned, t20, t18, t19)
-			// 		(ifFalse, t20, labeltemp_1)
-			// 		(LW, t21, d)
-			// 		(sw, c, t21)
-			// 		(goto, labeltemp_2)
-			// 		labeltemp_1: (nop)     	
-			// 		(lw, t22, f)
-			// 		(lw, t23, g)                                                    
-			// 		(multSigned, t24, t22, t23)
-			// 		(sw, e, t24)
-			// 		labeltemp_2: (nop)   
-			// parts of if-else statement: expr, if_statement, else_statement
-			// load expr which will be in a register
-			// 
+			create_if_else_statement_ir(n);
 			break;
 		}
 	}
 	return n->ir;
 }
-
+// ir_label *create_ir_label(char *name, ir *ir_to_attach_label_to) {
+// 	ir_label *irl = malloc(sizeof(ir_label));
+// 	irl->id = ir_label_id;
+// 	ir_label_id++;
+// 	irl->ir = ir_to_attach_label_to;
+// 	if (name != NULL) {
+// 		irl->name = name;
+// 	}
+// 	ir_to_attach_label_to->ir_label = irl;
+// 	return irl;
+// }
 ir *create_ir(int ir_type, int opcode) {
 	ir *ir_node = malloc(sizeof(*ir_node));
 	ir_node->ir_type = ir_type;
@@ -2231,9 +2186,64 @@ ir *create_ir(int ir_type, int opcode) {
 	case LOAD_CONST:
 		ir_node->data.load_const_ir = malloc(sizeof(*ir_node->data.load_const_ir));
 		break;
+	case JUMP:
+		ir_node->data.jump_ir = malloc(sizeof(*ir_node->data.jump_ir));
+		break;
 	}
 	return ir_node;
 } 
+void create_if_else_statement_ir(node *node_to_attach_ir_to) {
+	// parts of if-else statement: expr, if_statement, else_statement
+	// load expr which will be in a register t1
+	// make l1 which points to a nop IR
+	// if t1 isFalse, go to label l1
+	// load if_statement
+	// if there's else_statement, make l2 which points to a nop IR, insert then load else_statement, then insert label l2
+	// if A then B -> load A, make nop IR l1, insert "if A false, jump to l1" IR, load B, insert l1
+	// if A then B else C -> load A, make nop IR l1, insert "if A false, jump to l1" IR, load B, make nop IR l2, insert "jump to l2" IR, insert l1, load C, insert l2
+	
+	// load expr which will be in a register t1
+	node_to_attach_ir_to->ir = add_to_ir_list(node_to_attach_ir_to->ir, generate_ir_from_node(node_to_attach_ir_to->data.if_else_statement->expr));
+	// ir_label *l1 = create_ir_label(NULL, nop_ir);
+	// if t1 isFalse, go to label l1
+	ir *nop_ir = create_nop_ir(NULL);
+	create_jump_ir(node_to_attach_ir_to, beqz, get_rd_register_from_ir(get_last_ir_list_element(node_to_attach_ir_to->ir)), NULL, nop_ir);
+	node_to_attach_ir_to->ir = add_to_ir_list(node_to_attach_ir_to->ir, generate_ir_from_node(node_to_attach_ir_to->data.if_else_statement->if_statement));
+	if (node_to_attach_ir_to->data.if_else_statement->else_statement != NULL) {
+		ir *after_else_label_ir = create_nop_ir(NULL);
+		create_jump_ir(node_to_attach_ir_to->data.if_else_statement->else_statement, Jump, NULL, NULL, after_else_label_ir);
+		node_to_attach_ir_to->ir = add_to_ir_list(node_to_attach_ir_to->ir, nop_ir);
+		node_to_attach_ir_to->ir = add_to_ir_list(node_to_attach_ir_to->ir, generate_ir_from_node(node_to_attach_ir_to->data.if_else_statement->else_statement));		
+		node_to_attach_ir_to->ir = add_to_ir_list(node_to_attach_ir_to->ir, after_else_label_ir);
+	}
+	else {
+		node_to_attach_ir_to->ir = add_to_ir_list(node_to_attach_ir_to->ir, nop_ir);
+	}
+}
+ir *create_nop_ir(char *name) {
+	ir *nop_ir = create_ir(NOP, nop);
+	if (name != NULL) {
+		nop_ir->ir_label = name;
+	}
+	else {
+		nop_ir->ir_label = num_to_s(ir_label_id);
+		ir_label_id++;
+	}
+	return nop_ir;
+}
+char *num_to_s(int num) {
+	char *str = malloc(100);
+	sprintf(str, "%d", num);
+	return str;
+}
+ir *create_jump_ir(node *node_to_attach_ir_to, int op, temp *src1, temp *src2, ir *label_ir) {
+	ir *ir = create_ir(JUMP, op);
+	node_to_attach_ir_to->ir = add_to_ir_list(node_to_attach_ir_to->ir, ir);
+	ir->data.jump_ir->s1 = src1;
+	ir->data.jump_ir->s2 = src2;
+	ir->data.jump_ir->label_ir = label_ir;
+	return ir;
+}
 void create_subscript_expr_ir(node *node_to_attach_ir_to) {
 	assert(node_to_attach_ir_to->node_type == SUBSCRIPT_EXPR_NODE);
 			// int a[]; a[3]; -> load addr of postfix expr, load expr, load size of postfix expr's element type, multiply last 2, add that to 1, load word (half/byte) there
@@ -2589,7 +2599,7 @@ ir *get_last_ir_list_element(ir *list) {
 		}
 	}
 }
-ir *add_to_ir_list(ir *list, ir *new) {
+ir *add_to_ir_list(ir *list, ir *new) { // should only be used when the IR you're adding wasn't created by a function that also attaches it to the node you're adding it to; otherwise its next field will be itself and lead to infinite loops. it's a terrible terrible linked list implementation 
 	if (new != NULL) {
 		ir *old = get_last_ir_list_element(list);
 		if (old == NULL) { // empty list, so put 'new' in as first element   
@@ -2615,37 +2625,53 @@ void print_ir(ir *ir, FILE *output) {
 		// op_ir: opcode, temp rd, temp rs, temp rt
 		// load_ir: opcode, temp rd, symbol rs
 		// store_ir: opcode, symbol rd, temp rs
-		fprintf(output, "%s(", opcodes[ir->opcode]);
-		switch (ir->ir_type) {
-			case OP:
-				fprintf(output, "t_%d", ir->data.op_ir->rd->id);
-				fprintf(output, ", t_%d", ir->data.op_ir->rs->id);
-				if (ir->data.op_ir->rt != NULL) {
-					fprintf(output, ", t_%d", ir->data.op_ir->rt->id);			
-				}
-				break;
-			case LOAD:
-				fprintf(output, "t_%d, ", ir->data.load_ir->rd->id);
-				fprintf(output, "%s", ir->data.load_ir->rs->name);
-				break;
-			case STORE:
-				fprintf(output, "%s, ", ir->data.store_ir->rd->name);
-				fprintf(output, "t_%d", ir->data.store_ir->rs->id);
-				break;
-			case LOAD_CONST:
-				fprintf(output, "t_%d, ", ir->data.load_const_ir->rd->id);
-				fprintf(output, "%d", ir->data.load_const_ir->rs);
-				break;
-			default:
-				fprintf(output, "ERROR: unknown IR node type: %d\n", ir->ir_type);
+		if (ir->ir_label != NULL) {
+			fprintf(output, "label_%s: NoOp", ir->ir_label);
 		}
-		fputs(")\n", output);
+		else {
+			fprintf(output, "%s(", opcodes[ir->opcode]);
+			switch (ir->ir_type) {
+				case OP:
+					fprintf(output, "t_%d", ir->data.op_ir->rd->id);
+					fprintf(output, ", t_%d", ir->data.op_ir->rs->id);
+					if (ir->data.op_ir->rt != NULL) {
+						fprintf(output, ", t_%d", ir->data.op_ir->rt->id);			
+					}
+					break;
+				case LOAD:
+					fprintf(output, "t_%d, ", ir->data.load_ir->rd->id);
+					fprintf(output, "%s", ir->data.load_ir->rs->name);
+					break;
+				case STORE:
+					fprintf(output, "%s, ", ir->data.store_ir->rd->name);
+					fprintf(output, "t_%d", ir->data.store_ir->rs->id);
+					break;
+				case LOAD_CONST:
+					fprintf(output, "t_%d, ", ir->data.load_const_ir->rd->id);
+					fprintf(output, "%d", ir->data.load_const_ir->rs);
+					break;
+				case JUMP:
+					if (ir->data.jump_ir->s1 != NULL) {
+						fprintf(output, "t_%d, ", ir->data.jump_ir->s1->id);
+					}
+					if (ir->data.jump_ir->s2 != NULL) {
+						fprintf(output, "t_%d, ", ir->data.jump_ir->s2->id);
+					}
+					if (ir->data.jump_ir->label_ir != NULL) {
+						fprintf(output, "label_%s", ir->data.jump_ir->label_ir->ir_label);
+					}
+					break;
+				default:
+					fprintf(output, "ERROR: unknown IR node type: %d\n", ir->ir_type);
+			}                
+			fputs(")", output);
+		}
+		fputs("\n", output);
 		if (ir->next != NULL) {
 			print_ir(ir->next, output);
 		}                 
 	}
 }
-
 void add_ir_opcodes() {
 	opcodes[LoadAddr] = "LoadAddr";
 	opcodes[LoadWordIndirect] = "LoadWordIndirect";
@@ -2684,4 +2710,7 @@ void add_ir_opcodes() {
 	opcodes[not] = "BitwiseNot";
 	opcodes[LogicalNot] = "LogicalNot";
 	opcodes[neg] = "Negative";
+	opcodes[nop] = "NoOp";
+	opcodes[beqz] = "JumpIfFalse";
+	opcodes[Jump] = "Jump";
 }
