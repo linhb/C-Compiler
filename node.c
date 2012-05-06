@@ -2200,20 +2200,26 @@ void create_if_else_statement_ir(node *node_to_attach_ir_to) {
 	// load if_statement
 	// if there's else_statement, make l2 which points to a nop IR, insert then load else_statement, then insert label l2
 	// if A then B -> load A, make nop IR l1, insert "if A false, jump to l1" IR, load B, insert l1
-	// if A then B else C -> load A, make nop IR l1, insert "if A false, jump to l1" IR, load B, make nop IR l2, insert "jump to l2" IR, insert l1, load C, insert l2
+	// if A then B else C -> load A, make nop IR l1, insert "if A false, jump to l1" IR, load B, , make nop IR l2, insert "jump to l2" IR, insert l1, load C, insert l2
 	
-	// load expr which will be in a register t1
+	// load A
 	node_to_attach_ir_to->ir = add_to_ir_list(node_to_attach_ir_to->ir, generate_ir_from_node(node_to_attach_ir_to->data.if_else_statement->expr));
-	// ir_label *l1 = create_ir_label(NULL, nop_ir);
-	// if t1 isFalse, go to label l1
+	// make nop IR l1
 	ir *nop_ir = create_nop_ir(NULL);
+	// insert "if A false, jump to l1" IR
 	create_jump_ir(node_to_attach_ir_to, beqz, get_rd_register_from_ir(get_last_ir_list_element(node_to_attach_ir_to->ir)), NULL, nop_ir);
+	// load B
 	node_to_attach_ir_to->ir = add_to_ir_list(node_to_attach_ir_to->ir, generate_ir_from_node(node_to_attach_ir_to->data.if_else_statement->if_statement));
 	if (node_to_attach_ir_to->data.if_else_statement->else_statement != NULL) {
+		// make nop IR l2
 		ir *after_else_label_ir = create_nop_ir(NULL);
-		create_jump_ir(node_to_attach_ir_to->data.if_else_statement->else_statement, Jump, NULL, NULL, after_else_label_ir);
+		// insert "jump to l2" IR
+		create_jump_ir(node_to_attach_ir_to->ir, Jump, NULL, NULL, after_else_label_ir);
+		// insert l1
 		node_to_attach_ir_to->ir = add_to_ir_list(node_to_attach_ir_to->ir, nop_ir);
+		// load C
 		node_to_attach_ir_to->ir = add_to_ir_list(node_to_attach_ir_to->ir, generate_ir_from_node(node_to_attach_ir_to->data.if_else_statement->else_statement));		
+		// insert l2
 		node_to_attach_ir_to->ir = add_to_ir_list(node_to_attach_ir_to->ir, after_else_label_ir);
 	}
 	else {
@@ -2238,10 +2244,10 @@ char *num_to_s(int num) {
 }
 ir *create_jump_ir(node *node_to_attach_ir_to, int op, temp *src1, temp *src2, ir *label_ir) {
 	ir *ir = create_ir(JUMP, op);
-	node_to_attach_ir_to->ir = add_to_ir_list(node_to_attach_ir_to->ir, ir);
 	ir->data.jump_ir->s1 = src1;
 	ir->data.jump_ir->s2 = src2;
 	ir->data.jump_ir->label_ir = label_ir;
+	node_to_attach_ir_to->ir = add_to_ir_list(node_to_attach_ir_to->ir, ir);
 	return ir;
 }
 void create_subscript_expr_ir(node *node_to_attach_ir_to) {
