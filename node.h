@@ -230,6 +230,7 @@ typedef struct n_reserved_word_statement
 {
 	node *reserved_word;
 	node *expr;
+	// symbol_table *symbol_table;
 } reserved_word_statement;
 typedef struct n_if_else_statement
 {
@@ -539,6 +540,7 @@ int compare_arithmetic_types(type *t1, type *t2);
 void assignment_type_check(node *left, node *right);
 node *create_decl_node_from_type(type *type);
 int size_of_type(type *t);
+int is_equal(type *t1, type *t2);
 
 #define OP 1
 #define LOAD 2
@@ -649,6 +651,10 @@ char *opcodes[100];
 #define nop 38
 #define beqz 39
 #define Jump 40
+#define ReturnWord 41
+#define ReturnHalf 42
+#define ReturnByte 43
+#define JumpIfTrue 44
 
 temp *load_lvalue_from_rvalue_ir_if_needed(node *n, temp *may_be_address);
 ir *generate_ir_from_node(node *n);
@@ -667,8 +673,13 @@ ir *create_unary_ir(node *n, temp *t);
 void create_subscript_expr_ir(node *node_to_attach_ir_to);
 void create_binary_expr_ir(node *n);
 void create_if_else_statement_ir(node *node_to_attach_ir_to);
+void create_for_statement_ir(node *node_to_attach_ir_to);
 ir *create_jump_ir(node *node_to_attach_ir_to, int op, temp *src1, temp *src2, ir *label_ir);
+void create_do_statement_ir(node *node_to_attach_ir_to);
 ir *create_nop_ir(char *name);
+void create_return_statement_ir(node *node_to_attach_ir_to);
+ir *create_return_ir(node *node_to_attach_ir_to, node *expr, temp *temp);
+void create_reserved_word_statement_ir(node *node_to_attach_ir_to);
 temp *create_temp();
 char *num_to_s(int num);
 temp *get_rd_register_from_ir(ir *ir);

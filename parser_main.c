@@ -58,6 +58,7 @@ int main(int argc, char **argv) {
 		add_ir_opcodes();
 		fputs("\n****** INTERMEDIATE REPRESENTATION ********\n", output);
 		print_ir(ir_list, output);
+		// generate_code(ir_list);
 		break;
 	case 1:
 		fprintf(stderr, "Number of errors: %d", yynerrs);

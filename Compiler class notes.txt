@@ -1022,7 +1022,7 @@ i = f(a, b);
 (loadword, t7, b)
 (paramword, t6) // can put t6 on the stack
 (paramword, t7) 
-(call, t8, f, 2) // 2 means 2 parameters, must match number of paramword
+(call, t8, f, 2) // 2 means 2 parameters, must match number of paramword; f is a nop labeled IR that points to the beginning of the IR for f
 (storeword, i, t8)
 
 (returnword, t9)
@@ -1083,6 +1083,28 @@ a = A[i];
 4/3
 
 Lecture:
+
+Structure of assembly program:
+
+1st column: labels, end with : then whitespace
+	labels are basically identifiers, they refer to the location of variables, can use to refer to variables
+2nd column: opcodes. All lines that don't have labels have to start with space or tab
+If line starts with ., is instruction to the assembler
+	.data: everything that follows is data not instructions
+	.text: everything that follows is instructions
+	.globl: the variable that follows is visible outside the program, useful for linkers
+
+Most instructions take the destination as first argument, but store instructions take the destination as second argument
+
+To make system calls eg print_string, put the code number for the call function in $v0, its arguments in $a0-a3.
+
+Registers and calling conventions:
+	zero: also the number 0
+	$at: reserved for the assembler to use to translate pseudoinstructions into real instructions
+	$t0-t9: if occupied when a function is called, can't rely on their values to still be there when the called function returns
+	$s0-s7: can trust they'll still be there when a called function returns
+		when generating code for a function, it has to save the s registers before it's called, and restore them when it exits
+		but if it calls another function, it can assume the s registers will still be there when the callee exits. But it'll have to save the t registers.
 
 Words are 32 bits (write most significant first, so 31 - 0)
 Instructions: 3 classes
@@ -1508,3 +1530,12 @@ Assumption: can't verify at runtime
 	Without this, there must be an ordering constraint - can't do things in parallel
 	
 	
+5/8/12
+
+TA: 
+
+To know the function you're in when you have a return statement, find the highest ST from the current ST that only have 1 ancestor, that's the function you're in.
+
+When doing the ST pass, attach the correct return type to the return statement, then use that for the type checking pass when you don't know what ST you're in.
+
+No need to create data structures for MIPS code, just print from IR.

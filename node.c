@@ -1257,6 +1257,7 @@ node *get_identifier_from_declarator(node *n) {
 	default:
 		printf("ERROR: tried to get name from unknown node %d\n", n->node_type);
 	}
+	return NULL;
 }
 void create_decl_node_symbol_table(node *n, symbol_table *st) {
 	node *decl_spec = n->data.decl->declaration_specifier;
@@ -1323,6 +1324,7 @@ node *get_parameter_type_list_from_declarator(node *declarator) {
 	else {
 		printf("ERROR: node type %d doesn't have parameters\n", declarator->node_type);
 	}
+	return NULL;
 }
 symbol_table *create_child_symbol_table(symbol_table *parent_st, node *compound_statement, symbol_table_identifier *fn_symbol) {
 	symbol_table *new = malloc(sizeof(symbol_table));
@@ -1792,6 +1794,7 @@ node *get_identifier_from_node(node *n) {
 	case UNARY_EXPRESSION_NODE:
 		return get_core_operand_from_unary_expr(n->data.unary_expression->operand);
 	}
+	return NULL;
 }
 void do_unary_conversion(node *n) {
 	// only !, ~, +, -, * and array
@@ -1901,9 +1904,9 @@ node *insert_cast(type *type, node *n) {
 	}
 	return create_cast_expr_node(cast, n);
 }
-node *create_cast_node_from_type(type *type) {
-	
-}
+// node *create_cast_node_from_type(type *type) {
+// 	
+// }
 node *insert_cast_from_string(char *cast_type, int is_unsigned, node *n) {
 	type *int_type = malloc(sizeof(*int_type));
 	int_type->type = ARITHMETIC_TYPE;
@@ -1973,6 +1976,7 @@ type *type_of_expr(node *n) {
 			// t->data.pointer_type = malloc(sizeof(*t->data.pointer_type));
 			// t->data.pointer_type->
 	}
+	return NULL;
 }
 type *larger_type(type *left_type, type *right_type) {
 	if (rank(left_type) > rank(right_type)) {
@@ -2029,6 +2033,7 @@ int is_equal(type *t1, type *t2) {
 	else {
 		return 0;
 	}
+	return NULL;
 }
 type *type_of_unary_expr(node *unary_expression) {
 	node *operand = get_core_operand_from_unary_expr(unary_expression);
@@ -2054,12 +2059,9 @@ int rank(type *t) {
 			return 20;
 		default:
 			printf("ERROR: unknown number type: %d\n", t->data.arithmetic_type->number_type);
-			return 9999;
 		}
 	}
-	else {
-		return NULL;
-	}
+	return 9999;
 }
 int size_of_type(type *t) {
 	switch (t->type) {
@@ -2134,7 +2136,10 @@ ir *generate_ir_from_node(node *n) {
 			break;
 		}
 		case COMPOUND_STATEMENT_NODE: {
-			n->ir = add_to_ir_list(n->ir, generate_ir_from_node(n->data.compound_statement->declaration_or_statement_list));
+			node *declaration_or_statement_list = n->data.compound_statement->declaration_or_statement_list;
+			if (declaration_or_statement_list != NULL) {
+				n->ir = add_to_ir_list(n->ir, generate_ir_from_node(declaration_or_statement_list));
+			}
 			break;
 		}
 		case DECLARATION_OR_STATEMENT_LIST_NODE: {
@@ -2155,20 +2160,27 @@ ir *generate_ir_from_node(node *n) {
 			create_if_else_statement_ir(n);
 			break;
 		}
+		case FOR_STATEMENT_NODE: {
+			create_for_statement_ir(n);
+			break;
+		}
+		case RESERVED_WORD_STATEMENT_NODE: {
+			create_reserved_word_statement_ir(n);
+			break;
+		}
+		case DO_STATEMENT_NODE: 
+			create_do_statement_ir(n);
+			break;
+		case WHILE_STATEMENT_NODE: 
+			create_while_statement_ir(n);
+			break;
+			// continue/break?
+		// case RESERVED_WORD_STATEMENT_NODE: 
+		// 	create_while_statement_ir(n);
+		// 	break;
 	}
 	return n->ir;
 }
-// ir_label *create_ir_label(char *name, ir *ir_to_attach_label_to) {
-// 	ir_label *irl = malloc(sizeof(ir_label));
-// 	irl->id = ir_label_id;
-// 	ir_label_id++;
-// 	irl->ir = ir_to_attach_label_to;
-// 	if (name != NULL) {
-// 		irl->name = name;
-// 	}
-// 	ir_to_attach_label_to->ir_label = irl;
-// 	return irl;
-// }
 ir *create_ir(int ir_type, int opcode) {
 	ir *ir_node = malloc(sizeof(*ir_node));
 	ir_node->ir_type = ir_type;
@@ -2214,7 +2226,7 @@ void create_if_else_statement_ir(node *node_to_attach_ir_to) {
 		// make nop IR l2
 		ir *after_else_label_ir = create_nop_ir(NULL);
 		// insert "jump to l2" IR
-		create_jump_ir(node_to_attach_ir_to->ir, Jump, NULL, NULL, after_else_label_ir);
+		create_jump_ir(node_to_attach_ir_to, Jump, NULL, NULL, after_else_label_ir);
 		// insert l1
 		node_to_attach_ir_to->ir = add_to_ir_list(node_to_attach_ir_to->ir, nop_ir);
 		// load C
@@ -2224,6 +2236,111 @@ void create_if_else_statement_ir(node *node_to_attach_ir_to) {
 	}
 	else {
 		node_to_attach_ir_to->ir = add_to_ir_list(node_to_attach_ir_to->ir, nop_ir);
+	}
+}
+void create_reserved_word_statement_ir(node *node_to_attach_ir_to) {
+	switch (node_to_attach_ir_to->data.reserved_word_statement->reserved_word->data.reserved_word->value) {
+		case RETURN: {
+			create_return_statement_ir(node_to_attach_ir_to);
+			break;
+		}
+		case GOTO: {
+			// create_jump_ir(node_to_attach_ir_to, Jump, )
+			break;
+		}
+	}
+}
+void create_for_statement_ir(node *node_to_attach_ir_to) {
+	// for statements have for_expr and statement
+	// for_expr has initial_clause, goal_expr, advance_expr
+	// attach initial_clause
+	node_to_attach_ir_to->ir = add_to_ir_list(node_to_attach_ir_to->ir, generate_ir_from_node(node_to_attach_ir_to->data.for_statement->for_expr->data.for_expr->initial_clause));
+	// create nop IR to statement
+	ir *before_statement_ir = create_nop_ir(NULL);
+	node_to_attach_ir_to->ir = add_to_ir_list(node_to_attach_ir_to->ir, before_statement_ir);
+	// attach goal_expr
+	node *goal_expr = node_to_attach_ir_to->data.for_statement->for_expr->data.for_expr->goal_expr;
+	ir *goal_expr_ir = generate_ir_from_node(goal_expr);
+	node_to_attach_ir_to->ir = add_to_ir_list(node_to_attach_ir_to->ir, goal_expr_ir);	
+	// make nop IR for end of loop
+	ir *end_of_loop_ir = create_nop_ir(NULL);
+	// if goal_expr isFalse, go to nop IR
+	create_jump_ir(node_to_attach_ir_to, beqz, goal_expr->temp, NULL, end_of_loop_ir);
+	// attach statement
+	node_to_attach_ir_to->ir = add_to_ir_list(node_to_attach_ir_to->ir, generate_ir_from_node(node_to_attach_ir_to->data.for_statement->statement));	
+	// attach advance_expr
+	node_to_attach_ir_to->ir = add_to_ir_list(node_to_attach_ir_to->ir, generate_ir_from_node(node_to_attach_ir_to->data.for_statement->for_expr->data.for_expr->advance_expr));	
+	// create and attach jump IR to nop IR before statement
+	create_jump_ir(node_to_attach_ir_to, Jump, NULL, NULL, before_statement_ir);
+	// attach nop IR for end of loop
+	node_to_attach_ir_to->ir = add_to_ir_list(node_to_attach_ir_to->ir, end_of_loop_ir);
+}
+void create_return_statement_ir(node *node_to_attach_ir_to) {
+	// return statement has optional expr
+	// attach expr, then create return<Size> with expr's temp
+	assert(node_to_attach_ir_to->node_type == RESERVED_WORD_STATEMENT_NODE);
+	node *expr = node_to_attach_ir_to->data.reserved_word_statement->expr;
+	if (expr != NULL) {
+		node_to_attach_ir_to->ir = add_to_ir_list(node_to_attach_ir_to->ir, generate_ir_from_node(expr));
+		create_return_ir(node_to_attach_ir_to, expr, expr->temp);
+	}
+	else {
+		create_return_ir(node_to_attach_ir_to, NULL, NULL);
+	}
+}
+void create_do_statement_ir(node *node_to_attach_ir_to) {
+	// do statement has statement and expr
+	// create and insert before_stmt label IR
+	ir *before_stmt = create_nop_ir(NULL);
+	node_to_attach_ir_to->ir = add_to_ir_list(node_to_attach_ir_to->ir, before_stmt);
+	// create IR for statement 
+	node_to_attach_ir_to->ir = add_to_ir_list(node_to_attach_ir_to->ir, generate_ir_from_node(node_to_attach_ir_to->data.do_statement->statement));
+	// create IR for expr
+	ir *expr_ir = generate_ir_from_node(node_to_attach_ir_to->data.do_statement->expr);
+	node_to_attach_ir_to->ir = add_to_ir_list(node_to_attach_ir_to->ir, expr_ir);
+	// insert JumpIfTrue(before_stmt, expr)	
+	create_jump_ir(node_to_attach_ir_to, JumpIfTrue, node_to_attach_ir_to->data.do_statement->expr->temp, NULL, before_stmt);
+}
+void create_while_statement_ir(node *node_to_attach_ir_to) {
+	// while statement has expr and statement
+	// create and attach before_expr label
+	ir *before_expr = create_nop_ir(NULL);
+	node_to_attach_ir_to->ir = add_to_ir_list(node_to_attach_ir_to->ir, before_expr);
+	// create and attach expr IR
+	node_to_attach_ir_to->ir = add_to_ir_list(node_to_attach_ir_to->ir, generate_ir_from_node(node_to_attach_ir_to->data.while_statement->expr));
+	temp *expr_temp = node_to_attach_ir_to->data.while_statement->expr->temp;
+	// create and attach JumpIfFalse IR to after_statement IR
+	ir *after_statement = create_nop_ir(NULL);
+	create_jump_ir(node_to_attach_ir_to, beqz, expr_temp, NULL, after_statement);
+	// create and attach statement IR
+	node_to_attach_ir_to->ir = add_to_ir_list(node_to_attach_ir_to->ir, generate_ir_from_node(node_to_attach_ir_to->data.while_statement->statement));
+	// create and attach unconditional jump to before_expr label
+	create_jump_ir(node_to_attach_ir_to, Jump, NULL, NULL, before_expr);
+	// create and attach after_statement IR
+	node_to_attach_ir_to->ir = add_to_ir_list(node_to_attach_ir_to->ir, after_statement);
+}
+ir *create_return_ir(node *node_to_attach_ir_to, node *expr, temp *temp) {
+	// if there's something to return, ie expr != NULL, create a return IR and a jump IR to outside the function
+	// else just create a jump IR to outside the function
+	ir *ir;
+	if (expr != NULL && temp != NULL) {
+		int opcode;
+		switch (size_of_type(type_of_expr(expr))) {
+		case WORD:
+			opcode = ReturnWord;
+			break;
+		case HALF:
+			opcode = ReturnHalf;
+			break;
+		case BYTE:
+			opcode = ReturnByte;
+			break;
+		}
+		ir = create_ir(OP, opcode);
+		ir->data.op_ir->rd = temp;
+		node_to_attach_ir_to->ir = add_to_ir_list(node_to_attach_ir_to->ir, ir);
+		// TODO add jump IR to after function
+		return ir;
 	}
 }
 ir *create_nop_ir(char *name) {
@@ -2502,9 +2619,11 @@ ir *create_simple_binary_ir(node *node_to_attach_ir_to, int op, temp *rs, temp *
 		}
 		case IS_EQUAL: {
 			ir = create_ir(OP, seq);
+			break;
 		}
 		case IS_NOT_EQUAL: {
 			ir = create_ir(OP, sne);
+			break;
 		}
 		case BITWISE_OR: {
 			ir = create_ir(OP, BitwiseOr);
@@ -2639,7 +2758,9 @@ void print_ir(ir *ir, FILE *output) {
 			switch (ir->ir_type) {
 				case OP:
 					fprintf(output, "t_%d", ir->data.op_ir->rd->id);
-					fprintf(output, ", t_%d", ir->data.op_ir->rs->id);
+					if (ir->data.op_ir->rs != NULL) {
+						fprintf(output, ", t_%d", ir->data.op_ir->rs->id);
+					}
 					if (ir->data.op_ir->rt != NULL) {
 						fprintf(output, ", t_%d", ir->data.op_ir->rt->id);			
 					}
@@ -2719,4 +2840,8 @@ void add_ir_opcodes() {
 	opcodes[nop] = "NoOp";
 	opcodes[beqz] = "JumpIfFalse";
 	opcodes[Jump] = "Jump";
+	opcodes[ReturnWord] = "ReturnWord";
+	opcodes[ReturnByte] = "ReturnByte";
+	opcodes[ReturnHalf] = "ReturnHalf";
+	opcodes[JumpIfTrue] = "JumpIfTrue";
 }
