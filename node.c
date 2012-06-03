@@ -1,7 +1,7 @@
 /*
 Definitions of functions that create and print different kinds of nodes
 */
-
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -1014,6 +1014,8 @@ void print_indentation(FILE *output) {
 	}
 }
 
+void add_to_list(void *element) {}
+
 symbol_table *add_to_symbol_table_list(symbol_table *list, symbol_table *new) {
 	symbol_table *old = get_last_symbol_table_list_element(list);
 	if (old == NULL) { // empty list, so put 'new' in as first element   
@@ -1149,6 +1151,7 @@ int all_numbers(node *n) {
 void create_symbol_table(node *n, symbol_table *st) {
 	// evaluate(n);
 	if (n != NULL) {
+		n->symbol_table = st;
 		switch (n->node_type) {
 		case DECL_NODE:
 			create_decl_node_symbol_table(n, st);
@@ -1220,6 +1223,14 @@ void create_symbol_table(node *n, symbol_table *st) {
 			create_symbol_table(n->data.ternary_expr->logical_or_expr, st);
 			create_symbol_table(n->data.ternary_expr->expr, st);
 			create_symbol_table(n->data.ternary_expr->conditional_expr, st);
+			break;
+		case FUNCTION_CALL_NODE:
+			create_symbol_table(n->data.function_call->postfix_expr, st);
+			create_symbol_table(n->data.function_call->expression_list, st);
+			break;
+		case EXPRESSION_LIST_NODE:
+			create_symbol_table(n->data.expression_list->expression_list, st);
+			create_symbol_table(n->data.expression_list->assignment_expr, st);
 			break;
 		default:
 			// DEBUG
@@ -1793,6 +1804,8 @@ node *get_identifier_from_node(node *n) {
 	switch (n->node_type) {
 	case UNARY_EXPRESSION_NODE:
 		return get_core_operand_from_unary_expr(n->data.unary_expression->operand);
+	case IDENTIFIER_NODE:
+		return n;
 	}
 	return NULL;
 }
@@ -2178,6 +2191,13 @@ ir *generate_ir_from_node(node *n) {
 		// case RESERVED_WORD_STATEMENT_NODE: 
 		// 	create_while_statement_ir(n);
 		// 	break;
+		case FUNCTION_CALL_NODE:
+			create_function_call_ir(n);
+			break;
+		case EXPRESSION_LIST_NODE:
+			n->ir = add_to_ir_list(n->ir, generate_ir_from_node(n->data.expression_list->expression_list));
+			n->ir = add_to_ir_list(n->ir, generate_ir_from_node(n->data.expression_list->assignment_expr));
+			break;
 	}
 	return n->ir;
 }
@@ -2204,6 +2224,61 @@ ir *create_ir(int ir_type, int opcode) {
 	}
 	return ir_node;
 } 
+void create_function_call_ir(node *node_to_attach_ir_to) {
+	// function calls have postfix_expr and expr_list
+	// expr_list has expr_list and assignment_expr
+	// make array of exprs that are children of expr_list; these are the parameters
+	// create paramWord IR for each array element
+	// OR create paramWord IR for expr_list's assignment_expr and its expr_list's assignment_expr and so on recursively
+	// make call IR, attach results to node_to_attach_ir_to's temp
+	// node params[get_number_of_exprs_from_expr_list(node_to_attach_ir_to->data.function_call->expression_list)] = 
+	node *expression_list = node_to_attach_ir_to->data.function_call->expression_list;
+	// get number of arguments from function's symbol table entry
+	// get identifier from function_call's postfix_expr
+	node *identifier = get_identifier_from_node(node_to_attach_ir_to->data.function_call->postfix_expr);
+	// get symbol table entry from identifier
+	symbol_table_identifier *entry = find_identifier_in_symbol_table(node_to_attach_ir_to->symbol_table, identifier->data.identifier->name);
+	// get argument number from symbol table entry
+	int argc = entry->type->data.function_type->argc;
+	// char *c[3]: array of 3 char pointers, or 3 strings
+	// char c[3]: array of 3 chars
+	ir *param_irs[100]; // had no end of trouble when i attempted to declare a variable-sized array, even when compiled in C99
+	int i = 0;
+	while (expression_list->node_type == EXPRESSION_LIST_NODE) {
+		// this is tricky because the highest level expression_list's assignment_expr contains the last parameter, so collect all the param IRs into an array and add them in reverse order
+		generate_ir_from_node(expression_list);
+		node *assignment_expr = expression_list->data.expression_list->assignment_expr;
+		ir *param_ir = create_param_ir(node_to_attach_ir_to, assignment_expr->temp, assignment_expr);
+		param_irs[i] = param_ir;
+		i++;
+		expression_list = expression_list->data.expression_list->expression_list;
+	}
+	// do it one last time for the last expression_list, which is an assignment_expr
+	generate_ir_from_node(assignment_expr);
+	param_irs[i] = create_param_ir(node_to_attach_ir_to, expression_list->temp, expression_list);
+	// now add IRs in param_irs from last to first
+	for (i = argc - 1; i >= 0; i--) {
+		node_to_attach_ir_to->ir = add_to_ir_list(node_to_attach_ir_to->ir, param_irs[i]);
+	}
+}
+ir *create_param_ir(node *node_to_attach_ir_to, temp *temp, node *param_expr) {
+	// 
+	ir *ir;
+	switch (size_of_type(type_of_expr(param_expr))) {
+	case WORD:
+		ir = create_ir(OP, ParamWord);
+		break;
+	case HALF:
+		ir = create_ir(OP, ParamHalf);
+		break;
+	case BYTE:
+		ir = create_ir(OP, ParamByte);
+		break;
+	}
+	ir->data.op_ir->rd = temp;
+	// node_to_attach_ir_to->ir = add_to_ir_list(node_to_attach_ir_to->ir, ir);
+	return ir;
+}
 void create_if_else_statement_ir(node *node_to_attach_ir_to) {
 	// parts of if-else statement: expr, if_statement, else_statement
 	// load expr which will be in a register t1
@@ -2844,4 +2919,7 @@ void add_ir_opcodes() {
 	opcodes[ReturnByte] = "ReturnByte";
 	opcodes[ReturnHalf] = "ReturnHalf";
 	opcodes[JumpIfTrue] = "JumpIfTrue";
+	opcodes[ParamWord] = "ParamWord";
+	opcodes[ParamHalf] = "ParamHalf";
+	opcodes[ParamByte] = "ParamByte";
 }

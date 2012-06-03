@@ -1,0 +1,7 @@
+void do_stmt(void) {
+	int a;
+	do {
+		a++;
+	}
+	while (a < 4);
+}

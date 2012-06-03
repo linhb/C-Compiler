@@ -96,6 +96,7 @@ typedef struct t_node {
 		struct n_abstract_declarator *abstract_declarator;
 		struct n_comma_expr *comma_expr;
 	} data;
+	struct t_symbol_table *symbol_table;
 	struct n_ir *ir;
 	struct n_temp *temp; // only meaningful for nodes that have a value, eg identifiers, expr. Meaningless for eg function_definition. Shouldn't be used even if populated.
 } node;
@@ -416,6 +417,12 @@ void print_comma_expr_node(FILE *output, node *n);
 
 const char *types[400];
 
+typedef struct t_list
+{
+	void *element;
+	struct t_list *next;
+} list;
+void add_to_list(void *element);
 typedef struct t_symbol_table
 {
 	struct t_symbol_table_identifier *identifiers;        // both identifiers and children are linked lists
@@ -655,6 +662,9 @@ char *opcodes[100];
 #define ReturnHalf 42
 #define ReturnByte 43
 #define JumpIfTrue 44
+#define ParamWord 45
+#define ParamHalf 46
+#define ParamByte 47
 
 temp *load_lvalue_from_rvalue_ir_if_needed(node *n, temp *may_be_address);
 ir *generate_ir_from_node(node *n);
@@ -680,6 +690,8 @@ ir *create_nop_ir(char *name);
 void create_return_statement_ir(node *node_to_attach_ir_to);
 ir *create_return_ir(node *node_to_attach_ir_to, node *expr, temp *temp);
 void create_reserved_word_statement_ir(node *node_to_attach_ir_to);
+void create_function_call_ir(node *node_to_attach_ir_to);
+ir *create_param_ir(node *node_to_attach_ir_to, temp *temp, node *param_expr);
 temp *create_temp();
 char *num_to_s(int num);
 temp *get_rd_register_from_ir(ir *ir);

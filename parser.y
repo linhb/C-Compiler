@@ -11,7 +11,7 @@
 	extern int yylineno;
   void yyerror(char const *s);
 	extern node *root;
-	int yydebug = 1;   
+	int yydebug = 0;   
 
 %}
 %token DO FOR RETURN BREAK SHORT ELSE GOTO SIGNED UNSIGNED CHAR IF VOID INT CONTINUE LONG WHILE 
