@@ -120,11 +120,6 @@ typedef struct n_identifier {
 	int st_id;
 } identifier;
 
-typedef struct n_list {
-	node *list;
-	node *item;
-} list;
-
 typedef struct n_binary_expression {
 	node *left;
 	node *op;
@@ -282,8 +277,8 @@ typedef struct n_cast_expr
 } cast_expr;
 typedef struct n_expression_list
 {
-	node *expression_list;
 	node *assignment_expr;
+	node *expression_list;
 } expression_list;
 typedef struct n_direct_abstract_declarator
 {
@@ -417,12 +412,16 @@ void print_comma_expr_node(FILE *output, node *n);
 
 const char *types[400];
 
+typedef struct t_item
+{
+	void *data;
+	struct t_item *next;
+} item;
 typedef struct t_list
 {
-	void *element;
-	struct t_list *next;
+	struct t_item *first;
 } list;
-void add_to_list(void *element);
+void add_to_list(list *list, void *element);
 typedef struct t_symbol_table
 {
 	struct t_symbol_table_identifier *identifiers;        // both identifiers and children are linked lists

@@ -54,7 +54,10 @@ int main(int argc, char **argv) {
 		fputs("\n****** PARSE TREE ********\n", output);
 		print_node(output, root);
 		fputs("\n", output);
-		ir *ir_list = generate_ir_from_node(root);
+		// ir *ir_list = generate_ir_from_node(root);
+		ir *ir_list = malloc(sizeof(*list));
+		ir_list->first = malloc(sizeof(*item));
+		generate_ir_from_node(root);
 		add_ir_opcodes();
 		fputs("\n****** INTERMEDIATE REPRESENTATION ********\n", output);
 		print_ir(ir_list, output);

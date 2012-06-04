@@ -180,7 +180,7 @@ initialized_declarator_list : initialized_declarator             {printf("******
 	| initialized_declarator_list COMMA initialized_declarator     {printf("*********creating initialized_declarator_list node\n"); $$ = create_initialized_declarator_list_node($1, $3);}
 ;                                
 expression_list : assignment_expr |
-	expression_list COMMA assignment_expr          {printf("*********creating expression_list node\n"); $$ = create_expression_list_node($1, $3);}
+	assignment_expr COMMA expression_list          {printf("*********creating expression_list node\n"); $$ = create_expression_list_node($1, $3);}
 ;
 expr : comma_expr 
 ;

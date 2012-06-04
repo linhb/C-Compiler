@@ -7,7 +7,8 @@ make
 # ./parser test_input_return_stmt
 # echo "****************DO STATEMENTS****************"
 # ./parser test_input_do_stmt
-echo "****************WHILE STATEMENTS****************"
-./parser test_input_while_stmt
+# echo "****************WHILE STATEMENTS****************"
+# ./parser test_input_while_stmt
+
 
 make clean
