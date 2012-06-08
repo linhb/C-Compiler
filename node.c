@@ -381,6 +381,7 @@ void break_down_compound_assignment_if_needed(node *binary_expr) {
 			*new_right = *binary_expr->data.binary_expression->right;
 			node *new_binary = create_binary_expr_node(create_identifier_node(binary_expr->data.binary_expression->left->data.identifier->name), new_op,  new_right);
 			binary_expr->data.binary_expression->right = new_binary;
+			break;
 		}
 	}
 }
@@ -718,6 +719,7 @@ void print_node(FILE *output, node *n) {
 		break;
 	default:
 		fprintf(stderr, "ERROR: Can't print current node of type %d", n->node_type);
+		break;
 	}	
 }
 
@@ -1013,9 +1015,44 @@ void print_indentation(FILE *output) {
 		fputs("  ", output);
 	}
 }
+void add_data_to_list(list *list, void *new_data) {
+	item *new_item = malloc(sizeof(*new_item));
+	new_item->data = new_data;
+	add_item_to_list(list, new_item);
+}
+void add_item_to_list(list *list, item *new_item) {
+	item *last = get_last_list_item(list);
+	// list has 0 item
+	if (last == NULL) {
+		list->first = new_item;
+	}
+	// list has 1+ items
+	else {
+		last->next = new_item;
+		new_item->prev = last;
+	}
+}
 
-void add_to_list(list *list, void *element) {
-	
+void join_lists(list *l1, list *l2) {
+//	need to
+	add_item_to_list(l1, l2->first);
+}
+
+item *get_last_list_item(list *list) {
+	assert(list != NULL);
+	if (list->first == NULL) {
+		// first item is null, so empty list
+		return NULL;
+	}
+	item *current = list->first;
+	// for each iteration, look at an item starting with list->first. if its next is null, it's the last one; return it
+	// otherwise iterate again with its next
+	// terminate when current->next is null
+	// continue if current->next is not null
+	while (current->next != NULL) {
+		current = current->next;
+	}
+	return current;
 }
 
 
@@ -1271,6 +1308,7 @@ node *get_identifier_from_declarator(node *n) {
 		return get_identifier_from_declarator(n->data.function_declarator->direct_declarator);
 	default:
 		printf("ERROR: tried to get name from unknown node %d\n", n->node_type);
+		break;
 	}
 	return NULL;
 }
@@ -1528,10 +1566,13 @@ type *complete_type(type *incomplete, type *missing) {
 	switch (incomplete->type) {
 	case POINTER_TYPE:
 		incomplete->data.pointer_type->base_type = missing;
+		break;
 	case ARRAY_TYPE:
 		incomplete->data.array_type->element_type = missing;
+		break;
 	default:
 		printf("ERROR: type number %d isn't supposed to have an incomplete subtype\n", incomplete->type);
+		break;
 	}
 	return incomplete;
 }
@@ -1754,6 +1795,7 @@ char *type_to_s(type *t) {
 			break;
 		default:
 			printf("ERROR: Can't print ST entry of type %d\n", type);
+			break;
 	}
 	return str;
 }
@@ -1916,6 +1958,7 @@ node *insert_cast(type *type, node *n) {
 				
 				// node *type_name = create_type_name_node()
 				// cast = 
+				break;
 			}
 		}
 	}
@@ -2040,17 +2083,17 @@ int is_equal(type *t1, type *t2) {
 			case POINTER_TYPE:
 				return is_equal(t1->data.pointer_type->base_type, t2->data.pointer_type->base_type);
 			case ARRAY_TYPE:
-			;
+			break;
 			// TODO
 			case FUNCTION_TYPE:
-			;
+			break;
 			// TODO
 		}
 	}
 	else {
 		return 0;
 	}
-	return NULL;
+	return 0;
 }
 type *type_of_unary_expr(node *unary_expression) {
 	node *operand = get_core_operand_from_unary_expr(unary_expression);
@@ -2076,6 +2119,7 @@ int rank(type *t) {
 			return 20;
 		default:
 			printf("ERROR: unknown number type: %d\n", t->data.arithmetic_type->number_type);
+			break;
 		}
 	}
 	return 9999;
@@ -2095,9 +2139,11 @@ int size_of_type(type *t) {
 			case SHORT:
 				return 2;
 			}
+			break;
 		} 
 		case FUNCTION_TYPE:
 			printf("ERROR: function variables are not supported\n");
+		break;
 	}
 	printf("ERROR: can't determine size of unknown type %d\n", t->type);
 	return 9999;
@@ -2110,16 +2156,19 @@ temp *load_lvalue_from_rvalue_ir_if_needed(node *n, temp *may_be_address) {
 		return may_be_address;
 	}
 }
-ir *generate_ir_from_node(node *n) {
-	// if binary, copy children's IR then 
-	// if not, eg identifier
+
+list *generate_ir_from_node(node *n) {
+	if (n->ir_list == NULL) {
+		n->ir_list = malloc(sizeof(*n->ir_list));
+	}
+	// attach generated IR to the node, but also returns it because sometimes the node to have IR attached to it is different than (eg parent of) the node from which to generate IR
 	switch (n->node_type) {
 		case BINARY_EXPRESSION_NODE: {
 			create_binary_expr_ir(n);
 			break;
 		}
 		case UNARY_EXPRESSION_NODE: {
-			add_to_list(n->ir, generate_ir_from_node(n->data.unary_expression->operand));
+			join_lists(n->ir_list, generate_ir_from_node(n->data.unary_expression->operand));
 			temp *operand_temp = load_lvalue_from_rvalue_ir_if_needed(n, n->data.unary_expression->operand->temp);
 			switch (n->data.unary_expression->operator->data.operator->value) {
 			case AMPERSAND:
@@ -2149,28 +2198,28 @@ ir *generate_ir_from_node(node *n) {
 		}
 		case FUNCTION_DEFINITION_NODE: {
 			// n->ir = generate_ir(n->data.function_definition->function_def_specifier);
-			add_to_list(n->ir, generate_ir_from_node(n->data.function_definition->compound_statement));
+			join_lists(n->ir_list, generate_ir_from_node(n->data.function_definition->compound_statement));
 			break;
 		}
 		case COMPOUND_STATEMENT_NODE: {
 			node *declaration_or_statement_list = n->data.compound_statement->declaration_or_statement_list;
 			if (declaration_or_statement_list != NULL) {
-				add_to_list(n->ir, generate_ir_from_node(declaration_or_statement_list));
+				join_lists(n->ir_list, generate_ir_from_node(declaration_or_statement_list));
 			}
 			break;
 		}
 		case DECLARATION_OR_STATEMENT_LIST_NODE: {
-			add_to_list(n->ir, generate_ir_from_node(n->data.declaration_or_statement_list->declaration_or_statement_list));
-			add_to_list(n->ir, generate_ir_from_node(n->data.declaration_or_statement_list->declaration_or_statement));
+			join_lists(n->ir_list, generate_ir_from_node(n->data.declaration_or_statement_list->declaration_or_statement_list));
+			join_lists(n->ir_list, generate_ir_from_node(n->data.declaration_or_statement_list->declaration_or_statement));
 			break;
 		}
 		case STATEMENT_NODE: {
-			add_to_list(n->ir, generate_ir_from_node(n->data.statement->statement));
+			join_lists(n->ir_list, generate_ir_from_node(n->data.statement->statement));
 			break;
 		}
 		case TRANSLATION_UNIT_NODE: {
-			add_to_list(n->ir, generate_ir_from_node(n->data.translation_unit->translation_unit));
-			add_to_list(n->ir, generate_ir_from_node(n->data.translation_unit->top_level_decl));
+			join_lists(n->ir_list, generate_ir_from_node(n->data.translation_unit->translation_unit));
+			join_lists(n->ir_list, generate_ir_from_node(n->data.translation_unit->top_level_decl));
 			break;
 		}
 		case IF_ELSE_STATEMENT_NODE: {
@@ -2198,12 +2247,14 @@ ir *generate_ir_from_node(node *n) {
 		case FUNCTION_CALL_NODE:
 			create_function_call_ir(n);
 			break;
-		case EXPRESSION_LIST_NODE:
-			add_to_list(n->ir, generate_ir_from_node(n->data.expression_list->expression_list));
-			add_to_list(n->ir, generate_ir_from_node(n->data.expression_list->assignment_expr));
-			break;
+		case EXPRESSION_LIST_NODE: {
+				node *expression_list = n->data.expression_list->expression_list;
+				join_lists(n->ir_list, generate_ir_from_node(n->data.expression_list->assignment_expr));
+				join_lists(n->ir_list, generate_ir_from_node(expression_list));
+				break;
+		}
 	}
-	return n->ir;
+	return n->ir_list;
 }
 ir *create_ir(int ir_type, int opcode) {
 	ir *ir_node = malloc(sizeof(*ir_node));
@@ -2241,15 +2292,14 @@ void create_function_call_ir(node *node_to_attach_ir_to) {
 	// get identifier from function_call's postfix_expr
 	node *identifier = get_identifier_from_node(node_to_attach_ir_to->data.function_call->postfix_expr);
 	// get symbol table entry from identifier
-	symbol_table_identifier *entry = find_identifier_in_symbol_table(node_to_attach_ir_to->symbol_table, identifier->data.identifier->name);
+//	symbol_table_identifier *entry = find_identifier_in_symbol_table(node_to_attach_ir_to->symbol_table, identifier->data.identifier->name);
 	// get argument number from symbol table entry
-	int argc = entry->type->data.function_type->argc;
-	// char *c[3]: array of 3 char pointers, or 3 strings
-	// char c[3]: array of 3 chars
-	ir *param_irs[100]; // had no end of trouble when i attempted to declare a variable-sized array, even when compiled in C99
-	int i = 0;  
-	/* stable version, would require reversing expression_list and assignment_expr in parser.y and create_expression_list_node
-	while (expression_list->node_type == EXPRESSION_LIST_NODE) {
+
+		/* stable version, would require reversing expression_list and assignment_expr in parser.y and create_expression_list_node
+//  int argc = entry->type->data.function_type->argc;
+//	ir *param_irs[100]; // had no end of trouble when i attempted to declare a variable-sized array, even when compiled in C99
+//	int i = 0;
+ * 	while (expression_list->node_type == EXPRESSION_LIST_NODE) {
 		// this is tricky because the highest level expression_list's assignment_expr contains the last parameter, so collect all the param IRs into an array and add them in reverse order
 		generate_ir_from_node(expression_list);
 		node *assignment_expr = expression_list->data.expression_list->assignment_expr;
@@ -2271,12 +2321,12 @@ void create_function_call_ir(node *node_to_attach_ir_to) {
 		// this is tricky because the highest level expression_list's assignment_expr contains the last parameter, so collect all the param IRs into an array and add them in reverse order
 		generate_ir_from_node(expression_list);
 		node *assignment_expr = expression_list->data.expression_list->assignment_expr;
-		add_to_list(node_to_attach_ir_to->ir, create_param_ir(node_to_attach_ir_to, assignment_expr->temp, assignment_expr));
+		add_data_to_list(node_to_attach_ir_to->ir_list, create_param_ir(node_to_attach_ir_to, assignment_expr->temp, assignment_expr));
 		expression_list = expression_list->data.expression_list->expression_list;
 	}
 	// do it one last time for the last expression_list, which is an assignment_expr
 	generate_ir_from_node(expression_list);
-	add_to_list(node_to_attach_ir_to->ir, create_param_ir(node_to_attach_ir_to, expression_list->temp, expression_list));
+	add_data_to_list(node_to_attach_ir_to->ir_list, create_param_ir(node_to_attach_ir_to, expression_list->temp, expression_list));
 }
 ir *create_param_ir(node *node_to_attach_ir_to, temp *temp, node *param_expr) {
 	// 
@@ -2293,7 +2343,7 @@ ir *create_param_ir(node *node_to_attach_ir_to, temp *temp, node *param_expr) {
 		break;
 	}
 	ir->data.op_ir->rd = temp;
-	// add_to_list(node_to_attach_ir_to->ir, ir);
+	// join_lists(node_to_attach_ir_to->ir, ir);
 	return ir;
 }
 void create_if_else_statement_ir(node *node_to_attach_ir_to) {
@@ -2307,27 +2357,27 @@ void create_if_else_statement_ir(node *node_to_attach_ir_to) {
 	// if A then B else C -> load A, make nop IR l1, insert "if A false, jump to l1" IR, load B, , make nop IR l2, insert "jump to l2" IR, insert l1, load C, insert l2
 	
 	// load A
-	add_to_list(node_to_attach_ir_to->ir, generate_ir_from_node(node_to_attach_ir_to->data.if_else_statement->expr));
+	join_lists(node_to_attach_ir_to->ir_list, generate_ir_from_node(node_to_attach_ir_to->data.if_else_statement->expr));
 	// make nop IR l1
 	ir *nop_ir = create_nop_ir(NULL);
 	// insert "if A false, jump to l1" IR
-	create_jump_ir(node_to_attach_ir_to, beqz, get_rd_register_from_ir(get_last_ir_list_element(node_to_attach_ir_to->ir)), NULL, nop_ir);
+	create_jump_ir(node_to_attach_ir_to, beqz, get_rd_register_from_ir(get_last_list_item(node_to_attach_ir_to->ir_list)->data), NULL, nop_ir);
 	// load B
-	add_to_list(node_to_attach_ir_to->ir, generate_ir_from_node(node_to_attach_ir_to->data.if_else_statement->if_statement));
+	join_lists(node_to_attach_ir_to->ir_list, generate_ir_from_node(node_to_attach_ir_to->data.if_else_statement->if_statement));
 	if (node_to_attach_ir_to->data.if_else_statement->else_statement != NULL) {
 		// make nop IR l2
 		ir *after_else_label_ir = create_nop_ir(NULL);
 		// insert "jump to l2" IR
 		create_jump_ir(node_to_attach_ir_to, Jump, NULL, NULL, after_else_label_ir);
 		// insert l1
-		add_to_list(node_to_attach_ir_to->ir, nop_ir);
+		add_data_to_list(node_to_attach_ir_to->ir_list, nop_ir);
 		// load C
-		add_to_list(node_to_attach_ir_to->ir, generate_ir_from_node(node_to_attach_ir_to->data.if_else_statement->else_statement));		
+		join_lists(node_to_attach_ir_to->ir_list, generate_ir_from_node(node_to_attach_ir_to->data.if_else_statement->else_statement));		
 		// insert l2
-		add_to_list(node_to_attach_ir_to->ir, after_else_label_ir);
+		add_data_to_list(node_to_attach_ir_to->ir_list, after_else_label_ir);
 	}
 	else {
-		add_to_list(node_to_attach_ir_to->ir, nop_ir);
+		add_data_to_list(node_to_attach_ir_to->ir_list, nop_ir);
 	}
 }
 void create_reserved_word_statement_ir(node *node_to_attach_ir_to) {
@@ -2346,26 +2396,26 @@ void create_for_statement_ir(node *node_to_attach_ir_to) {
 	// for statements have for_expr and statement
 	// for_expr has initial_clause, goal_expr, advance_expr
 	// attach initial_clause
-	add_to_list(node_to_attach_ir_to->ir, generate_ir_from_node(node_to_attach_ir_to->data.for_statement->for_expr->data.for_expr->initial_clause));
+	join_lists(node_to_attach_ir_to->ir_list, generate_ir_from_node(node_to_attach_ir_to->data.for_statement->for_expr->data.for_expr->initial_clause));
 	// create nop IR to statement
 	ir *before_statement_ir = create_nop_ir(NULL);
-	add_to_list(node_to_attach_ir_to->ir, before_statement_ir);
+	add_data_to_list(node_to_attach_ir_to->ir_list, before_statement_ir);
 	// attach goal_expr
 	node *goal_expr = node_to_attach_ir_to->data.for_statement->for_expr->data.for_expr->goal_expr;
-	ir *goal_expr_ir = generate_ir_from_node(goal_expr);
-	add_to_list(node_to_attach_ir_to->ir, goal_expr_ir);	
+	list *goal_expr_ir_list = generate_ir_from_node(goal_expr);
+	join_lists(node_to_attach_ir_to->ir_list, goal_expr_ir_list);
 	// make nop IR for end of loop
 	ir *end_of_loop_ir = create_nop_ir(NULL);
 	// if goal_expr isFalse, go to nop IR
 	create_jump_ir(node_to_attach_ir_to, beqz, goal_expr->temp, NULL, end_of_loop_ir);
 	// attach statement
-	add_to_list(node_to_attach_ir_to->ir, generate_ir_from_node(node_to_attach_ir_to->data.for_statement->statement));	
+	join_lists(node_to_attach_ir_to->ir_list, generate_ir_from_node(node_to_attach_ir_to->data.for_statement->statement));	
 	// attach advance_expr
-	add_to_list(node_to_attach_ir_to->ir, generate_ir_from_node(node_to_attach_ir_to->data.for_statement->for_expr->data.for_expr->advance_expr));	
+	join_lists(node_to_attach_ir_to->ir_list, generate_ir_from_node(node_to_attach_ir_to->data.for_statement->for_expr->data.for_expr->advance_expr));	
 	// create and attach jump IR to nop IR before statement
 	create_jump_ir(node_to_attach_ir_to, Jump, NULL, NULL, before_statement_ir);
 	// attach nop IR for end of loop
-	add_to_list(node_to_attach_ir_to->ir, end_of_loop_ir);
+	add_data_to_list(node_to_attach_ir_to->ir_list, end_of_loop_ir);
 }
 void create_return_statement_ir(node *node_to_attach_ir_to) {
 	// return statement has optional expr
@@ -2373,7 +2423,7 @@ void create_return_statement_ir(node *node_to_attach_ir_to) {
 	assert(node_to_attach_ir_to->node_type == RESERVED_WORD_STATEMENT_NODE);
 	node *expr = node_to_attach_ir_to->data.reserved_word_statement->expr;
 	if (expr != NULL) {
-		add_to_list(node_to_attach_ir_to->ir, generate_ir_from_node(expr));
+		join_lists(node_to_attach_ir_to->ir_list, generate_ir_from_node(expr));
 		create_return_ir(node_to_attach_ir_to, expr, expr->temp);
 	}
 	else {
@@ -2384,12 +2434,12 @@ void create_do_statement_ir(node *node_to_attach_ir_to) {
 	// do statement has statement and expr
 	// create and insert before_stmt label IR
 	ir *before_stmt = create_nop_ir(NULL);
-	add_to_list(node_to_attach_ir_to->ir, before_stmt);
+	add_data_to_list(node_to_attach_ir_to->ir_list, before_stmt);
 	// create IR for statement 
-	add_to_list(node_to_attach_ir_to->ir, generate_ir_from_node(node_to_attach_ir_to->data.do_statement->statement));
+	join_lists(node_to_attach_ir_to->ir_list, generate_ir_from_node(node_to_attach_ir_to->data.do_statement->statement));
 	// create IR for expr
-	ir *expr_ir = generate_ir_from_node(node_to_attach_ir_to->data.do_statement->expr);
-	add_to_list(node_to_attach_ir_to->ir, expr_ir);
+	list *expr_ir_list = generate_ir_from_node(node_to_attach_ir_to->data.do_statement->expr);
+	join_lists(node_to_attach_ir_to->ir_list, expr_ir_list);
 	// insert JumpIfTrue(before_stmt, expr)	
 	create_jump_ir(node_to_attach_ir_to, JumpIfTrue, node_to_attach_ir_to->data.do_statement->expr->temp, NULL, before_stmt);
 }
@@ -2397,19 +2447,19 @@ void create_while_statement_ir(node *node_to_attach_ir_to) {
 	// while statement has expr and statement
 	// create and attach before_expr label
 	ir *before_expr = create_nop_ir(NULL);
-	add_to_list(node_to_attach_ir_to->ir, before_expr);
+	add_data_to_list(node_to_attach_ir_to->ir_list, before_expr);
 	// create and attach expr IR
-	add_to_list(node_to_attach_ir_to->ir, generate_ir_from_node(node_to_attach_ir_to->data.while_statement->expr));
+	join_lists(node_to_attach_ir_to->ir_list, generate_ir_from_node(node_to_attach_ir_to->data.while_statement->expr));
 	temp *expr_temp = node_to_attach_ir_to->data.while_statement->expr->temp;
 	// create and attach JumpIfFalse IR to after_statement IR
 	ir *after_statement = create_nop_ir(NULL);
 	create_jump_ir(node_to_attach_ir_to, beqz, expr_temp, NULL, after_statement);
 	// create and attach statement IR
-	add_to_list(node_to_attach_ir_to->ir, generate_ir_from_node(node_to_attach_ir_to->data.while_statement->statement));
+	join_lists(node_to_attach_ir_to->ir_list, generate_ir_from_node(node_to_attach_ir_to->data.while_statement->statement));
 	// create and attach unconditional jump to before_expr label
 	create_jump_ir(node_to_attach_ir_to, Jump, NULL, NULL, before_expr);
 	// create and attach after_statement IR
-	add_to_list(node_to_attach_ir_to->ir, after_statement);
+	add_data_to_list(node_to_attach_ir_to->ir_list, after_statement);
 }
 ir *create_return_ir(node *node_to_attach_ir_to, node *expr, temp *temp) {
 	// if there's something to return, ie expr != NULL, create a return IR and a jump IR to outside the function
@@ -2430,7 +2480,7 @@ ir *create_return_ir(node *node_to_attach_ir_to, node *expr, temp *temp) {
 		}
 		ir = create_ir(OP, opcode);
 		ir->data.op_ir->rd = temp;
-		add_to_list(node_to_attach_ir_to->ir, ir);
+		add_data_to_list(node_to_attach_ir_to->ir_list, ir);
 		// TODO add jump IR to after function
 		return ir;
 	}
@@ -2456,25 +2506,26 @@ ir *create_jump_ir(node *node_to_attach_ir_to, int op, temp *src1, temp *src2, i
 	ir->data.jump_ir->s1 = src1;
 	ir->data.jump_ir->s2 = src2;
 	ir->data.jump_ir->label_ir = label_ir;
-	add_to_list(node_to_attach_ir_to->ir, ir);
+	add_data_to_list(node_to_attach_ir_to->ir_list, ir);
 	return ir;
 }
 void create_subscript_expr_ir(node *node_to_attach_ir_to) {
 	assert(node_to_attach_ir_to->node_type == SUBSCRIPT_EXPR_NODE);
 			// int a[]; a[3]; -> load addr of postfix expr, load expr, load size of postfix expr's element type, multiply last 2, add that to 1, load word (half/byte) there
 			//load addr of postfix expr
-	add_to_list(node_to_attach_ir_to->ir, generate_ir_from_node(node_to_attach_ir_to->data.subscript_expr->postfix_expr));
+	join_lists(node_to_attach_ir_to->ir_list, generate_ir_from_node(node_to_attach_ir_to->data.subscript_expr->postfix_expr));
 	// load expr
-	add_to_list(node_to_attach_ir_to->ir, generate_ir_from_node(node_to_attach_ir_to->data.subscript_expr->expr));  
-	load_lvalue_from_rvalue_ir_if_needed(node_to_attach_ir_to, get_rd_register_from_ir(get_last_ir_list_element(node_to_attach_ir_to->ir)));
+	join_lists(node_to_attach_ir_to->ir_list, generate_ir_from_node(node_to_attach_ir_to->data.subscript_expr->expr));  
+	load_lvalue_from_rvalue_ir_if_needed(node_to_attach_ir_to, get_rd_register_from_ir((ir *)get_last_list_item(node_to_attach_ir_to->ir_list)->data));
 	// load size of postfix expr's element type
 	create_load_const_ir(node_to_attach_ir_to, size_of_type(node_to_attach_ir_to->data.subscript_expr->postfix_expr->data.identifier->symbol_table_identifier->type));
-	ir *last_ir = get_last_ir_list_element(node_to_attach_ir_to->ir);
+	item *last_ir_item = get_last_list_item(node_to_attach_ir_to->ir_list);
+	ir *last_ir = last_ir_item->data;
 	type *signed_arithmetic_type = create_type(ARITHMETIC_TYPE);
 	signed_arithmetic_type->data.arithmetic_type->is_unsigned = 0;
 	signed_arithmetic_type->data.arithmetic_type->number_type = INT;
 	// multiply last 2
-	ir *mult_ir = create_simple_binary_ir(node_to_attach_ir_to, STAR, last_ir->data.load_const_ir->rd, get_rd_register_from_ir(last_ir->prev), signed_arithmetic_type);
+	ir *mult_ir = create_simple_binary_ir(node_to_attach_ir_to, STAR, last_ir->data.load_const_ir->rd, get_rd_register_from_ir((ir *)last_ir_item->prev->data), signed_arithmetic_type);
 	 // add that to 1
 	ir *add_ir = create_simple_binary_ir(node_to_attach_ir_to, PLUS, get_rd_register_from_ir(mult_ir), node_to_attach_ir_to->data.subscript_expr->postfix_expr->temp, signed_arithmetic_type);
 	// load word (half/byte) there
@@ -2509,6 +2560,7 @@ temp *get_rd_register_from_ir(ir *ir) {
 		return ir->data.load_const_ir->rd;
 	default:
 		printf("ERROR: no destination register for this type of IR node\n");
+		break;
 	}
 }
 void create_binary_expr_ir(node *node_to_attach_ir_to) { 
@@ -2519,8 +2571,8 @@ void create_binary_expr_ir(node *node_to_attach_ir_to) {
 	// generate op IR for left-op-right
 	assert (node_to_attach_ir_to->node_type == BINARY_EXPRESSION_NODE);
 	temp *left_temp, *right_temp;
-	add_to_list(node_to_attach_ir_to->ir, generate_ir_from_node(node_to_attach_ir_to->data.binary_expression->left));
-	add_to_list(node_to_attach_ir_to->ir, generate_ir_from_node(node_to_attach_ir_to->data.binary_expression->right));
+	join_lists(node_to_attach_ir_to->ir_list, generate_ir_from_node(node_to_attach_ir_to->data.binary_expression->left));
+	join_lists(node_to_attach_ir_to->ir_list, generate_ir_from_node(node_to_attach_ir_to->data.binary_expression->right));
 	right_temp = load_lvalue_from_rvalue_ir_if_needed(node_to_attach_ir_to, node_to_attach_ir_to->data.binary_expression->right->temp);
 	switch (node_to_attach_ir_to->data.binary_expression->op->data.operator->value) {
 		case ASSIGN: // a = b; load addr of a, load addr of b, load value of b into t1, store into a from t1
@@ -2529,6 +2581,7 @@ void create_binary_expr_ir(node *node_to_attach_ir_to) {
 		default: {
 			left_temp = load_lvalue_from_rvalue_ir_if_needed(node_to_attach_ir_to, node_to_attach_ir_to->data.binary_expression->left->temp);
 			create_simple_binary_ir(node_to_attach_ir_to, node_to_attach_ir_to->data.binary_expression->op->data.operator->value, left_temp, right_temp, type_of_expr(node_to_attach_ir_to));
+			break;
 		}
 	}
 }
@@ -2539,7 +2592,7 @@ ir *create_load_addr_ir(node *node_to_attach_ir_to, node *id) {
 	l->rd = create_temp();
 	l->rd->is_lvalue = 1;
 	l->rs = id->data.identifier->symbol_table_identifier;
-	add_to_list(node_to_attach_ir_to->ir, identifier_ir);
+	add_data_to_list(node_to_attach_ir_to->ir_list, identifier_ir);
 	node_to_attach_ir_to->temp = l->rd;
 	return identifier_ir;
 }
@@ -2548,7 +2601,7 @@ ir *create_load_indirect_ir(node *node_to_attach_ir_to, temp *rs) {
 	ir->data.op_ir->rd = create_temp();
 	ir->data.op_ir->rd->is_lvalue = 0;
 	ir->data.op_ir->rs = rs;
-	add_to_list(node_to_attach_ir_to->ir, ir);
+	add_data_to_list(node_to_attach_ir_to->ir_list, ir);
 	node_to_attach_ir_to->temp = ir->data.op_ir->rd;
 	return ir;
 }
@@ -2578,6 +2631,7 @@ ir *create_simple_binary_ir(node *node_to_attach_ir_to, int op, temp *rs, temp *
 				// }
 			break;
 			}
+		break;
 		}
 		case DASH: {
 			switch (type->data.arithmetic_type->is_unsigned) {
@@ -2738,7 +2792,7 @@ ir *create_simple_binary_ir(node *node_to_attach_ir_to, int op, temp *rs, temp *
 	ir->data.op_ir->rd->is_lvalue = 0;
 	ir->data.op_ir->rs = rs;
 	ir->data.op_ir->rt = rt;
-	add_to_list(node_to_attach_ir_to->ir, ir);
+	add_data_to_list(node_to_attach_ir_to->ir_list, ir);
 	node_to_attach_ir_to->temp = ir->data.op_ir->rd;
 	return ir;
 }
@@ -2747,7 +2801,7 @@ ir *create_load_const_ir(node *node_to_attach_ir_to, int number) {
 	ir->data.load_const_ir->rd = create_temp();
 	ir->data.load_const_ir->rd->is_lvalue = 0;
 	ir->data.load_const_ir->rs = number;
-	add_to_list(node_to_attach_ir_to->ir, ir);
+	add_data_to_list(node_to_attach_ir_to->ir_list, ir);
 	node_to_attach_ir_to->temp = ir->data.load_const_ir->rd;
 	return ir;
 }
@@ -2767,14 +2821,16 @@ ir *create_store_ir(node *current, node *stored_to, temp *from_register) {
 			default:
 				ir = create_ir(STORE, sw);
 			}
+		break;
 		}
 		default: {
 			ir = create_ir(STORE, sw);
+			break;
 		}
 	}
 	ir->data.store_ir->rd = stored_to->data.identifier->symbol_table_identifier;
 	ir->data.store_ir->rs = from_register;
-	current->ir = add_to_ir_list(current->ir, ir);
+	add_data_to_list(current->ir_list, ir);
 	return ir;
 }
 ir *create_unary_ir(node *node_to_attach_ir_to, temp *t) {
@@ -2795,41 +2851,8 @@ ir *create_unary_ir(node *node_to_attach_ir_to, temp *t) {
 	ir->data.op_ir->rd->is_lvalue = 0;
 	ir->data.op_ir->rs = t;
 	node_to_attach_ir_to->temp = ir->data.op_ir->rd;
-	add_to_list(node_to_attach_ir_to->ir, ir);
+	add_data_to_list(node_to_attach_ir_to->ir_list, ir);
 	return ir;
-}
-ir *get_last_ir_list_element(ir *list) {
-	// list can be null, 1 element (next == NULL) or more
-	if (list == NULL) {
-		return NULL;
-	}
-	else {
-		if (list->next == NULL) {
-			return list;
-		}
-		else {
-			ir *last = list->next;
-			while (last->next != NULL) {
-				last = last->next;
-			}
-			return last;	
-		}
-	}
-}
-ir *add_to_ir_list(ir *list, ir *new) { // should only be used when the IR you're adding wasn't created by a function that also attaches it to the node you're adding it to; otherwise its next field will be itself and lead to infinite loops. it's a terrible terrible linked list implementation 
-	if (new != NULL) {
-		ir *old = get_last_ir_list_element(list);
-		if (old == NULL) { // empty list, so put 'new' in as first element   
-			list = malloc(sizeof(ir));
-			assert(list != NULL);
-			*list = *new;
-		}
-		else {
-			old->next = new;
-			new->prev = old;
-		}
-	}
-	return list;
 }
 temp *create_temp() {
 	temp *t = malloc(sizeof(temp));
@@ -2837,8 +2860,10 @@ temp *create_temp() {
 	temp_id++;
 	return t;
 }
-void print_ir(ir *ir, FILE *output) {
-	if (ir != NULL) {
+void print_ir(list *ir_list, FILE *output) {
+	item *current = ir_list->first;
+	while (current != NULL) {         
+		ir *ir = current->data;
 		// op_ir: opcode, temp rd, temp rs, temp rt
 		// load_ir: opcode, temp rd, symbol rs
 		// store_ir: opcode, symbol rd, temp rs
@@ -2846,7 +2871,7 @@ void print_ir(ir *ir, FILE *output) {
 			fprintf(output, "label_%s: NoOp", ir->ir_label);
 		}
 		else {
-			fprintf(output, "%s(", opcodes[ir->opcode]);
+			fprintf(output, "%s(", ir_opcodes[ir->opcode]);
 			switch (ir->ir_type) {
 				case OP:
 					fprintf(output, "t_%d", ir->data.op_ir->rd->id);
@@ -2882,16 +2907,64 @@ void print_ir(ir *ir, FILE *output) {
 					break;
 				default:
 					fprintf(output, "ERROR: unknown IR node type: %d\n", ir->ir_type);
+					break;
 			}                
 			fputs(")", output);
 		}
 		fputs("\n", output);
-		if (ir->next != NULL) {
-			print_ir(ir->next, output);
-		}                 
+		current = current->next;
 	}
 }
 void add_ir_opcodes() {
+	ir_opcodes[LoadAddr] = "LoadAddr";
+	ir_opcodes[LoadWordIndirect] = "LoadWordIndirect";
+	ir_opcodes[MultSigned] = "MultSigned";
+	ir_opcodes[MultUnsigned] = "MultUnsigned";
+	ir_opcodes[AddSigned] = "AddSigned";
+	ir_opcodes[AddUnsigned] = "AddUnsigned";
+	ir_opcodes[MinusSigned] = "MinusSigned";
+	ir_opcodes[MinusUnsigned] = "MinusUnsigned";
+	ir_opcodes[DivideSigned] = "DivideSigned";
+	ir_opcodes[DivideUnsigned] = "DivideUnsigned";
+	ir_opcodes[RemainderSigned] = "RemainderSigned";
+	ir_opcodes[RemainderUnsigned] = "RemainderUnsigned";
+	ir_opcodes[BitshiftLeftSigned] = "BitshiftLeftSigned";
+	ir_opcodes[BitshiftLeftUnsigned] = "BitshiftLeftUnsigned";
+	ir_opcodes[BitshiftRightSigned] = "BitshiftRightSigned";
+	ir_opcodes[BitshiftRightUnsigned] = "BitshiftRightUnsigned";
+	ir_opcodes[LoadConst] = "LoadConst";
+	ir_opcodes[seq] = "IsEqual";
+	ir_opcodes[sgt] = "IsGreaterThan";
+	ir_opcodes[sgtu] = "IsGreaterThanUnsigned";
+	ir_opcodes[slt] = "IsLessThan";
+	ir_opcodes[sltu] = "IsLessThanUnsigned";
+	ir_opcodes[sge] = "IsGreaterThanOrEqual";
+	ir_opcodes[sgeu] = "IsGreaterThanOrEqualUnsigned";
+	ir_opcodes[sle] = "IsLessThanOrEqual";
+	ir_opcodes[sleu] = "IsLessThanOrEqualUnsigned";
+	ir_opcodes[sne] = "IsNotEqual";
+	ir_opcodes[and] = "LogicalAnd";
+	ir_opcodes[or] = "LogicalOr";
+	ir_opcodes[xor] = "BitwiseXor";
+	ir_opcodes[BitwiseOr] = "BitwiseOr";
+	ir_opcodes[sw] = "StoreWord";
+	ir_opcodes[sh] = "StoreHalfword";
+	ir_opcodes[sb] = "StoreByte";
+	ir_opcodes[not] = "BitwiseNot";
+	ir_opcodes[LogicalNot] = "LogicalNot";
+	ir_opcodes[neg] = "Negative";
+	ir_opcodes[nop] = "NoOp";
+	ir_opcodes[beqz] = "JumpIfFalse";
+	ir_opcodes[Jump] = "Jump";
+	ir_opcodes[ReturnWord] = "ReturnWord";
+	ir_opcodes[ReturnByte] = "ReturnByte";
+	ir_opcodes[ReturnHalf] = "ReturnHalf";
+	ir_opcodes[JumpIfTrue] = "JumpIfTrue";
+	ir_opcodes[ParamWord] = "ParamWord";
+	ir_opcodes[ParamHalf] = "ParamHalf";
+	ir_opcodes[ParamByte] = "ParamByte";
+}
+void add_opcodes() {
 	opcodes[LoadAddr] = "LoadAddr";
 	opcodes[LoadWordIndirect] = "LoadWordIndirect";
 	opcodes[MultSigned] = "MultSigned";
@@ -2909,28 +2982,28 @@ void add_ir_opcodes() {
 	opcodes[BitshiftRightSigned] = "BitshiftRightSigned";
 	opcodes[BitshiftRightUnsigned] = "BitshiftRightUnsigned";
 	opcodes[LoadConst] = "LoadConst";
-	opcodes[seq] = "IsEqual";
-	opcodes[sgt] = "IsGreaterThan";
-	opcodes[sgtu] = "IsGreaterThanUnsigned";
-	opcodes[slt] = "IsLessThan";
-	opcodes[sltu] = "IsLessThanUnsigned";
-	opcodes[sge] = "IsGreaterThanOrEqual";
-	opcodes[sgeu] = "IsGreaterThanOrEqualUnsigned";
-	opcodes[sle] = "IsLessThanOrEqual";
-	opcodes[sleu] = "IsLessThanOrEqualUnsigned";
-	opcodes[sne] = "IsNotEqual";
-	opcodes[and] = "LogicalAnd";
-	opcodes[or] = "LogicalOr";
-	opcodes[xor] = "BitwiseXor";
+	opcodes[seq] = "seq";
+	opcodes[sgt] = "sgt";
+	opcodes[sgtu] = "sgtu";
+	opcodes[slt] = "slt";
+	opcodes[sltu] = "sltu";
+	opcodes[sge] = "sge";
+	opcodes[sgeu] = "sgeu";
+	opcodes[sle] = "sle";
+	opcodes[sleu] = "sleu";
+	opcodes[sne] = "sne";
+	opcodes[and] = "and";
+	opcodes[or] = "or";
+	opcodes[xor] = "xor";
 	opcodes[BitwiseOr] = "BitwiseOr";
-	opcodes[sw] = "StoreWord";
-	opcodes[sh] = "StoreHalfword";
-	opcodes[sb] = "StoreByte";
-	opcodes[not] = "BitwiseNot";
+	opcodes[sw] = "sw";
+	opcodes[sh] = "sh";
+	opcodes[sb] = "sb";
+	opcodes[not] = "not";
 	opcodes[LogicalNot] = "LogicalNot";
-	opcodes[neg] = "Negative";
-	opcodes[nop] = "NoOp";
-	opcodes[beqz] = "JumpIfFalse";
+	opcodes[neg] = "neg";
+	opcodes[nop] = "nop";
+	opcodes[beqz] = "beqz";
 	opcodes[Jump] = "Jump";
 	opcodes[ReturnWord] = "ReturnWord";
 	opcodes[ReturnByte] = "ReturnByte";
@@ -2939,4 +3012,10 @@ void add_ir_opcodes() {
 	opcodes[ParamWord] = "ParamWord";
 	opcodes[ParamHalf] = "ParamHalf";
 	opcodes[ParamByte] = "ParamByte";
+}
+void generate_code(list *ir_list, FILE *output) {
+	fprintf(".text\n", output);
+	fprintf(".globl main\n", output);
+	fprintf("main: ", output);
+	
 }

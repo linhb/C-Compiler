@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stddef.h>
 #include <assert.h>
 #include "node.h"
 
@@ -55,13 +56,13 @@ int main(int argc, char **argv) {
 		print_node(output, root);
 		fputs("\n", output);
 		// ir *ir_list = generate_ir_from_node(root);
-		ir *ir_list = malloc(sizeof(*list));
-		ir_list->first = malloc(sizeof(*item));
-		generate_ir_from_node(root);
+		//list *ir_list = malloc(sizeof(*ir_list));
+		root->ir_list = generate_ir_from_node(root);
 		add_ir_opcodes();
+		add_opcodes();
 		fputs("\n****** INTERMEDIATE REPRESENTATION ********\n", output);
-		print_ir(ir_list, output);
-		// generate_code(ir_list);
+		print_ir(root->ir_list, output);
+		generate_code(root->ir_list, output);
 		break;
 	case 1:
 		fprintf(stderr, "Number of errors: %d", yynerrs);

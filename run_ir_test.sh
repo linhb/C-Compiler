@@ -1,4 +1,7 @@
 make
+
+echo "EXPRESSIONS"
+./parser test_input_expressions
 # echo "****************IF STATEMENTS****************"
 # ./parser test_input_if_stmt
 # echo "****************FOR STATEMENTS****************"

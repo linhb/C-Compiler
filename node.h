@@ -97,7 +97,7 @@ typedef struct t_node {
 		struct n_comma_expr *comma_expr;
 	} data;
 	struct t_symbol_table *symbol_table;
-	struct n_ir *ir;
+	struct t_list *ir_list;
 	struct n_temp *temp; // only meaningful for nodes that have a value, eg identifiers, expr. Meaningless for eg function_definition. Shouldn't be used even if populated.
 } node;
 
@@ -416,12 +416,15 @@ typedef struct t_item
 {
 	void *data;
 	struct t_item *next;
+	struct t_item *prev;
 } item;
 typedef struct t_list
 {
 	struct t_item *first;
 } list;
-void add_to_list(list *list, void *element);
+void add_data_to_list(list *list, void *new_data);
+void add_item_to_list(list *list, item *new_item);
+item *get_last_list_item(list *list);
 typedef struct t_symbol_table
 {
 	struct t_symbol_table_identifier *identifiers;        // both identifiers and children are linked lists
@@ -566,9 +569,6 @@ typedef struct n_ir
 		struct n_load_const_ir *load_const_ir;
 		struct n_jump_ir *jump_ir;
 	} data;
-	struct n_ir *next;
-	struct n_ir *prev;
-	// struct n_ir_label *ir_label;
 	char *ir_label;
 } ir;
 typedef struct n_op_ir {
@@ -616,7 +616,9 @@ int temp_id;
 
 int ir_label_id; 
 
+char *ir_opcodes[100];
 char *opcodes[100];
+
 #define LoadAddr 1
 #define LoadWordIndirect 2
 #define MultSigned 3
@@ -666,9 +668,9 @@ char *opcodes[100];
 #define ParamByte 47
 
 temp *load_lvalue_from_rvalue_ir_if_needed(node *n, temp *may_be_address);
-ir *generate_ir_from_node(node *n);
+list *generate_ir_from_node(node *n);
 ir *create_ir(int ir_type, int opcode);
-void print_ir(ir *ir, FILE *output);
+void print_ir(list *ir_list, FILE *output);
 ir *get_last_ir_list_element(ir *list);
 ir *add_to_ir_list(ir *list, ir *new);
 // create_ir functions that take a node will attach the created IR to the IR of that node
@@ -691,10 +693,11 @@ ir *create_return_ir(node *node_to_attach_ir_to, node *expr, temp *temp);
 void create_reserved_word_statement_ir(node *node_to_attach_ir_to);
 void create_function_call_ir(node *node_to_attach_ir_to);
 ir *create_param_ir(node *node_to_attach_ir_to, temp *temp, node *param_expr);
+void create_while_statement_ir(node *node_to_attach_ir_to);
 temp *create_temp();
 char *num_to_s(int num);
 temp *get_rd_register_from_ir(ir *ir);
-// ir_label *create_ir_label(char *name, ir *ir_to_attach_label_to);
-// char *ir_label_to_s(ir_label *irl);
+void add_opcodes();
+void generate_code(list *ir_list, FILE *output);
 #endif
 
