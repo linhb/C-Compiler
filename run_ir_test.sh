@@ -1,7 +1,7 @@
 make
 
 echo "EXPRESSIONS"
-./parser test_input_expressions test_input_expressions.sh
+# ./parser test_inputs/test_input_expressions test_input_expressions.sh
 # echo "****************IF STATEMENTS****************"
 # ./parser test_input_if_stmt
 # echo "****************FOR STATEMENTS****************"
@@ -11,7 +11,7 @@ echo "EXPRESSIONS"
 # echo "****************DO STATEMENTS****************"
 # ./parser test_input_do_stmt
 # echo "****************WHILE STATEMENTS****************"
-# ./parser test_input_while_stmt
+./parser test_inputs/test_input_while_stmt
 
 
 make clean

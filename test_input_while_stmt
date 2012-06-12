@@ -1,5 +1,0 @@
-void while_test(int i, short j, char k) {
-	while (i < 9) {
-		while_test(i, j, k);
-	}
-}

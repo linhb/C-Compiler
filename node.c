@@ -2248,9 +2248,9 @@ list *generate_ir_from_node(node *n) {
 			create_function_call_ir(n);
 			break;
 		case EXPRESSION_LIST_NODE: {
-				node *expression_list = n->data.expression_list->expression_list;
+//				node *expression_list = n->data.expression_list->expression_list;
 				join_lists(n->ir_list, generate_ir_from_node(n->data.expression_list->assignment_expr));
-				join_lists(n->ir_list, generate_ir_from_node(expression_list));
+//				join_lists(n->ir_list, generate_ir_from_node(expression_list));
 				break;
 		}
 	}
@@ -2319,13 +2319,13 @@ void create_function_call_ir(node *node_to_attach_ir_to) {
 	/* EXPERIMENTAL reversing order of expression_list and assignment_expr to avoid having to reverse processing parameters*/
 	while (expression_list->node_type == EXPRESSION_LIST_NODE) {
 		// this is tricky because the highest level expression_list's assignment_expr contains the last parameter, so collect all the param IRs into an array and add them in reverse order
-		generate_ir_from_node(expression_list);
+		join_lists(node_to_attach_ir_to->ir_list, generate_ir_from_node(expression_list));
 		node *assignment_expr = expression_list->data.expression_list->assignment_expr;
 		add_data_to_list(node_to_attach_ir_to->ir_list, create_param_ir(node_to_attach_ir_to, assignment_expr->temp, assignment_expr));
 		expression_list = expression_list->data.expression_list->expression_list;
 	}
 	// do it one last time for the last expression_list, which is an assignment_expr
-	generate_ir_from_node(expression_list);
+	join_lists(node_to_attach_ir_to->ir_list, generate_ir_from_node(expression_list));
 	add_data_to_list(node_to_attach_ir_to->ir_list, create_param_ir(node_to_attach_ir_to, expression_list->temp, expression_list));
 }
 ir *create_param_ir(node *node_to_attach_ir_to, temp *temp, node *param_expr) {
@@ -2972,7 +2972,7 @@ void add_ir_opcodes() {
 }
 void add_opcodes() {
 	opcodes[LoadAddr] = "la";
-	opcodes[LoadWordIndirect] = "l";
+	opcodes[LoadWordIndirect] = "lw";
 	opcodes[MultSigned] = "MultSigned";
 	opcodes[MultUnsigned] = "MultUnsigned";
 	opcodes[AddSigned] = "AddSigned";

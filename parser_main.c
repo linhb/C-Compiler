@@ -57,7 +57,7 @@ int main(int argc, char **argv) {
 		create_symbol_table(root, file_scope_symbol_table);
 		print_symbol_table(output, file_scope_symbol_table);
 		type_check(root);
-		fputs("\n****** PARSE TREE ********\n", output);
+		fputs("\n\n****** PARSE TREE ********\n\n", output);
 		print_node(output, root);
 		fputs("\n", output);
 		// ir *ir_list = generate_ir_from_node(root);
@@ -65,8 +65,9 @@ int main(int argc, char **argv) {
 		root->ir_list = generate_ir_from_node(root);
 		add_ir_opcodes();
 		add_opcodes();
-		fputs("\n****** INTERMEDIATE REPRESENTATION ********\n", output);
+		fputs("\n\n****** INTERMEDIATE REPRESENTATION ********\n\n", output);
 		print_ir_list(root->ir_list, output, 1);
+		fputs("\n\n******* SPIM INSTRUCTIONS *******\n\n", output);
 		generate_code(root->ir_list, instruction_output);
 		break;
 	case 1:
