@@ -1,7 +1,7 @@
 make
 
 echo "EXPRESSIONS"
-./parser test_input_expressions
+./parser test_input_expressions test_input_expressions.sh
 # echo "****************IF STATEMENTS****************"
 # ./parser test_input_if_stmt
 # echo "****************FOR STATEMENTS****************"

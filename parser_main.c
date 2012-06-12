@@ -20,7 +20,7 @@ node *root;
 */
 
 int main(int argc, char **argv) {
-	FILE *input, *output;
+	FILE *input, *output, *instruction_output;
 	if (argc < 2 || !strcmp(argv[1], "-")) {
 		input = stdin;		
 	} else {
@@ -30,6 +30,11 @@ int main(int argc, char **argv) {
 		output = stdout;
 	} else {
 		output = fopen(argv[2], "w");
+	}
+	if (argc < 4 || !strcmp(argv[3], "-")) {
+		instruction_output = stdout;
+	} else {
+		instruction_output = fopen(argv[3], "w");
 	}
 	int result;
 	yyin = input;
@@ -61,8 +66,8 @@ int main(int argc, char **argv) {
 		add_ir_opcodes();
 		add_opcodes();
 		fputs("\n****** INTERMEDIATE REPRESENTATION ********\n", output);
-		print_ir(root->ir_list, output);
-		generate_code(root->ir_list, output);
+		print_ir_list(root->ir_list, output, 1);
+		generate_code(root->ir_list, instruction_output);
 		break;
 	case 1:
 		fprintf(stderr, "Number of errors: %d", yynerrs);

@@ -2860,60 +2860,66 @@ temp *create_temp() {
 	temp_id++;
 	return t;
 }
-void print_ir(list *ir_list, FILE *output) {
+void print_ir_list(list *ir_list, FILE *output, int is_ir) {
 	item *current = ir_list->first;
 	while (current != NULL) {         
 		ir *ir = current->data;
-		// op_ir: opcode, temp rd, temp rs, temp rt
-		// load_ir: opcode, temp rd, symbol rs
-		// store_ir: opcode, symbol rd, temp rs
-		if (ir->ir_label != NULL) {
-			fprintf(output, "label_%s: NoOp", ir->ir_label);
-		}
-		else {
-			fprintf(output, "%s(", ir_opcodes[ir->opcode]);
-			switch (ir->ir_type) {
-				case OP:
-					fprintf(output, "t_%d", ir->data.op_ir->rd->id);
-					if (ir->data.op_ir->rs != NULL) {
-						fprintf(output, ", t_%d", ir->data.op_ir->rs->id);
-					}
-					if (ir->data.op_ir->rt != NULL) {
-						fprintf(output, ", t_%d", ir->data.op_ir->rt->id);			
-					}
-					break;
-				case LOAD:
-					fprintf(output, "t_%d, ", ir->data.load_ir->rd->id);
-					fprintf(output, "%s", ir->data.load_ir->rs->name);
-					break;
-				case STORE:
-					fprintf(output, "%s, ", ir->data.store_ir->rd->name);
-					fprintf(output, "t_%d", ir->data.store_ir->rs->id);
-					break;
-				case LOAD_CONST:
-					fprintf(output, "t_%d, ", ir->data.load_const_ir->rd->id);
-					fprintf(output, "%d", ir->data.load_const_ir->rs);
-					break;
-				case JUMP:
-					if (ir->data.jump_ir->s1 != NULL) {
-						fprintf(output, "t_%d, ", ir->data.jump_ir->s1->id);
-					}
-					if (ir->data.jump_ir->s2 != NULL) {
-						fprintf(output, "t_%d, ", ir->data.jump_ir->s2->id);
-					}
-					if (ir->data.jump_ir->label_ir != NULL) {
-						fprintf(output, "label_%s", ir->data.jump_ir->label_ir->ir_label);
-					}
-					break;
-				default:
-					fprintf(output, "ERROR: unknown IR node type: %d\n", ir->ir_type);
-					break;
-			}                
-			fputs(")", output);
-		}
-		fputs("\n", output);
+		print_ir(output, ir, is_ir);
 		current = current->next;
 	}
+}
+void print_ir(FILE *output, ir *ir, int is_ir) {
+	// op_ir: opcode, temp rd, temp rs, temp rt
+	// load_ir: opcode, temp rd, symbol rs
+	// store_ir: opcode, symbol rd, temp rs
+	if (ir->ir_label != NULL) {
+		fprintf(output, "label_%s: NoOp", ir->ir_label);
+	}
+	else {
+		if (is_ir)
+			fprintf(output, "%s(", ir_opcodes[ir->opcode]);
+		else
+			fprintf(output, "%s(", opcodes[ir->opcode]);
+		switch (ir->ir_type) {
+			case OP:
+				fprintf(output, "$t%d", ir->data.op_ir->rd->id);
+				if (ir->data.op_ir->rs != NULL) {
+					fprintf(output, ", $t%d", ir->data.op_ir->rs->id);
+				}
+				if (ir->data.op_ir->rt != NULL) {
+					fprintf(output, ", $t%d", ir->data.op_ir->rt->id);
+				}
+				break;
+			case LOAD:
+				fprintf(output, "$t%d, ", ir->data.load_ir->rd->id);
+				fprintf(output, "%s", ir->data.load_ir->rs->name);
+				break;
+			case STORE:
+				fprintf(output, "%s, ", ir->data.store_ir->rd->name);
+				fprintf(output, "$t%d", ir->data.store_ir->rs->id);
+				break;
+			case LOAD_CONST:
+				fprintf(output, "$t%d, ", ir->data.load_const_ir->rd->id);
+				fprintf(output, "%d", ir->data.load_const_ir->rs);
+				break;
+			case JUMP:
+				if (ir->data.jump_ir->s1 != NULL) {
+					fprintf(output, "$t%d, ", ir->data.jump_ir->s1->id);
+				}
+				if (ir->data.jump_ir->s2 != NULL) {
+					fprintf(output, "$t%d, ", ir->data.jump_ir->s2->id);
+				}
+				if (ir->data.jump_ir->label_ir != NULL) {
+					fprintf(output, "label_%s", ir->data.jump_ir->label_ir->ir_label);
+				}
+				break;
+			default:
+				fprintf(output, "ERROR: unknown IR node type: %d\n", ir->ir_type);
+				break;
+		}
+		fputs(")", output);
+	}
+	fputs("\n", output);
 }
 void add_ir_opcodes() {
 	ir_opcodes[LoadAddr] = "LoadAddr";
@@ -2965,8 +2971,8 @@ void add_ir_opcodes() {
 	ir_opcodes[ParamByte] = "ParamByte";
 }
 void add_opcodes() {
-	opcodes[LoadAddr] = "LoadAddr";
-	opcodes[LoadWordIndirect] = "LoadWordIndirect";
+	opcodes[LoadAddr] = "la";
+	opcodes[LoadWordIndirect] = "l";
 	opcodes[MultSigned] = "MultSigned";
 	opcodes[MultUnsigned] = "MultUnsigned";
 	opcodes[AddSigned] = "AddSigned";
@@ -3014,8 +3020,18 @@ void add_opcodes() {
 	opcodes[ParamByte] = "ParamByte";
 }
 void generate_code(list *ir_list, FILE *output) {
-	fprintf(".text\n", output);
-	fprintf(".globl main\n", output);
-	fprintf("main: ", output);
-	
+	fprintf(output, ".text\n");
+	fprintf(output, ".globl main\n");
+	fprintf(output, "main: ");
+	item *current_item = ir_list->first;
+	while (current_item != NULL) {
+		ir *current_ir = current_item->data;
+		switch (current_ir->ir_type) {
+		case OP:
+			// plus/minus: eg add $t1, $2
+			print_ir(output, current_ir, 0);
+			break;
+		}
+		current_item = current_item->next;
+	}
 }

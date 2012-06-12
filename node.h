@@ -670,7 +670,7 @@ char *opcodes[100];
 temp *load_lvalue_from_rvalue_ir_if_needed(node *n, temp *may_be_address);
 list *generate_ir_from_node(node *n);
 ir *create_ir(int ir_type, int opcode);
-void print_ir(list *ir_list, FILE *output);
+void print_ir_list(list *ir_list, FILE *output, int is_ir);
 ir *get_last_ir_list_element(ir *list);
 ir *add_to_ir_list(ir *list, ir *new);
 // create_ir functions that take a node will attach the created IR to the IR of that node
