@@ -1284,6 +1284,7 @@ void create_symbol_table(node *n, symbol_table *st) {
 symbol_table_identifier *create_identifier(symbol_table *st) {
 	symbol_table_identifier *current = malloc(sizeof(symbol_table_identifier));
 	assert(current != NULL);
+	current->parent = st;
 	advance_current_identifier(current);
 	return current;
 }
@@ -1317,15 +1318,15 @@ void create_decl_node_symbol_table(node *n, symbol_table *st) {
 	node *initialized_declarator_list = n->data.decl->initialized_declarator_list;
 	// create ID for initialized_declarator_list from bottom to top
 	symbol_table_identifier *current = create_identifier(st);
-	create_decl_identifier(n, decl_spec, initialized_declarator_list->data.initialized_declarator_list->initialized_declarator, current, st);
+	create_decl_identifier(n, decl_spec, initialized_declarator_list->data.initialized_declarator_list->initialized_declarator, current, st, 0);
 	node *idl = initialized_declarator_list->data.initialized_declarator_list->initialized_declarator_list;
 	while (idl != NULL) {
 		symbol_table_identifier *current = create_identifier(st);
-		create_decl_identifier(n, decl_spec, idl->data.initialized_declarator_list->initialized_declarator, current, st);
+		create_decl_identifier(n, decl_spec, idl->data.initialized_declarator_list->initialized_declarator, current, st, 0);
 		idl = idl->data.initialized_declarator_list->initialized_declarator_list;
 	}
 }
-symbol_table_identifier *create_decl_identifier(node *parent, node *decl_spec, node *declarator, symbol_table_identifier *current, symbol_table *st) {
+symbol_table_identifier *create_decl_identifier(node *parent, node *decl_spec, node *declarator, symbol_table_identifier *current, symbol_table *st, int is_param) {
 	int declarator_node_type =  declarator->node_type;
 	node *id = get_identifier_from_declarator(declarator);
 	current->name = id->data.identifier->name;
@@ -1420,7 +1421,7 @@ void create_parameter_decl_node_symbol_table(node *n, symbol_table *st)  {
 	symbol_table_identifier *current = create_identifier(st);
 	node *decl_spec = n->data.parameter_decl->declaration_specifiers;
 	node *declarator = n->data.parameter_decl->declarator;
-	current = create_decl_identifier(n, decl_spec, declarator, current, st);
+	current = create_decl_identifier(n, decl_spec, declarator, current, st, 1);
 }
 void create_subscript_expr_node_symbol_table(node *n, symbol_table *st)  {
 	node *postfix_expr = n->data.subscript_expr->postfix_expr;
@@ -1850,6 +1851,8 @@ node *get_identifier_from_node(node *n) {
 	switch (n->node_type) {
 	case UNARY_EXPRESSION_NODE:
 		return get_core_operand_from_unary_expr(n->data.unary_expression->operand);
+	case FUNCTION_CALL_NODE:
+//		return get_identifier_from_declarator(n->data.function_call->postfix_expr)->type;
 	case IDENTIFIER_NODE:
 		return n;
 	}
@@ -2032,9 +2035,11 @@ type *type_of_expr(node *n) {
 	case CAST_EXPR_NODE:
 		// if the type_name has an abstract declarator, it's a pointer cast, otherwise an arithmetic cast
 		// if (n->data.cast_expr->type_name->data.type_name->abstract_declarator != NULL) {
-			return get_type_from_decl_node(n->data.cast_expr->type_name);
+		return get_type_from_decl_node(n->data.cast_expr->type_name);
 			// t->data.pointer_type = malloc(sizeof(*t->data.pointer_type));
 			// t->data.pointer_type->
+	case FUNCTION_CALL_NODE:
+		return get_identifier_from_node(n);
 	}
 	return NULL;
 }
@@ -2198,7 +2203,7 @@ list *generate_ir_from_node(node *n) {
 		}
 		case FUNCTION_DEFINITION_NODE: {
 			// n->ir = generate_ir(n->data.function_definition->function_def_specifier);
-			join_lists(n->ir_list, generate_ir_from_node(n->data.function_definition->compound_statement));
+			create_function_definition_ir(n);
 			break;
 		}
 		case COMPOUND_STATEMENT_NODE: {
@@ -2248,10 +2253,8 @@ list *generate_ir_from_node(node *n) {
 			create_function_call_ir(n);
 			break;
 		case EXPRESSION_LIST_NODE: {
-//				node *expression_list = n->data.expression_list->expression_list;
-				join_lists(n->ir_list, generate_ir_from_node(n->data.expression_list->assignment_expr));
-//				join_lists(n->ir_list, generate_ir_from_node(expression_list));
-				break;
+			join_lists(n->ir_list, generate_ir_from_node(n->data.expression_list->assignment_expr));
+			break;
 		}
 	}
 	return n->ir_list;
@@ -2276,9 +2279,18 @@ ir *create_ir(int ir_type, int opcode) {
 	case JUMP:
 		ir_node->data.jump_ir = malloc(sizeof(*ir_node->data.jump_ir));
 		break;
+	case CALL:
+		ir_node->data.call_ir = malloc(sizeof(*ir_node->data.call_ir));
+		break;
 	}
 	return ir_node;
 } 
+void create_function_definition_ir(node *node_to_attach_ir_to) {
+	// create nop label IR with name being function's name, taken from the function def specifier
+	// generate and attach IR for n's compound statement
+	add_data_to_list(node_to_attach_ir_to->ir_list, create_nop_ir(get_identifier_from_declarator(node_to_attach_ir_to->data.function_definition->function_def_specifier->data.function_def_specifier->declarator)->data.identifier->name));
+	join_lists(node_to_attach_ir_to->ir_list, generate_ir_from_node(node_to_attach_ir_to->data.function_definition->compound_statement));
+}
 void create_function_call_ir(node *node_to_attach_ir_to) {
 	// function calls have postfix_expr and expr_list
 	// expr_list has expr_list and assignment_expr
@@ -2290,7 +2302,7 @@ void create_function_call_ir(node *node_to_attach_ir_to) {
 	node *expression_list = node_to_attach_ir_to->data.function_call->expression_list;
 	// get number of arguments from function's symbol table entry
 	// get identifier from function_call's postfix_expr
-	node *identifier = get_identifier_from_node(node_to_attach_ir_to->data.function_call->postfix_expr);
+//	node *identifier = get_identifier_from_node(node_to_attach_ir_to->data.function_call->postfix_expr);
 	// get symbol table entry from identifier
 //	symbol_table_identifier *entry = find_identifier_in_symbol_table(node_to_attach_ir_to->symbol_table, identifier->data.identifier->name);
 	// get argument number from symbol table entry
@@ -2327,6 +2339,18 @@ void create_function_call_ir(node *node_to_attach_ir_to) {
 	// do it one last time for the last expression_list, which is an assignment_expr
 	join_lists(node_to_attach_ir_to->ir_list, generate_ir_from_node(expression_list));
 	add_data_to_list(node_to_attach_ir_to->ir_list, create_param_ir(node_to_attach_ir_to, expression_list->temp, expression_list));
+	// call($t8, fn, argc)
+	create_call_ir(node_to_attach_ir_to, find_identifier_in_symbol_table(node_to_attach_ir_to->symbol_table, get_identifier_from_node(node_to_attach_ir_to->data.function_call->postfix_expr)->data.identifier->name));
+
+}
+ir *create_call_ir(node *node_to_attach_ir_to, symbol_table_identifier *function) {
+	ir *ir = create_ir(CALL, Call);
+	ir->data.call_ir->ra = create_temp();
+	ir->data.call_ir->function = function;
+	ir->data.call_ir->argc = function->type->data.function_type->argc;
+	add_data_to_list(node_to_attach_ir_to->ir_list, ir);
+	node_to_attach_ir_to->temp = ir->data.call_ir->ra;
+	return ir;
 }
 ir *create_param_ir(node *node_to_attach_ir_to, temp *temp, node *param_expr) {
 	// 
@@ -2390,6 +2414,9 @@ void create_reserved_word_statement_ir(node *node_to_attach_ir_to) {
 			// create_jump_ir(node_to_attach_ir_to, Jump, )
 			break;
 		}
+		case CONTINUE:
+
+			break;
 	}
 }
 void create_for_statement_ir(node *node_to_attach_ir_to) {
@@ -2484,6 +2511,7 @@ ir *create_return_ir(node *node_to_attach_ir_to, node *expr, temp *temp) {
 		// TODO add jump IR to after function
 		return ir;
 	}
+	return NULL;
 }
 ir *create_nop_ir(char *name) {
 	ir *nop_ir = create_ir(NOP, nop);
@@ -2491,7 +2519,8 @@ ir *create_nop_ir(char *name) {
 		nop_ir->ir_label = name;
 	}
 	else {
-		nop_ir->ir_label = num_to_s(ir_label_id);
+//		char *ir_label = malloc(200);
+		sprintf(nop_ir->ir_label, "label_%d", num_to_s(ir_label_id));
 		ir_label_id++;
 	}
 	return nop_ir;
@@ -2562,6 +2591,7 @@ temp *get_rd_register_from_ir(ir *ir) {
 		printf("ERROR: no destination register for this type of IR node\n");
 		break;
 	}
+	return NULL;
 }
 void create_binary_expr_ir(node *node_to_attach_ir_to) { 
 	// copy instructions for left
@@ -2686,29 +2716,11 @@ ir *create_simple_binary_ir(node *node_to_attach_ir_to, int op, temp *rs, temp *
 			break;
 		}
 		case BITSHIFT_LEFT: {
-			switch (type->data.arithmetic_type->is_unsigned) {
-				case 1: {
-					ir = create_ir(OP, BitshiftLeftUnsigned);
-					break;
-				}
-				case 0: {
-					ir = create_ir(OP, BitshiftLeftUnsigned);
-					break;
-				}
-			}
+			ir = create_ir(OP, BitshiftLeft);
 			break;
 		}
 		case BITSHIFT_RIGHT: {
-			switch (type->data.arithmetic_type->is_unsigned) {
-				case 1: {
-					ir = create_ir(OP, BitshiftRightUnsigned);
-					break;
-				}
-				case 0: {
-					ir = create_ir(OP, BitshiftRightSigned);
-					break;
-				}
-			}
+			ir = create_ir(OP, BitshiftRight);
 			break;
 		}
 		case LESS_THAN: {
@@ -2873,13 +2885,17 @@ void print_ir(FILE *output, ir *ir, int is_ir) {
 	// load_ir: opcode, temp rd, symbol rs
 	// store_ir: opcode, symbol rd, temp rs
 	if (ir->ir_label != NULL) {
-		fprintf(output, "label_%s: NoOp", ir->ir_label);
+		if (is_ir)
+			fprintf(output, "%s:\tNoOp", ir->ir_label);
+		else
+			fprintf(output, "%s:\tnop", ir->ir_label);
 	}
 	else {
+		fprintf(output, "\t");
 		if (is_ir)
 			fprintf(output, "%s(", ir_opcodes[ir->opcode]);
 		else
-			fprintf(output, "%s(", opcodes[ir->opcode]);
+			fprintf(output, "%s\t", opcodes[ir->opcode]);
 		switch (ir->ir_type) {
 			case OP:
 				fprintf(output, "$t%d", ir->data.op_ir->rd->id);
@@ -2913,11 +2929,17 @@ void print_ir(FILE *output, ir *ir, int is_ir) {
 					fprintf(output, "label_%s", ir->data.jump_ir->label_ir->ir_label);
 				}
 				break;
+			case CALL:
+				fprintf(output, "$t%d, ", ir->data.call_ir->ra->id);
+				fprintf(output, "%s, ", ir->data.call_ir->function->name);
+				fprintf(output, "%d", ir->data.call_ir->argc);
+				break;
 			default:
 				fprintf(output, "ERROR: unknown IR node type: %d\n", ir->ir_type);
 				break;
 		}
-		fputs(")", output);
+		if (is_ir)
+			fputs(")", output);
 	}
 	fputs("\n", output);
 }
@@ -2934,10 +2956,8 @@ void add_ir_opcodes() {
 	ir_opcodes[DivideUnsigned] = "DivideUnsigned";
 	ir_opcodes[RemainderSigned] = "RemainderSigned";
 	ir_opcodes[RemainderUnsigned] = "RemainderUnsigned";
-	ir_opcodes[BitshiftLeftSigned] = "BitshiftLeftSigned";
-	ir_opcodes[BitshiftLeftUnsigned] = "BitshiftLeftUnsigned";
-	ir_opcodes[BitshiftRightSigned] = "BitshiftRightSigned";
-	ir_opcodes[BitshiftRightUnsigned] = "BitshiftRightUnsigned";
+	ir_opcodes[BitshiftLeft] = "BitshiftLeft";
+	ir_opcodes[BitshiftRight] = "BitshiftRight";
 	ir_opcodes[LoadConst] = "LoadConst";
 	ir_opcodes[seq] = "IsEqual";
 	ir_opcodes[sgt] = "IsGreaterThan";
@@ -2969,25 +2989,24 @@ void add_ir_opcodes() {
 	ir_opcodes[ParamWord] = "ParamWord";
 	ir_opcodes[ParamHalf] = "ParamHalf";
 	ir_opcodes[ParamByte] = "ParamByte";
+	ir_opcodes[Call] = "Call";
 }
 void add_opcodes() {
 	opcodes[LoadAddr] = "la";
 	opcodes[LoadWordIndirect] = "lw";
-	opcodes[MultSigned] = "MultSigned";
-	opcodes[MultUnsigned] = "MultUnsigned";
-	opcodes[AddSigned] = "AddSigned";
-	opcodes[AddUnsigned] = "AddUnsigned";
-	opcodes[MinusSigned] = "MinusSigned";
-	opcodes[MinusUnsigned] = "MinusUnsigned";
-	opcodes[DivideSigned] = "DivideSigned";
-	opcodes[DivideUnsigned] = "DivideUnsigned";
-	opcodes[RemainderSigned] = "RemainderSigned";
-	opcodes[RemainderUnsigned] = "RemainderUnsigned";
-	opcodes[BitshiftLeftSigned] = "BitshiftLeftSigned";
-	opcodes[BitshiftLeftUnsigned] = "BitshiftLeftUnsigned";
-	opcodes[BitshiftRightSigned] = "BitshiftRightSigned";
-	opcodes[BitshiftRightUnsigned] = "BitshiftRightUnsigned";
-	opcodes[LoadConst] = "LoadConst";
+	opcodes[MultSigned] = "mul";
+	opcodes[MultUnsigned] = "mulou";
+	opcodes[AddSigned] = "add";
+	opcodes[AddUnsigned] = "addu";
+	opcodes[MinusSigned] = "sub";
+	opcodes[MinusUnsigned] = "subu";
+	opcodes[DivideSigned] = "div";
+	opcodes[DivideUnsigned] = "divu";
+	opcodes[RemainderSigned] = "rem";
+	opcodes[RemainderUnsigned] = "remu";
+	opcodes[BitshiftLeft] = "sllv";
+	opcodes[BitshiftRight] = "srlv";
+	opcodes[LoadConst] = "li";
 	opcodes[seq] = "seq";
 	opcodes[sgt] = "sgt";
 	opcodes[sgtu] = "sgtu";
@@ -3019,19 +3038,67 @@ void add_opcodes() {
 	opcodes[ParamHalf] = "ParamHalf";
 	opcodes[ParamByte] = "ParamByte";
 }
-void generate_code(list *ir_list, FILE *output) {
-	fprintf(output, ".text\n");
-	fprintf(output, ".globl main\n");
-	fprintf(output, "main: ");
+void print_spim_code(list *ir_list, FILE *output) {
+	fprintf(output, "\t.text\n");
+	fprintf(output, "\t.globl main\n");
 	item *current_item = ir_list->first;
 	while (current_item != NULL) {
 		ir *current_ir = current_item->data;
 		switch (current_ir->ir_type) {
 		case OP:
+		case NOP:
 			// plus/minus: eg add $t1, $2
+
 			print_ir(output, current_ir, 0);
+			break;
+		case CALL:
+			print_function_entry_spim_code(current_ir->data.call_ir->function, output);
 			break;
 		}
 		current_item = current_item->next;
 	}
+	fprintf(output, "\tli	$v0, 10\n\tsyscall\n");
+}
+void print_function_entry_spim_code(symbol_table_identifier *fn, FILE *output) {
+	fprintf(output, "\taddi	$sp, $sp, -80\n");
+	fprintf(output, "\tsw		$s7, -36($sp)\n");
+	fprintf(output, "\tsw		$s6, -32($sp)\n");
+	fprintf(output, "\tsw		$s5, -28($sp)\n");
+	fprintf(output, "\tsw		$s4, -24($sp)\n");
+	fprintf(output, "\tsw		$s3, -20($sp)\n");
+	fprintf(output, "\tsw		$s2, -16($sp)\n");
+	fprintf(output, "\tsw		$s1, -12($sp)\n");
+	fprintf(output, "\tsw		$s0, -8($sp)\n");
+	fprintf(output, "\tsw		$ra, -4($sp)\n");
+	fprintf(output, "\tsw		$fp, 0($sp)\n");
+	fprintf(output, "\taddi	$fp, $sp, 80\n");
+	fprintf(output, "\tsub 	$sp, $sp, %d\n", scope_memory(fn->parent));
+}
+void print_print_int_spim_code(FILE *output, int i) {
+	fprintf(output, "");
+}
+int scope_memory(symbol_table *st) {
+	// count the vars in the current ST
+	// if there are children, do the same to children and add the return value
+	// if not, return count
+	int count = 0;
+	symbol_table_identifier *current = st->identifiers;
+	symbol_table *child = st->children;
+	while (current != NULL) {
+		if (current->type->type != FUNCTION_TYPE) {
+			count += size_of_type(current->type);
+		}
+		current = current->next;
+	}
+	int max_child = 0;
+	while (child != NULL) {
+		// return max of scope_memory(children)
+		int current_size = scope_memory(child);
+		if (current_size > max_child) {
+			max_child = current_size;
+		}
+		child = child->next;
+	}
+	count += max_child;
+	return count;
 }

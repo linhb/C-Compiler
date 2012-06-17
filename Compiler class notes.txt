@@ -1539,3 +1539,14 @@ To know the function you're in when you have a return statement, find the highes
 When doing the ST pass, attach the correct return type to the return statement, then use that for the type checking pass when you don't know what ST you're in.
 
 No need to create data structures for MIPS code, just print from IR.
+
+After class notes:
+
+Function entry code:
+	move SP forward by 80
+	store s registers at 36(sp) to 8(sp)
+	store ra at 4(sp)
+	store old fp at 0(sp)
+	update fp to sp + 80 (so at the beginning of the new stack frame)
+	move sp forward as many bytes as the function takes up
+	start actual function

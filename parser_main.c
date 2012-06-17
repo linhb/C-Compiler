@@ -56,7 +56,7 @@ int main(int argc, char **argv) {
 		file_scope_symbol_table->st_id = st_id;
 		create_symbol_table(root, file_scope_symbol_table);
 		print_symbol_table(output, file_scope_symbol_table);
-		type_check(root);
+//		type_check(root);
 		fputs("\n\n****** PARSE TREE ********\n\n", output);
 		print_node(output, root);
 		fputs("\n", output);
@@ -68,7 +68,7 @@ int main(int argc, char **argv) {
 		fputs("\n\n****** INTERMEDIATE REPRESENTATION ********\n\n", output);
 		print_ir_list(root->ir_list, output, 1);
 		fputs("\n\n******* SPIM INSTRUCTIONS *******\n\n", output);
-		generate_code(root->ir_list, instruction_output);
+		print_spim_code(root->ir_list, instruction_output);
 		break;
 	case 1:
 		fprintf(stderr, "Number of errors: %d", yynerrs);

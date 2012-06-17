@@ -448,6 +448,8 @@ typedef struct t_symbol_table_identifier
 	int identifier_id; // not meant to be consecutive; there'll be gaps when a redeclared variable is encountered
 	struct t_symbol_table_identifier *next;
 	struct t_type *type;
+	struct t_symbol_table *parent;
+	int is_param;
 } symbol_table_identifier;  // calling it symbol_table_identifier as opposed to plain identifier which is a node
 // example: 
 // old: i->data.arithmetic_identifier->is_signed -> 
@@ -501,7 +503,7 @@ void create_symbol_table(node *result, symbol_table *st);
 int redeclared_variable(symbol_table *st, char *name);
 node *get_identifier_from_declarator(node *n);
 void create_decl_node_symbol_table(node *n, symbol_table *st);
-symbol_table_identifier *create_decl_identifier(node *parent, node *decl_spec, node *declarator, symbol_table_identifier *current, symbol_table *st);
+symbol_table_identifier *create_decl_identifier(node *parent, node *decl_spec, node *declarator, symbol_table_identifier *current, symbol_table *st, int is_param);
 void create_function_def_specifier_node_symbol_table(node *n, symbol_table *st, node *compound_statement);
 node *get_parameter_type_list_from_declarator(node *declarator);
 symbol_table *create_child_symbol_table(symbol_table *parent_st, node *compound_statement, symbol_table_identifier *fn_symbol);
@@ -557,6 +559,7 @@ int is_equal(type *t1, type *t2);
 #define LOAD_CONST 4 
 #define NOP 5
 #define JUMP 6
+#define CALL 7
 
 typedef struct n_ir
 {
@@ -568,6 +571,7 @@ typedef struct n_ir
 		struct n_store_ir *store_ir; // includes all instructions that stores into the symbol table
 		struct n_load_const_ir *load_const_ir;
 		struct n_jump_ir *jump_ir;
+		struct n_call_ir *call_ir;
 	} data;
 	char *ir_label;
 } ir;
@@ -599,6 +603,11 @@ typedef struct n_jump_ir
 	struct n_temp *s2;
 	struct n_ir *label_ir;
 } jump_ir;
+typedef struct n_call_ir {
+	struct n_temp *ra;
+	symbol_table_identifier *function;
+	int argc;
+} call_ir;
 typedef struct n_temp
 {
 	int id;
@@ -631,10 +640,8 @@ char *opcodes[100];
 #define DivideUnsigned 10
 #define RemainderSigned 11
 #define RemainderUnsigned 12
-#define BitshiftLeftSigned 13
-#define BitshiftLeftUnsigned 14
-#define BitshiftRightSigned 15
-#define BitshiftRightUnsigned 16
+#define BitshiftLeft 13
+#define BitshiftRight 15
 #define LoadConst 17
 #define seq 18
 #define sgt 19
@@ -666,6 +673,7 @@ char *opcodes[100];
 #define ParamWord 45
 #define ParamHalf 46
 #define ParamByte 47
+#define Call 48
 
 temp *load_lvalue_from_rvalue_ir_if_needed(node *n, temp *may_be_address);
 list *generate_ir_from_node(node *n);
@@ -675,6 +683,7 @@ ir *get_last_ir_list_element(ir *list);
 ir *add_to_ir_list(ir *list, ir *new);
 // create_ir functions that take a node will attach the created IR to the IR of that node
 ir *create_load_indirect_ir(node *n, temp *rs);
+void create_function_definition_ir(node *node_to_attach_ir_to);
 void add_ir_opcodes();
 ir *create_load_addr_ir(node *n, node *id);
 ir *create_simple_binary_ir(node *n, int op, temp *rs, temp *rt, type *type);
@@ -694,10 +703,14 @@ void create_reserved_word_statement_ir(node *node_to_attach_ir_to);
 void create_function_call_ir(node *node_to_attach_ir_to);
 ir *create_param_ir(node *node_to_attach_ir_to, temp *temp, node *param_expr);
 void create_while_statement_ir(node *node_to_attach_ir_to);
+ir *create_call_ir(node *node_to_attach_ir_to, symbol_table_identifier *function);
 temp *create_temp();
 char *num_to_s(int num);
 temp *get_rd_register_from_ir(ir *ir);
+void print_ir(FILE *output, ir *ir, int is_ir);
 void add_opcodes();
-void generate_code(list *ir_list, FILE *output);
+void print_spim_code(list *ir_list, FILE *output);
+void print_function_entry_spim_code(symbol_table_identifier *fn, FILE *output);
+int scope_memory(symbol_table *st);
 #endif
 
