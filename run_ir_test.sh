@@ -12,6 +12,6 @@ make
 # echo "****************WHILE STATEMENTS****************"
 # ./parser test_inputs/test_input_while_stmt
 echo "**************** SPIM INSTRUCTIONS ****************"
-./parser test_inputs/spim_input.c - spim_output.s && spim -file spim_output.s
+./parser test_inputs/spim_input.c - spim_output.s # && spim -file spim_output.s
                                                                              
 make clean

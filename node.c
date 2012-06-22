@@ -27,61 +27,61 @@ node *create_number_node(char *yytext) {
 	node *num = create_node(NUMBER_NODE);
 	// DEBUG
 	// printf("node type %d\n", num->node_type);
-	num->data.number = malloc(sizeof(number));
-	assert(num->data.number != NULL);
-	num->data.number->value = strtoul(yytext, NULL, 10);
+	num->node_data.number = malloc(sizeof(number));
+	assert(num->node_data.number != NULL);
+	num->node_data.number->value = strtoul(yytext, NULL, 10);
 	unsigned long int ul_limit = 4294967295UL;
 	unsigned long int int_limit = 2147483647UL;
-	unsigned long int value = num->data.number->value;
+	unsigned long int value = num->node_data.number->value;
 	if (value <= int_limit)
-		num->data.number->type = INT;    
+		num->node_data.number->type = INT;    
  	else if (value <= ul_limit)
-		num->data.number->type = LONG;    
+		num->node_data.number->type = LONG;    
 	else { /* overflow */
-		num->data.number->value = ul_limit;
-		num->data.number->type = LONG;    
-		num->data.number->overflow = 1;
+		num->node_data.number->value = ul_limit;
+		num->node_data.number->type = LONG;    
+		num->node_data.number->overflow = 1;
 	}
 	return num;
 }     
 node *create_string_node(char *yytext) {
 	node *string = create_node(STRING_NODE);
-	string->data.string = malloc(sizeof(*string->data.string));
-	string->data.string->value = escape_string(yytext);
-	assert(string->data.string->value != NULL);
-	string->data.string->length = strlen(string->data.string->value);
+	string->node_data.string = malloc(sizeof(*string->node_data.string));
+	string->node_data.string->value = escape_string(yytext);
+	assert(string->node_data.string->value != NULL);
+	string->node_data.string->length = strlen(string->node_data.string->value);
 	return string;
 }
 node *create_char_node(char *yytext) { // yytext = "'\127'"
 	node *char_node = create_node(NUMBER_NODE);
-	char_node->data.number = malloc(sizeof(*char_node->data.number));
+	char_node->node_data.number = malloc(sizeof(*char_node->node_data.number));
 	// extract the escape sequence from yytext with escape_string, then extract the integer value and assign it to value
-	char_node->data.number->value = escape_string(yytext)[0];
-	char_node->data.number->type = CHAR;
+	char_node->node_data.number->value = escape_string(yytext)[0];
+	char_node->node_data.number->type = CHAR;
 	return char_node;
 }
 
 node *create_identifier_node(char *yytext) {
 	node *identifier = create_node(IDENTIFIER_NODE);
-	identifier->data.identifier = malloc(sizeof(*identifier->data.identifier));
-	identifier->data.identifier->name = strdup(yytext);
-	assert(identifier->data.identifier->name != NULL);
+	identifier->node_data.identifier = malloc(sizeof(*identifier->node_data.identifier));
+	identifier->node_data.identifier->name = strdup(yytext);
+	assert(identifier->node_data.identifier->name != NULL);
 	return identifier;
 }
 node *create_reserved_word_node(char *yytext, int value) {
 	node *reserved_word = create_node(RESERVED_WORD_NODE);
-	reserved_word->data.reserved_word = malloc(sizeof(*reserved_word->data.reserved_word));
-	reserved_word->data.reserved_word->text = strdup(yytext);
-	assert(reserved_word->data.reserved_word->text != NULL);
-	reserved_word->data.reserved_word->value = value;
+	reserved_word->node_data.reserved_word = malloc(sizeof(*reserved_word->node_data.reserved_word));
+	reserved_word->node_data.reserved_word->text = strdup(yytext);
+	assert(reserved_word->node_data.reserved_word->text != NULL);
+	reserved_word->node_data.reserved_word->value = value;
 	return reserved_word;
 }
 node *create_operator_node(char *yytext, int value) {
 	node *operator = create_node(OPERATOR_NODE);
-	operator->data.operator = malloc(sizeof(*operator->data.operator));
-	operator->data.operator->text = strdup(yytext);
-	assert(operator->data.operator->text != NULL);
-	operator->data.operator->value = value;
+	operator->node_data.operator = malloc(sizeof(*operator->node_data.operator));
+	operator->node_data.operator->text = strdup(yytext);
+	assert(operator->node_data.operator->text != NULL);
+	operator->node_data.operator->value = value;
 	return operator;
 }
 char *escape_string(char *yytext) {
@@ -171,50 +171,50 @@ char *escape_string(char *yytext) {
 }
 node *create_decl_node(node *decl_spec, node *ini_decl_list) {
 	node *n = create_node(DECL_NODE);
-	n->data.decl = malloc(sizeof(*n->data.decl));
-	assert(n->data.decl != NULL);
-	n->data.decl->declaration_specifier = decl_spec;
-	n->data.decl->initialized_declarator_list = ini_decl_list;
+	n->node_data.decl = malloc(sizeof(*n->node_data.decl));
+	assert(n->node_data.decl != NULL);
+	n->node_data.decl->declaration_specifier = decl_spec;
+	n->node_data.decl->initialized_declarator_list = ini_decl_list;
 	return n;
 }
 
 node *create_initialized_declarator_list_node(node *list, node *decl) {
 	node *n = create_node(INITIALIZED_DECLARATOR_LIST_NODE);
-	n->data.initialized_declarator_list = malloc(sizeof(*n->data.initialized_declarator_list));
-	assert(n->data.initialized_declarator_list != NULL);
-	n->data.initialized_declarator_list->initialized_declarator_list = list;
-	n->data.initialized_declarator_list->initialized_declarator = decl;
+	n->node_data.initialized_declarator_list = malloc(sizeof(*n->node_data.initialized_declarator_list));
+	assert(n->node_data.initialized_declarator_list != NULL);
+	n->node_data.initialized_declarator_list->initialized_declarator_list = list;
+	n->node_data.initialized_declarator_list->initialized_declarator = decl;
 	return n;
 }
 node *create_compound_number_type_specifier_node(node *reserved_words[]) {
 	node *n = create_node(COMPOUND_NUMBER_TYPE_SPECIFIER_NODE);
-	n->data.compound_number_type_specifier = malloc(sizeof(*n->data.compound_number_type_specifier));
-	assert(n->data.compound_number_type_specifier != NULL);
+	n->node_data.compound_number_type_specifier = malloc(sizeof(*n->node_data.compound_number_type_specifier));
+	assert(n->node_data.compound_number_type_specifier != NULL);
 	int i;
 	for (i = 0; i< 3; i++) {
-		n->data.compound_number_type_specifier->reserved_words[i] = reserved_words[i];
+		n->node_data.compound_number_type_specifier->reserved_words[i] = reserved_words[i];
 	}
 	if (reserved_words[1]!=NULL)
 	if (is_type(n, 0, "unsigned")) {
-		n->data.compound_number_type_specifier->is_unsigned = 1;
+		n->node_data.compound_number_type_specifier->is_unsigned = 1;
 	}
 	if (is_type(n, 0, "short") || is_type(n, 1, "short")) {
-		n->data.compound_number_type_specifier->number_type = SHORT;
+		n->node_data.compound_number_type_specifier->number_type = SHORT;
 	}
 	else if (is_type(n, 0, "long") || is_type(n, 1, "long")) {
-		n->data.compound_number_type_specifier->number_type = LONG;
+		n->node_data.compound_number_type_specifier->number_type = LONG;
 	}	
 	else if (is_type(n, 0, "char") || is_type(n, 1, "char")) {
-		n->data.compound_number_type_specifier->number_type = CHAR;
+		n->node_data.compound_number_type_specifier->number_type = CHAR;
 	}
 	else {
-		n->data.compound_number_type_specifier->number_type = INT;
+		n->node_data.compound_number_type_specifier->number_type = INT;
 	}
 	return n;
 }
 int is_type(node *n, int index, char *type) {
-	if (n->data.compound_number_type_specifier->reserved_words[index] != NULL){
-		return !strcmp(n->data.compound_number_type_specifier->reserved_words[index]->data.reserved_word->text, type);
+	if (n->node_data.compound_number_type_specifier->reserved_words[index] != NULL){
+		return !strcmp(n->node_data.compound_number_type_specifier->reserved_words[index]->node_data.reserved_word->text, type);
 	}
 	else {
 		return 0;
@@ -222,116 +222,116 @@ int is_type(node *n, int index, char *type) {
 }
 node *create_increment_decrement_expr_node(node *operand, node *operator) {
 	node *n = create_node(INCREMENT_DECREMENT_EXPR_NODE);
-	n->data.increment_decrement_expr = malloc(sizeof(*n->data.increment_decrement_expr));
-	assert(n->data.increment_decrement_expr != NULL);
-	n->data.increment_decrement_expr->operand = operand;
-	n->data.increment_decrement_expr->operator = operator;
+	n->node_data.increment_decrement_expr = malloc(sizeof(*n->node_data.increment_decrement_expr));
+	assert(n->node_data.increment_decrement_expr != NULL);
+	n->node_data.increment_decrement_expr->operand = operand;
+	n->node_data.increment_decrement_expr->operator = operator;
 	return n;
 }
 node *create_translation_unit_node(node *translation_unit, node *top_level_decl) {
 	node *n = create_node(TRANSLATION_UNIT_NODE);
-	n->data.translation_unit = malloc(sizeof(*n->data.translation_unit));
-	assert(n->data.translation_unit != NULL);
-	n->data.translation_unit->translation_unit = translation_unit;
-	n->data.translation_unit->top_level_decl = top_level_decl;
+	n->node_data.translation_unit = malloc(sizeof(*n->node_data.translation_unit));
+	assert(n->node_data.translation_unit != NULL);
+	n->node_data.translation_unit->translation_unit = translation_unit;
+	n->node_data.translation_unit->top_level_decl = top_level_decl;
 	return n;
 }
 node *create_function_def_specifier_node(node *declaration_specifiers, node *declarator) {
 	node *n = create_node(FUNCTION_DEF_SPECIFIER_NODE);
-	n->data.function_def_specifier = malloc(sizeof(*n->data.function_def_specifier));
-	assert(n->data.function_def_specifier != NULL);
-	n->data.function_def_specifier->declaration_specifiers = declaration_specifiers;
-	n->data.function_def_specifier->declarator = declarator;
+	n->node_data.function_def_specifier = malloc(sizeof(*n->node_data.function_def_specifier));
+	assert(n->node_data.function_def_specifier != NULL);
+	n->node_data.function_def_specifier->declaration_specifiers = declaration_specifiers;
+	n->node_data.function_def_specifier->declarator = declarator;
 	return n;
 }
 node *create_function_definition_node(node *function_def_specifier, node *compound_statement) {
 	node *n = create_node(FUNCTION_DEFINITION_NODE);
-	n->data.function_definition = malloc(sizeof(*n->data.function_definition));
-	assert(n->data.function_definition != NULL);
-	n->data.function_definition->function_def_specifier = function_def_specifier;
-	n->data.function_definition->compound_statement = compound_statement;
+	n->node_data.function_definition = malloc(sizeof(*n->node_data.function_definition));
+	assert(n->node_data.function_definition != NULL);
+	n->node_data.function_definition->function_def_specifier = function_def_specifier;
+	n->node_data.function_definition->compound_statement = compound_statement;
 	return n;
 }
 node *create_declaration_or_statement_list_node(node *declaration_or_statement_list, node *declaration_or_statement) {
 	node *n = create_node(DECLARATION_OR_STATEMENT_LIST_NODE);
-	n->data.declaration_or_statement_list = malloc(sizeof(*n->data.declaration_or_statement_list));
-	assert(n->data.declaration_or_statement_list != NULL);
-	n->data.declaration_or_statement_list->declaration_or_statement_list = declaration_or_statement_list;
-	n->data.declaration_or_statement_list->declaration_or_statement = declaration_or_statement;
+	n->node_data.declaration_or_statement_list = malloc(sizeof(*n->node_data.declaration_or_statement_list));
+	assert(n->node_data.declaration_or_statement_list != NULL);
+	n->node_data.declaration_or_statement_list->declaration_or_statement_list = declaration_or_statement_list;
+	n->node_data.declaration_or_statement_list->declaration_or_statement = declaration_or_statement;
 	return n;
 }
 node *create_compound_statement_node(node *declaration_or_statement_list) {
 	node *n = create_node(COMPOUND_STATEMENT_NODE);
-	n->data.compound_statement = malloc(sizeof(*n->data.compound_statement));
-	assert(n->data.compound_statement != NULL);
-	n->data.compound_statement->declaration_or_statement_list = declaration_or_statement_list;
+	n->node_data.compound_statement = malloc(sizeof(*n->node_data.compound_statement));
+	assert(n->node_data.compound_statement != NULL);
+	n->node_data.compound_statement->declaration_or_statement_list = declaration_or_statement_list;
 	return n;
 }
 node *create_direct_declarator_node(node *declarator) {
 	node *n = create_node(DIRECT_DECLARATOR_NODE);
-	n->data.direct_declarator = malloc(sizeof(*n->data.direct_declarator));
-	assert(n->data.direct_declarator != NULL);
-	n->data.direct_declarator->declarator = declarator;
+	n->node_data.direct_declarator = malloc(sizeof(*n->node_data.direct_declarator));
+	assert(n->node_data.direct_declarator != NULL);
+	n->node_data.direct_declarator->declarator = declarator;
 	return n;	
 }  
 node *create_function_declarator_node(node *direct_declarator, node *parameter_type_list) {	
 	node *n = create_node(FUNCTION_DECLARATOR_NODE);
-	n->data.function_declarator = malloc(sizeof(*n->data.function_declarator));
-	assert(n->data.function_declarator != NULL);
-	n->data.function_declarator->direct_declarator = direct_declarator;
-	n->data.function_declarator->parameter_type_list = parameter_type_list;
+	n->node_data.function_declarator = malloc(sizeof(*n->node_data.function_declarator));
+	assert(n->node_data.function_declarator != NULL);
+	n->node_data.function_declarator->direct_declarator = direct_declarator;
+	n->node_data.function_declarator->parameter_type_list = parameter_type_list;
 	return n;	
 }
 node *create_parameter_list_node(node *parameter_list, node *parameter_decl) {
 	node *n = create_node(PARAMETER_LIST_NODE);
-	n->data.parameter_list = malloc(sizeof(*n->data.parameter_list));
-	assert(n->data.parameter_list != NULL);
-	n->data.parameter_list->parameter_list = parameter_list;
-	n->data.parameter_list->parameter_decl = parameter_decl;
+	n->node_data.parameter_list = malloc(sizeof(*n->node_data.parameter_list));
+	assert(n->node_data.parameter_list != NULL);
+	n->node_data.parameter_list->parameter_list = parameter_list;
+	n->node_data.parameter_list->parameter_decl = parameter_decl;
 		// if 1 arg, no parameter_list node was created, so this function is never called, so number_of_params will never be 1
 		// if 2 args, 1 parameter_list node will be created which is the node being created right now, which will have NULL parameter_list
 		// there will only be a parent parameter_list node of type PARAMETER_LIST_NODE if there are 3 or more arguments
 	if (parameter_list != NULL && parameter_list->node_type == PARAMETER_LIST_NODE) {
-		int number_of_params = parameter_list->data.parameter_list->number_of_params;
-		n->data.parameter_list->number_of_params = number_of_params + 1;
+		int number_of_params = parameter_list->node_data.parameter_list->number_of_params;
+		n->node_data.parameter_list->number_of_params = number_of_params + 1;
 	}
 	else {
-		n->data.parameter_list->number_of_params = 2;
+		n->node_data.parameter_list->number_of_params = 2;
 	}
 	return n;		
 }
 node *create_parameter_decl_node(node *declaration_specifiers, node *declarator){	
 	node *n = create_node(PARAMETER_DECL_NODE);
-	n->data.parameter_decl = malloc(sizeof(*n->data.parameter_decl));
-	assert(n->data.parameter_decl != NULL);
-	n->data.parameter_decl->declaration_specifiers = declaration_specifiers;
-	n->data.parameter_decl->declarator = declarator;
+	n->node_data.parameter_decl = malloc(sizeof(*n->node_data.parameter_decl));
+	assert(n->node_data.parameter_decl != NULL);
+	n->node_data.parameter_decl->declaration_specifiers = declaration_specifiers;
+	n->node_data.parameter_decl->declarator = declarator;
 	return n;		
 }
 node *create_array_declarator_node(node *direct_declarator, node *constant_expr) {
 	node *n = create_node(ARRAY_DECLARATOR_NODE);
-	n->data.array_declarator = malloc(sizeof(*n->data.array_declarator)); 
-	assert(n->data.array_declarator != NULL);
-	n->data.array_declarator->direct_declarator = direct_declarator;
-	n->data.array_declarator->constant_expr = constant_expr;
+	n->node_data.array_declarator = malloc(sizeof(*n->node_data.array_declarator)); 
+	assert(n->node_data.array_declarator != NULL);
+	n->node_data.array_declarator->direct_declarator = direct_declarator;
+	n->node_data.array_declarator->constant_expr = constant_expr;
 	return n;			
 }
 node *create_binary_expr_node(node *left, node *op, node *right) {
 	node *n = create_node(BINARY_EXPRESSION_NODE);
-	n->data.binary_expression = malloc(sizeof(*n->data.binary_expression)); 
-	assert(n->data.binary_expression != NULL);
-	n->data.binary_expression->left = left;
-	n->data.binary_expression->op = op;
-	n->data.binary_expression->right = right;
+	n->node_data.binary_expression = malloc(sizeof(*n->node_data.binary_expression)); 
+	assert(n->node_data.binary_expression != NULL);
+	n->node_data.binary_expression->left = left;
+	n->node_data.binary_expression->op = op;
+	n->node_data.binary_expression->right = right;
 	break_down_compound_assignment_if_needed(n);
 	return n;				
 }
 void break_down_compound_assignment_if_needed(node *binary_expr) {
 	// if binary_expr is a += b, turn b into a binary expr with op = +, left = a, right = b, then change binary_expr's op to =
 	assert(binary_expr->node_type == BINARY_EXPRESSION_NODE);
-	node *original_op = binary_expr->data.binary_expression->op;
+	node *original_op = binary_expr->node_data.binary_expression->op;
 	node *new_op;
-	switch (original_op->data.operator->value) {
+	switch (original_op->node_data.operator->value) {
 		case ADD_AND_ASSIGN:
 			new_op = create_operator_node("+", PLUS);
 			break;
@@ -364,7 +364,7 @@ void break_down_compound_assignment_if_needed(node *binary_expr) {
 			break;
 		}
 	}
-	switch (original_op->data.operator->value) {
+	switch (original_op->node_data.operator->value) {
 		case ADD_AND_ASSIGN:
 		case SUBTRACT_AND_ASSIGN:
 		case MULTIPLY_AND_ASSIGN:
@@ -375,50 +375,50 @@ void break_down_compound_assignment_if_needed(node *binary_expr) {
 		case BITWISE_XOR_AND_ASSIGN:
 		case BITSHIFT_LEFT_AND_ASSIGN:
 		case BITSHIFT_RIGHT_AND_ASSIGN: {
-			original_op->data.operator->text = "=";
-			original_op->data.operator->value = ASSIGN;
+			original_op->node_data.operator->text = "=";
+			original_op->node_data.operator->value = ASSIGN;
 			node *new_right = malloc(sizeof(node));
-			*new_right = *binary_expr->data.binary_expression->right;
-			node *new_binary = create_binary_expr_node(create_identifier_node(binary_expr->data.binary_expression->left->data.identifier->name), new_op,  new_right);
-			binary_expr->data.binary_expression->right = new_binary;
+			*new_right = *binary_expr->node_data.binary_expression->right;
+			node *new_binary = create_binary_expr_node(create_identifier_node(binary_expr->node_data.binary_expression->left->node_data.identifier->name), new_op,  new_right);
+			binary_expr->node_data.binary_expression->right = new_binary;
 			break;
 		}
 	}
 }
 node *create_subscript_expr_node(node *postfix_expr, node *expr) {
 	node *n = create_node(SUBSCRIPT_EXPR_NODE);
-	n->data.subscript_expr = malloc(sizeof(*n->data.subscript_expr)); 
-	assert(n->data.subscript_expr != NULL);
-	n->data.subscript_expr->postfix_expr = postfix_expr;
-	n->data.subscript_expr->expr = expr;
+	n->node_data.subscript_expr = malloc(sizeof(*n->node_data.subscript_expr)); 
+	assert(n->node_data.subscript_expr != NULL);
+	n->node_data.subscript_expr->postfix_expr = postfix_expr;
+	n->node_data.subscript_expr->expr = expr;
 	return n;			
 }
 node *create_unary_expr_node(node *left, node *right, int op_first) {
 	node *n = create_node(UNARY_EXPRESSION_NODE);
-	n->data.unary_expression = malloc(sizeof(*n->data.unary_expression)); 
-	assert(n->data.unary_expression != NULL);
-	n->data.unary_expression->op_first = op_first;
+	n->node_data.unary_expression = malloc(sizeof(*n->node_data.unary_expression)); 
+	assert(n->node_data.unary_expression != NULL);
+	n->node_data.unary_expression->op_first = op_first;
 	if (op_first) {
-		n->data.unary_expression->operator = left;
-		n->data.unary_expression->operand = right;
+		n->node_data.unary_expression->operator = left;
+		n->node_data.unary_expression->operand = right;
 	}
 	else	{
-		n->data.unary_expression->operator = right;
-		n->data.unary_expression->operand = left;		
+		n->node_data.unary_expression->operator = right;
+		n->node_data.unary_expression->operand = left;		
 	}
 	n = break_down_increment_if_needed(n);   // turns eg a++ into a = a + 1                                                                                                                                                                                        
 	return n;				
 }
 node *break_down_increment_if_needed(node *unary_expression) {
 	if (unary_expression->node_type == UNARY_EXPRESSION_NODE
-			&& (unary_expression->data.unary_expression->operator->data.operator->value == INCREMENT
-			|| unary_expression->data.unary_expression->operator->data.operator->value == DECREMENT)) {
-		node *operand = unary_expression->data.unary_expression->operand;
+			&& (unary_expression->node_data.unary_expression->operator->node_data.operator->value == INCREMENT
+			|| unary_expression->node_data.unary_expression->operator->node_data.operator->value == DECREMENT)) {
+		node *operand = unary_expression->node_data.unary_expression->operand;
 		node *assignment_op = create_operator_node("=", ASSIGN);
 		node *new_op;
 		node *new_add_expr;
 		node *number_1 = create_number_node("1");
-		switch (unary_expression->data.unary_expression->operator->data.operator->value) {
+		switch (unary_expression->node_data.unary_expression->operator->node_data.operator->value) {
 			case INCREMENT: {
 				new_op = create_operator_node("+", PLUS);
 				break;
@@ -428,131 +428,131 @@ node *break_down_increment_if_needed(node *unary_expression) {
 				break;
 			}
 		}
-		new_add_expr = create_binary_expr_node(operand, new_op, number_1);
+		new_add_expr = create_binary_expr_node(create_identifier_node(operand->node_data.identifier->name), new_op, number_1);
 		unary_expression = create_binary_expr_node(operand, assignment_op, new_add_expr);
 	}
 	return unary_expression;
 }
 node *create_statement_node(node *statement) {
 	node *n = create_node(STATEMENT_NODE);
-	n->data.statement = malloc(sizeof(*n->data.statement)); 
-	assert(n->data.statement != NULL);
-	n->data.statement->statement = statement;
+	n->node_data.statement = malloc(sizeof(*n->node_data.statement)); 
+	assert(n->node_data.statement != NULL);
+	n->node_data.statement->statement = statement;
 	return n;
 }
 node *create_labeled_statement_node(node *label, node *statement) {	
 	node *n = create_node(LABELED_STATEMENT_NODE);
-	n->data.labeled_statement = malloc(sizeof(*n->data.labeled_statement)); 
-	assert(n->data.labeled_statement != NULL);
-	n->data.labeled_statement->label = label;
-	n->data.labeled_statement->statement = statement;
+	n->node_data.labeled_statement = malloc(sizeof(*n->node_data.labeled_statement)); 
+	assert(n->node_data.labeled_statement != NULL);
+	n->node_data.labeled_statement->label = label;
+	n->node_data.labeled_statement->statement = statement;
 	return n;
 }
 node *create_reserved_word_statement_node(node *reserved_word, node *expr) {
 	node *n = create_node(RESERVED_WORD_STATEMENT_NODE);
-	n->data.reserved_word_statement = malloc(sizeof(*n->data.reserved_word_statement));
-	assert(n->data.reserved_word_statement != NULL);
-	n->data.reserved_word_statement->reserved_word = reserved_word;
-	n->data.reserved_word_statement->expr = expr;
+	n->node_data.reserved_word_statement = malloc(sizeof(*n->node_data.reserved_word_statement));
+	assert(n->node_data.reserved_word_statement != NULL);
+	n->node_data.reserved_word_statement->reserved_word = reserved_word;
+	n->node_data.reserved_word_statement->expr = expr;
 	return n;	
 }
 node *create_if_else_statement_node(node *expr, node *if_statement, node *else_statement) {
 	node *n = create_node(IF_ELSE_STATEMENT_NODE);
-	n->data.if_else_statement = malloc(sizeof(*n->data.if_else_statement));
-	assert(n->data.if_else_statement != NULL);
-	n->data.if_else_statement->expr = expr;
-	n->data.if_else_statement->if_statement = if_statement;
-	n->data.if_else_statement->else_statement = else_statement;
+	n->node_data.if_else_statement = malloc(sizeof(*n->node_data.if_else_statement));
+	assert(n->node_data.if_else_statement != NULL);
+	n->node_data.if_else_statement->expr = expr;
+	n->node_data.if_else_statement->if_statement = if_statement;
+	n->node_data.if_else_statement->else_statement = else_statement;
 	return n;		
 }
 node *create_while_statement_node(node *expr, node *statement) {
 	node *n = create_node(WHILE_STATEMENT_NODE);
-	n->data.while_statement = malloc(sizeof(*n->data.while_statement));
-	assert(n->data.while_statement != NULL);
-	n->data.while_statement->expr = expr;
-	n->data.while_statement->statement = statement;
+	n->node_data.while_statement = malloc(sizeof(*n->node_data.while_statement));
+	assert(n->node_data.while_statement != NULL);
+	n->node_data.while_statement->expr = expr;
+	n->node_data.while_statement->statement = statement;
 	return n;		
 }
 node *create_do_statement_node(node *statement, node *expr) {
 	node *n = create_node(DO_STATEMENT_NODE);
-	n->data.do_statement = malloc(sizeof(*n->data.do_statement));
-	assert(n->data.do_statement != NULL);
-	n->data.do_statement->statement = statement;
-	n->data.do_statement->expr = expr;
+	n->node_data.do_statement = malloc(sizeof(*n->node_data.do_statement));
+	assert(n->node_data.do_statement != NULL);
+	n->node_data.do_statement->statement = statement;
+	n->node_data.do_statement->expr = expr;
 	return n;		
 }
 node *create_for_statement_node(node *for_expr, node *statement) {
 	node *n = create_node(FOR_STATEMENT_NODE);
-	n->data.for_statement = malloc(sizeof(*n->data.for_statement));
-	assert(n->data.for_statement != NULL);
-	n->data.for_statement->for_expr = for_expr;
-	n->data.for_statement->statement = statement;
+	n->node_data.for_statement = malloc(sizeof(*n->node_data.for_statement));
+	assert(n->node_data.for_statement != NULL);
+	n->node_data.for_statement->for_expr = for_expr;
+	n->node_data.for_statement->statement = statement;
 	return n;		
 }
 node *create_for_expr_node(node *initial_clause, node *goal_expr, node *advance_expr) {
 	node *n = create_node(FOR_EXPR_NODE);
-	n->data.for_expr = malloc(sizeof(*n->data.for_expr));
-	assert(n->data.for_expr != NULL);
-	n->data.for_expr->initial_clause = initial_clause;
-	n->data.for_expr->goal_expr = goal_expr;
-	n->data.for_expr->advance_expr = advance_expr;
+	n->node_data.for_expr = malloc(sizeof(*n->node_data.for_expr));
+	assert(n->node_data.for_expr != NULL);
+	n->node_data.for_expr->initial_clause = initial_clause;
+	n->node_data.for_expr->goal_expr = goal_expr;
+	n->node_data.for_expr->advance_expr = advance_expr;
 	return n;			
 }
 node *create_pointer_decl_node(node *pointer, node *direct_declarator) {
 	node *n = create_node(POINTER_DECL_NODE);
-	n->data.pointer_decl = malloc(sizeof(*n->data.pointer_decl));
-	assert(n->data.pointer_decl != NULL);
-	n->data.pointer_decl->pointer = pointer;
-	n->data.pointer_decl->direct_declarator = direct_declarator;
+	n->node_data.pointer_decl = malloc(sizeof(*n->node_data.pointer_decl));
+	assert(n->node_data.pointer_decl != NULL);
+	n->node_data.pointer_decl->pointer = pointer;
+	n->node_data.pointer_decl->direct_declarator = direct_declarator;
 	return n;		
 }
 node *create_function_call_node(node *postfix_expr, node *expression_list) {	
 	node *n = create_node(FUNCTION_CALL_NODE);
-	n->data.function_call = malloc(sizeof(*n->data.function_call));
-	assert(n->data.function_call != NULL);
-	n->data.function_call->postfix_expr = postfix_expr;
-	n->data.function_call->expression_list = expression_list;
+	n->node_data.function_call = malloc(sizeof(*n->node_data.function_call));
+	assert(n->node_data.function_call != NULL);
+	n->node_data.function_call->postfix_expr = postfix_expr;
+	n->node_data.function_call->expression_list = expression_list;
 	return n;		
 }
 node *create_type_name_node(node *declaration_specifiers, node *abstract_declarator) {	
 	node *n = create_node(TYPE_NAME_NODE);
-	n->data.type_name = malloc(sizeof(*n->data.type_name));
-	assert(n->data.type_name != NULL);
-	n->data.type_name->declaration_specifiers = declaration_specifiers;
-	n->data.type_name->abstract_declarator = abstract_declarator;
+	n->node_data.type_name = malloc(sizeof(*n->node_data.type_name));
+	assert(n->node_data.type_name != NULL);
+	n->node_data.type_name->declaration_specifiers = declaration_specifiers;
+	n->node_data.type_name->abstract_declarator = abstract_declarator;
 	return n;		
 }
 node *create_cast_expr_node(node *type_name, node *cast_expr) {
 	node *n = create_node(CAST_EXPR_NODE);
-	n->data.cast_expr = malloc(sizeof(*n->data.cast_expr)); 
-	assert(n->data.cast_expr != NULL);
-	n->data.cast_expr->type_name = type_name;
-	n->data.cast_expr->cast_expr = cast_expr;
+	n->node_data.cast_expr = malloc(sizeof(*n->node_data.cast_expr)); 
+	assert(n->node_data.cast_expr != NULL);
+	n->node_data.cast_expr->type_name = type_name;
+	n->node_data.cast_expr->cast_expr = cast_expr;
 	return n;			
 }
 node *create_expression_list_node(node *assignment_expr, node *expression_list) {
 	node *n = create_node(EXPRESSION_LIST_NODE);
-	n->data.expression_list = malloc(sizeof(*n->data.expression_list)); 
-	assert(n->data.expression_list != NULL);
-	n->data.expression_list->assignment_expr = assignment_expr;
-	n->data.expression_list->expression_list = expression_list;
+	n->node_data.expression_list = malloc(sizeof(*n->node_data.expression_list)); 
+	assert(n->node_data.expression_list != NULL);
+	n->node_data.expression_list->assignment_expr = assignment_expr;
+	n->node_data.expression_list->expression_list = expression_list;
 	return n;			
 }
 node *create_direct_abstract_declarator_node(node *n1, node *n2, node *n3, node *n4) {
 	node *n = create_node(DIRECT_ABSTRACT_DECLARATOR_NODE);
-	n->data.direct_abstract_declarator = malloc(sizeof(*n->data.direct_abstract_declarator)); 
-	assert(n->data.direct_abstract_declarator != NULL);
-	n->data.direct_abstract_declarator->n1 = n1;
-	n->data.direct_abstract_declarator->n2 = n2;
-	n->data.direct_abstract_declarator->n3 = n3;
-	n->data.direct_abstract_declarator->n4 = n4;
+	n->node_data.direct_abstract_declarator = malloc(sizeof(*n->node_data.direct_abstract_declarator)); 
+	assert(n->node_data.direct_abstract_declarator != NULL);
+	n->node_data.direct_abstract_declarator->n1 = n1;
+	n->node_data.direct_abstract_declarator->n2 = n2;
+	n->node_data.direct_abstract_declarator->n3 = n3;
+	n->node_data.direct_abstract_declarator->n4 = n4;
 	return n;			
 }                      
 node *create_pointer_node(node *pointer) {
 	node *n = create_node(POINTER_NODE);
-	n->data.pointer = malloc(sizeof(*n->data.pointer)); 
-	assert(n->data.pointer != NULL);
-	n->data.pointer->pointer = pointer;
+	n->node_data.pointer = malloc(sizeof(*n->node_data.pointer)); 
+	assert(n->node_data.pointer != NULL);
+	n->node_data.pointer->pointer = pointer;
 	return n;			
 }
 
@@ -562,28 +562,28 @@ node *create_null_statement_node() {
 }
 node *create_ternary_expr(node *logical_or_expr, node *expr, node *conditional_expr) {
 	node *n = create_node(TERNARY_EXPR_NODE);
-	n->data.ternary_expr = malloc(sizeof(*n->data.ternary_expr));
-	assert(n->data.ternary_expr != NULL);
-	n->data.ternary_expr->logical_or_expr = logical_or_expr;
-	n->data.ternary_expr->expr = expr;
-	n->data.ternary_expr->conditional_expr = conditional_expr;
+	n->node_data.ternary_expr = malloc(sizeof(*n->node_data.ternary_expr));
+	assert(n->node_data.ternary_expr != NULL);
+	n->node_data.ternary_expr->logical_or_expr = logical_or_expr;
+	n->node_data.ternary_expr->expr = expr;
+	n->node_data.ternary_expr->conditional_expr = conditional_expr;
 	return n;
 }
 node *create_abstract_declarator_node(node *pointer, node *direct_abstract_declarator) {
 	node *n = create_node(ABSTRACT_DECLARATOR_NODE);
-	n->data.abstract_declarator = malloc(sizeof(*n->data.abstract_declarator));
-	assert(n->data.abstract_declarator != NULL);
-	n->data.abstract_declarator->pointer = pointer;
-	n->data.abstract_declarator->direct_abstract_declarator = direct_abstract_declarator;
+	n->node_data.abstract_declarator = malloc(sizeof(*n->node_data.abstract_declarator));
+	assert(n->node_data.abstract_declarator != NULL);
+	n->node_data.abstract_declarator->pointer = pointer;
+	n->node_data.abstract_declarator->direct_abstract_declarator = direct_abstract_declarator;
 	return n;
 }
 
 node *create_comma_expr_node(node *comma_expr, node *assignment_expr) {
 	node *n = create_node(COMMA_EXPR_NODE);
-	n->data.comma_expr = malloc(sizeof(*n->data.comma_expr));
-	assert(n->data.comma_expr != NULL);
-	n->data.comma_expr->comma_expr = comma_expr;
-	n->data.comma_expr->assignment_expr = assignment_expr;
+	n->node_data.comma_expr = malloc(sizeof(*n->node_data.comma_expr));
+	assert(n->node_data.comma_expr != NULL);
+	n->node_data.comma_expr->comma_expr = comma_expr;
+	n->node_data.comma_expr->assignment_expr = assignment_expr;
 	return n;
 }
 
@@ -724,10 +724,10 @@ void print_node(FILE *output, node *n) {
 }
 
 void print_number_node(FILE *output, node *n) {
-	if (n->data.number->type == CHAR)
-		fprintf(output, "'%c'", (char)n->data.number->value);
+	if (n->node_data.number->type == CHAR)
+		fprintf(output, "'%c'", (char)n->node_data.number->value);
 	else
-		fprintf(output, "%lu", n->data.number->value);
+		fprintf(output, "%lu", n->node_data.number->value);
 }
 
 void print_string_node(FILE *output, node *n) {
@@ -741,84 +741,84 @@ void print_string_node(FILE *output, node *n) {
 	// fprintf(output, "\"%s\"", n->data.string->value);
 	fputs("\"", output);
 	int j;
-	for (j = 0; j < n->data.string->length; j++) {
-		fprintf(output, "%c", n->data.string->value[j]);
+	for (j = 0; j < n->node_data.string->length; j++) {
+		fprintf(output, "%c", n->node_data.string->value[j]);
 	}
 	fputs("\"", output);
 }
 void print_identifier_node(FILE *output, node *n) {
-	fprintf(output, "%s", n->data.identifier->name);
-	if (n->data.identifier->symbol_table_identifier != NULL) {
-		fprintf(output, "\t/* symbol %d */\t", n->data.identifier->symbol_table_identifier->identifier_id);
+	fprintf(output, "%s", n->node_data.identifier->name);
+	if (n->node_data.identifier->symbol_table_identifier != NULL) {
+		fprintf(output, "\t/* symbol %d */\t", n->node_data.identifier->symbol_table_identifier->identifier_id);
 	}
 }
 void print_decl_node(FILE *output, node *n) {
 	print_indentation(output);
-	print_node(output, n->data.decl->declaration_specifier);
-	print_node(output, n->data.decl->initialized_declarator_list);
+	print_node(output, n->node_data.decl->declaration_specifier);
+	print_node(output, n->node_data.decl->initialized_declarator_list);
 	fputs(";\n", output);
 }
 void print_initialized_declarator_list_node(FILE *output, node *n) {
-	if (n->data.initialized_declarator_list->initialized_declarator_list != NULL) {
-		print_node(output, n->data.initialized_declarator_list->initialized_declarator_list);
+	if (n->node_data.initialized_declarator_list->initialized_declarator_list != NULL) {
+		print_node(output, n->node_data.initialized_declarator_list->initialized_declarator_list);
 	  fputs(", ", output);                                                     
 	}
-	print_node(output, n->data.initialized_declarator_list->initialized_declarator);
+	print_node(output, n->node_data.initialized_declarator_list->initialized_declarator);
 }        
 void print_reserved_word_node(FILE *output, node *n) {
-	fprintf(output, "%s ", n->data.reserved_word->text);
+	fprintf(output, "%s ", n->node_data.reserved_word->text);
 }
 void print_compound_number_type_specifier_node(FILE *output, node *n) {
 	int i;
 	for (i = 0; i < 3; i++) {
-		if (n->data.compound_number_type_specifier->reserved_words[i] != NULL)
-			print_node(output, n->data.compound_number_type_specifier->reserved_words[i]);
+		if (n->node_data.compound_number_type_specifier->reserved_words[i] != NULL)
+			print_node(output, n->node_data.compound_number_type_specifier->reserved_words[i]);
 	}
 }
 void print_operator_node(FILE *output, node *n) {
-	fprintf(output, "%s", n->data.operator->text);
+	fprintf(output, "%s", n->node_data.operator->text);
 }
 void print_increment_decrement_expr_node(FILE *output, node *n){
-	print_node(output, n->data.increment_decrement_expr->operand);
-	char *text = n->data.increment_decrement_expr->operator->data.operator->text;
+	print_node(output, n->node_data.increment_decrement_expr->operand);
+	char *text = n->node_data.increment_decrement_expr->operator->node_data.operator->text;
 	fprintf(output, "%s%s", text, text);
 }
 void print_translation_unit_node(FILE *output, node *n){
-	if(n->data.translation_unit != NULL)
+	if(n->node_data.translation_unit != NULL)
 	{
-		print_node(output, n->data.translation_unit->translation_unit);	
+		print_node(output, n->node_data.translation_unit->translation_unit);	
 	}
-	print_node(output, n->data.translation_unit->top_level_decl);
+	print_node(output, n->node_data.translation_unit->top_level_decl);
 }
 void print_function_def_specifier_node(FILE *output, node *n){ 
-	if(n->data.function_def_specifier->declaration_specifiers != NULL)
+	if(n->node_data.function_def_specifier->declaration_specifiers != NULL)
 	{       
-		print_node(output, n->data.function_def_specifier->declaration_specifiers);	
+		print_node(output, n->node_data.function_def_specifier->declaration_specifiers);	
 	}
-	print_node(output, n->data.function_def_specifier->declarator);
+	print_node(output, n->node_data.function_def_specifier->declarator);
 }
 void print_function_definition_node(FILE *output, node *n){
-	if(n->data.function_definition->function_def_specifier != NULL)
+	if(n->node_data.function_definition->function_def_specifier != NULL)
 	{
-		print_node(output, n->data.function_definition->function_def_specifier);	
+		print_node(output, n->node_data.function_definition->function_def_specifier);	
 	}
-	print_node(output, n->data.function_definition->compound_statement);
+	print_node(output, n->node_data.function_definition->compound_statement);
 }
 void print_declaration_or_statement_list_node(FILE *output, node *n){
-	if(n->data.declaration_or_statement_list->declaration_or_statement_list != NULL)
+	if(n->node_data.declaration_or_statement_list->declaration_or_statement_list != NULL)
 	{
-		print_node(output, n->data.declaration_or_statement_list->declaration_or_statement_list);	
+		print_node(output, n->node_data.declaration_or_statement_list->declaration_or_statement_list);	
 	}
-	print_node(output, n->data.declaration_or_statement_list->declaration_or_statement);
+	print_node(output, n->node_data.declaration_or_statement_list->declaration_or_statement);
 }
 void print_compound_statement_node(FILE *output, node *n){
 	fputs("\n", output);
 	print_indentation(output);
 	fputs("{\n", output);
 	indent++;
-	if(n->data.compound_statement->declaration_or_statement_list != NULL)	
+	if(n->node_data.compound_statement->declaration_or_statement_list != NULL)	
 	{
-		print_node(output, n->data.compound_statement->declaration_or_statement_list);
+		print_node(output, n->node_data.compound_statement->declaration_or_statement_list);
 	}
 	indent--;
 	print_indentation(output);
@@ -826,188 +826,188 @@ void print_compound_statement_node(FILE *output, node *n){
 }
 void print_direct_declarator_node(FILE *output, node *n){  
 	fputs("(", output);
-	print_node(output, n->data.direct_declarator->declarator);
+	print_node(output, n->node_data.direct_declarator->declarator);
 	fputs(")", output);
 }
 void print_function_declarator_node(FILE *output, node *n) {
-	print_node(output, n->data.function_declarator->direct_declarator);
+	print_node(output, n->node_data.function_declarator->direct_declarator);
 	fputs("(", output);
-	print_node(output, n->data.function_declarator->parameter_type_list);
+	print_node(output, n->node_data.function_declarator->parameter_type_list);
 	fputs(")", output);
 }
 void print_parameter_list_node(FILE *output, node *n) {
-	if (n->data.parameter_list->parameter_list != NULL) {
-		print_node(output, n->data.parameter_list->parameter_list);
+	if (n->node_data.parameter_list->parameter_list != NULL) {
+		print_node(output, n->node_data.parameter_list->parameter_list);
 		fputs(", ", output);
 	}
-	print_node(output, n->data.parameter_list->parameter_decl);
+	print_node(output, n->node_data.parameter_list->parameter_decl);
 }
 void print_parameter_decl_node(FILE *output, node *n) {
-	print_node(output, n->data.parameter_decl->declaration_specifiers);
-	print_node(output, n->data.parameter_decl->declarator);
+	print_node(output, n->node_data.parameter_decl->declaration_specifiers);
+	print_node(output, n->node_data.parameter_decl->declarator);
 }
 void print_array_declarator_node(FILE *output, node *n) {  
 	fputs("(", output);
-	print_node(output, n->data.array_declarator->direct_declarator);
+	print_node(output, n->node_data.array_declarator->direct_declarator);
 	fputs("[", output);
-	if (n->data.array_declarator->constant_expr != NULL)
-		print_node(output, n->data.array_declarator->constant_expr);
+	if (n->node_data.array_declarator->constant_expr != NULL)
+		print_node(output, n->node_data.array_declarator->constant_expr);
 	fputs("]", output);
 	fputs(")", output);
 }
 void print_binary_expr_node(FILE *output, node *n) {
 	fputs("(", output);
-	print_node(output, n->data.binary_expression->left);
-	print_node(output, n->data.binary_expression->op);
-	print_node(output, n->data.binary_expression->right);
+	print_node(output, n->node_data.binary_expression->left);
+	print_node(output, n->node_data.binary_expression->op);
+	print_node(output, n->node_data.binary_expression->right);
 	fputs(")", output);	
 }
 void print_subscript_expr_node(FILE *output, node *n) {  
-	node *postfix_expr = n->data.subscript_expr->postfix_expr;
+	node *postfix_expr = n->node_data.subscript_expr->postfix_expr;
 	fputs("(", output);
 	print_node(output, postfix_expr);
 	fputs("[", output);
-	print_node(output, n->data.subscript_expr->expr);
+	print_node(output, n->node_data.subscript_expr->expr);
 	fputs("]", output);
 	fputs(")", output);
 }
 void print_unary_expr_node(FILE *output, node *n){
 	fputs("(", output);
-	if (n->data.unary_expression->op_first) {
-		print_node(output, n->data.unary_expression->operator);
-		print_node(output, n->data.unary_expression->operand);
+	if (n->node_data.unary_expression->op_first) {
+		print_node(output, n->node_data.unary_expression->operator);
+		print_node(output, n->node_data.unary_expression->operand);
 	}
 	else {
-		print_node(output, n->data.unary_expression->operand);
-		print_node(output, n->data.unary_expression->operator);		
+		print_node(output, n->node_data.unary_expression->operand);
+		print_node(output, n->node_data.unary_expression->operator);		
 	}
 	fputs(")", output);
 }
 void print_statement_node(FILE *output, node *n){
 	print_indentation(output);
-	print_node(output, n->data.statement->statement);
+	print_node(output, n->node_data.statement->statement);
 	fputs(";\n", output);
 }
 void print_labeled_statement_node(FILE *output, node *n) {
 	print_indentation(output);
-	print_node(output, n->data.labeled_statement->label);
+	print_node(output, n->node_data.labeled_statement->label);
 	fputs(" : ", output);
-	print_node(output, n->data.labeled_statement->statement);	
+	print_node(output, n->node_data.labeled_statement->statement);	
 	fputs("\n", output);
 }
 void print_reserved_word_statement_node(FILE *output, node *n) {
-	print_node(output, n->data.reserved_word_statement->reserved_word);
-	if (n->data.reserved_word_statement->expr)
-		print_node(output, n->data.reserved_word_statement->expr);
+	print_node(output, n->node_data.reserved_word_statement->reserved_word);
+	if (n->node_data.reserved_word_statement->expr)
+		print_node(output, n->node_data.reserved_word_statement->expr);
 }
 void print_if_else_statement_node(FILE *output, node *n) {
 	print_indentation(output);
 	fputs("if (", output);	
-	print_node(output, n->data.if_else_statement->expr);
+	print_node(output, n->node_data.if_else_statement->expr);
 	fputs(")", output);	
-	print_node(output, n->data.if_else_statement->if_statement);
-	if (n->data.if_else_statement->else_statement != NULL) {
+	print_node(output, n->node_data.if_else_statement->if_statement);
+	if (n->node_data.if_else_statement->else_statement != NULL) {
 		print_indentation(output);
 		fputs("else\n", output);	
-		print_node(output, n->data.if_else_statement->else_statement);
+		print_node(output, n->node_data.if_else_statement->else_statement);
 	}
 }
 void print_while_statement_node(FILE *output, node *n){
 	print_indentation(output);
 	fputs("while (", output);
-	print_node(output, n->data.while_statement->expr);
+	print_node(output, n->node_data.while_statement->expr);
 	fputs(")", output);
-	print_node(output, n->data.while_statement->statement);
+	print_node(output, n->node_data.while_statement->statement);
 }
 void print_do_statement_node(FILE *output, node *n){
 	print_indentation(output);
 	fputs("do", output);
-	print_node(output, n->data.do_statement->statement);
+	print_node(output, n->node_data.do_statement->statement);
 	print_indentation(output);
 	fputs("while (", output);
-	print_node(output, n->data.do_statement->expr);
+	print_node(output, n->node_data.do_statement->expr);
 	fputs(");\n", output);
 }
 void print_for_statement_node(FILE *output, node *n){
 	print_indentation(output);
 	fputs("for", output);
-	print_node(output, n->data.for_statement->for_expr);
+	print_node(output, n->node_data.for_statement->for_expr);
 	fputs("\n", output);
-	print_node(output, n->data.for_statement->statement);
+	print_node(output, n->node_data.for_statement->statement);
 }
 void print_for_expr_node(FILE *output, node *n){
 	fputs("(", output);
-	if (n->data.for_expr->initial_clause != NULL)
-		print_node(output, n->data.for_expr->initial_clause);
+	if (n->node_data.for_expr->initial_clause != NULL)
+		print_node(output, n->node_data.for_expr->initial_clause);
 	fputs(";", output);
-	if (n->data.for_expr->goal_expr != NULL)
-		print_node(output, n->data.for_expr->goal_expr);
+	if (n->node_data.for_expr->goal_expr != NULL)
+		print_node(output, n->node_data.for_expr->goal_expr);
 	fputs(";", output);
-	if (n->data.for_expr->advance_expr != NULL)
-		print_node(output, n->data.for_expr->advance_expr);
+	if (n->node_data.for_expr->advance_expr != NULL)
+		print_node(output, n->node_data.for_expr->advance_expr);
 	fputs(")\n", output);
 }
 void print_pointer_decl_node(FILE *output, node *n) {
 	fputs("(", output);
-	print_node(output, n->data.pointer_decl->pointer);
-	print_node(output, n->data.pointer_decl->direct_declarator);
+	print_node(output, n->node_data.pointer_decl->pointer);
+	print_node(output, n->node_data.pointer_decl->direct_declarator);
 	fputs(")", output);
 }
 void print_function_call_node(FILE *output, node *n) {
-	print_node(output, n->data.function_call->postfix_expr);
+	print_node(output, n->node_data.function_call->postfix_expr);
 	fputs("(", output);
-	if (n->data.function_call->expression_list)
-		print_node(output, n->data.function_call->expression_list);
+	if (n->node_data.function_call->expression_list)
+		print_node(output, n->node_data.function_call->expression_list);
 	fputs(")", output);
 }
 void print_type_name_node(FILE *output, node *n) {
-	print_node(output, n->data.type_name->declaration_specifiers);
-	if (n->data.type_name->abstract_declarator != NULL)
-		print_node(output, n->data.type_name->abstract_declarator);
+	print_node(output, n->node_data.type_name->declaration_specifiers);
+	if (n->node_data.type_name->abstract_declarator != NULL)
+		print_node(output, n->node_data.type_name->abstract_declarator);
 }
 void print_cast_expr_node(FILE *output, node *n){
 	fputs("(", output);
-	print_node(output, n->data.cast_expr->type_name);
+	print_node(output, n->node_data.cast_expr->type_name);
 	fputs(")", output);
-	print_node(output, n->data.cast_expr->cast_expr);
+	print_node(output, n->node_data.cast_expr->cast_expr);
 }
 void print_expression_list_node(FILE *output, node *n){
-	print_node(output, n->data.expression_list->assignment_expr);
+	print_node(output, n->node_data.expression_list->assignment_expr);
 	fputs(", ", output);
-	print_node(output, n->data.expression_list->expression_list);
+	print_node(output, n->node_data.expression_list->expression_list);
 }
 void print_direct_abstract_declarator_node(FILE *output, node *n){
-	print_node(output, n->data.direct_abstract_declarator->n1);
-	print_node(output, n->data.direct_abstract_declarator->n2);
-	print_node(output, n->data.direct_abstract_declarator->n3);
-	if (n->data.direct_abstract_declarator->n4 != NULL)
-		print_node(output, n->data.direct_abstract_declarator->n4);
+	print_node(output, n->node_data.direct_abstract_declarator->n1);
+	print_node(output, n->node_data.direct_abstract_declarator->n2);
+	print_node(output, n->node_data.direct_abstract_declarator->n3);
+	if (n->node_data.direct_abstract_declarator->n4 != NULL)
+		print_node(output, n->node_data.direct_abstract_declarator->n4);
 }
 void print_pointer_node(FILE *output, node *n){
 	fputs("*", output);
-	print_node(output, n->data.pointer->pointer);
+	print_node(output, n->node_data.pointer->pointer);
 }
 void print_null_statement_node(FILE *output, node *n) {
 	print_indentation(output);
 	fputs(";\n", output);
 }
 void print_ternary_expr_node(FILE *output, node *n) {
-	print_node(output, n->data.ternary_expr->logical_or_expr);
+	print_node(output, n->node_data.ternary_expr->logical_or_expr);
 	fputs(" ? ", output);
-	print_node(output, n->data.ternary_expr->expr);
+	print_node(output, n->node_data.ternary_expr->expr);
 	fputs(" : ", output);
-	print_node(output, n->data.ternary_expr->conditional_expr);	
+	print_node(output, n->node_data.ternary_expr->conditional_expr);	
 }
 void print_abstract_declarator_node(FILE *output, node *n) {
-	print_node(output, n->data.abstract_declarator->pointer);
-	print_node(output, n->data.abstract_declarator->direct_abstract_declarator);
+	print_node(output, n->node_data.abstract_declarator->pointer);
+	print_node(output, n->node_data.abstract_declarator->direct_abstract_declarator);
 }
 void print_comma_expr_node(FILE *output, node *n) {
-	if (n->data.comma_expr->comma_expr != NULL) {
-		print_node(output, n->data.comma_expr->comma_expr);
+	if (n->node_data.comma_expr->comma_expr != NULL) {
+		print_node(output, n->node_data.comma_expr->comma_expr);
 	  fputs(", ", output);                                                     
 	}
-	print_node(output, n->data.comma_expr->assignment_expr);
+	print_node(output, n->node_data.comma_expr->assignment_expr);
 }        
 void print_indentation(FILE *output) {
 	int i;
@@ -1034,8 +1034,10 @@ void add_item_to_list(list *list, item *new_item) {
 }
 
 void join_lists(list *l1, list *l2) {
-//	need to
-	add_item_to_list(l1, l2->first);
+	item *first = l2->first;
+	if (first != NULL) {
+		add_item_to_list(l1, first);
+	}
 }
 
 item *get_last_list_item(list *list) {
@@ -1176,9 +1178,9 @@ symbol_table_identifier *find_in_identifier_list(symbol_table_identifier *list, 
 int all_numbers(node *n) {
 	switch (n->node_type) {
 	case BINARY_EXPRESSION_NODE:
-		return (all_numbers(n->data.binary_expression->left) && all_numbers(n->data.binary_expression->right));
+		return (all_numbers(n->node_data.binary_expression->left) && all_numbers(n->node_data.binary_expression->right));
 	case UNARY_EXPRESSION_NODE:
-		return all_numbers(n->data.unary_expression->operand);
+		return all_numbers(n->node_data.unary_expression->operand);
 	case NUMBER_NODE:
 		return 1;
 	case IDENTIFIER_NODE:
@@ -1198,11 +1200,11 @@ void create_symbol_table(node *n, symbol_table *st) {
 			create_decl_node_symbol_table(n, st);
 			break;
 		case TRANSLATION_UNIT_NODE: 
-			create_symbol_table(n->data.translation_unit->translation_unit, st);
-			create_symbol_table(n->data.translation_unit->top_level_decl, st);
+			create_symbol_table(n->node_data.translation_unit->translation_unit, st);
+			create_symbol_table(n->node_data.translation_unit->top_level_decl, st);
 			break;
 		case FUNCTION_DEFINITION_NODE:
-			create_function_def_specifier_node_symbol_table(n->data.function_definition->function_def_specifier, st, n->data.function_definition->compound_statement);
+			create_function_def_specifier_node_symbol_table(n->node_data.function_definition->function_def_specifier, st, n->node_data.function_definition->compound_statement);
 			break;
 		case COMPOUND_STATEMENT_NODE:
 			create_compound_statement_node_symbol_table(n, st, 1);
@@ -1214,64 +1216,64 @@ void create_symbol_table(node *n, symbol_table *st) {
 			create_parameter_list_node_symbol_table(n, st);
 			break;
 		case PARAMETER_DECL_NODE:
-			create_parameter_decl_node_symbol_table(n, st);
+			create_parameter_decl_node_symbol_table(n, st, n);
 			break;
 		case SUBSCRIPT_EXPR_NODE:
 			create_subscript_expr_node_symbol_table(n, st);
 			break;
 		case BINARY_EXPRESSION_NODE:
-			create_symbol_table(n->data.binary_expression->left, st);
-			create_symbol_table(n->data.binary_expression->right, st);
+			create_symbol_table(n->node_data.binary_expression->left, st);
+			create_symbol_table(n->node_data.binary_expression->right, st);
 			break;
 		case STATEMENT_NODE:
-			create_symbol_table(n->data.statement->statement, st);
+			create_symbol_table(n->node_data.statement->statement, st);
 			break;
 		case IDENTIFIER_NODE: // if seeing an identifier here, it wasn't part of a declaration, so just have to add its ST entry to it
 			create_identifier_node_symbol_table(n, st);
 			break;
 		case IF_ELSE_STATEMENT_NODE:
-			create_symbol_table(n->data.if_else_statement->expr, st);
-			create_symbol_table(n->data.if_else_statement->if_statement, st);
-			create_symbol_table(n->data.if_else_statement->else_statement, st);
+			create_symbol_table(n->node_data.if_else_statement->expr, st);
+			create_symbol_table(n->node_data.if_else_statement->if_statement, st);
+			create_symbol_table(n->node_data.if_else_statement->else_statement, st);
 			break;
 		case UNARY_EXPRESSION_NODE:
-			create_symbol_table(n->data.unary_expression->operand, st);
+			create_symbol_table(n->node_data.unary_expression->operand, st);
 			break;
 		case CAST_EXPR_NODE:
-			create_symbol_table(n->data.cast_expr->cast_expr, st);
+			create_symbol_table(n->node_data.cast_expr->cast_expr, st);
 			break;
 		case DO_STATEMENT_NODE:
-			create_symbol_table(n->data.do_statement->statement, st);
-			create_symbol_table(n->data.do_statement->expr, st);
+			create_symbol_table(n->node_data.do_statement->statement, st);
+			create_symbol_table(n->node_data.do_statement->expr, st);
 			break;
 		case WHILE_STATEMENT_NODE:
-			create_symbol_table(n->data.while_statement->expr, st);
-			create_symbol_table(n->data.while_statement->statement, st);
+			create_symbol_table(n->node_data.while_statement->expr, st);
+			create_symbol_table(n->node_data.while_statement->statement, st);
 			break;
 		case FOR_STATEMENT_NODE:
-			create_symbol_table(n->data.for_statement->for_expr, st);
-			create_symbol_table(n->data.for_statement->statement, st);
+			create_symbol_table(n->node_data.for_statement->for_expr, st);
+			create_symbol_table(n->node_data.for_statement->statement, st);
 			break;
 		case FOR_EXPR_NODE:
-			create_symbol_table(n->data.for_expr->initial_clause, st);
-			create_symbol_table(n->data.for_expr->goal_expr, st);
-			create_symbol_table(n->data.for_expr->advance_expr, st);
+			create_symbol_table(n->node_data.for_expr->initial_clause, st);
+			create_symbol_table(n->node_data.for_expr->goal_expr, st);
+			create_symbol_table(n->node_data.for_expr->advance_expr, st);
 			break;
 		case RESERVED_WORD_STATEMENT_NODE:
-			create_symbol_table(n->data.reserved_word_statement->expr, st);
+			create_symbol_table(n->node_data.reserved_word_statement->expr, st);
 			break;
 		case TERNARY_EXPR_NODE:
-			create_symbol_table(n->data.ternary_expr->logical_or_expr, st);
-			create_symbol_table(n->data.ternary_expr->expr, st);
-			create_symbol_table(n->data.ternary_expr->conditional_expr, st);
+			create_symbol_table(n->node_data.ternary_expr->logical_or_expr, st);
+			create_symbol_table(n->node_data.ternary_expr->expr, st);
+			create_symbol_table(n->node_data.ternary_expr->conditional_expr, st);
 			break;
 		case FUNCTION_CALL_NODE:
-			create_symbol_table(n->data.function_call->postfix_expr, st);
-			create_symbol_table(n->data.function_call->expression_list, st);
+			create_symbol_table(n->node_data.function_call->postfix_expr, st);
+			create_symbol_table(n->node_data.function_call->expression_list, st);
 			break;
 		case EXPRESSION_LIST_NODE:
-			create_symbol_table(n->data.expression_list->expression_list, st);
-			create_symbol_table(n->data.expression_list->assignment_expr, st);
+			create_symbol_table(n->node_data.expression_list->expression_list, st);
+			create_symbol_table(n->node_data.expression_list->assignment_expr, st);
 			break;
 		default:
 			// DEBUG
@@ -1300,13 +1302,15 @@ node *get_identifier_from_declarator(node *n) {
 	case IDENTIFIER_NODE:
 		return n;
 	case ARRAY_DECLARATOR_NODE:
-		return get_identifier_from_declarator(n->data.array_declarator->direct_declarator);
+		return get_identifier_from_declarator(n->node_data.array_declarator->direct_declarator);
 	case POINTER_DECL_NODE:
-		return get_identifier_from_declarator(n->data.pointer_decl->direct_declarator);
+		return get_identifier_from_declarator(n->node_data.pointer_decl->direct_declarator);
 	case FUNCTION_DEF_SPECIFIER_NODE:
-		return get_identifier_from_declarator(n->data.function_def_specifier->declarator);
+		return get_identifier_from_declarator(n->node_data.function_def_specifier->declarator);
 	case FUNCTION_DECLARATOR_NODE:
-		return get_identifier_from_declarator(n->data.function_declarator->direct_declarator);
+		return get_identifier_from_declarator(n->node_data.function_declarator->direct_declarator);
+	case PARAMETER_DECL_NODE:
+		return get_identifier_from_declarator(n->node_data.parameter_decl->declarator);
 	default:
 		printf("ERROR: tried to get name from unknown node %d\n", n->node_type);
 		break;
@@ -1314,26 +1318,26 @@ node *get_identifier_from_declarator(node *n) {
 	return NULL;
 }
 void create_decl_node_symbol_table(node *n, symbol_table *st) {
-	node *decl_spec = n->data.decl->declaration_specifier;
-	node *initialized_declarator_list = n->data.decl->initialized_declarator_list;
+	node *decl_spec = n->node_data.decl->declaration_specifier;
+	node *initialized_declarator_list = n->node_data.decl->initialized_declarator_list;
 	// create ID for initialized_declarator_list from bottom to top
 	symbol_table_identifier *current = create_identifier(st);
-	create_decl_identifier(n, decl_spec, initialized_declarator_list->data.initialized_declarator_list->initialized_declarator, current, st, 0);
-	node *idl = initialized_declarator_list->data.initialized_declarator_list->initialized_declarator_list;
+	create_decl_identifier(n, decl_spec, initialized_declarator_list->node_data.initialized_declarator_list->initialized_declarator, current, st, 0);
+	node *idl = initialized_declarator_list->node_data.initialized_declarator_list->initialized_declarator_list;
 	while (idl != NULL) {
 		symbol_table_identifier *current = create_identifier(st);
-		create_decl_identifier(n, decl_spec, idl->data.initialized_declarator_list->initialized_declarator, current, st, 0);
-		idl = idl->data.initialized_declarator_list->initialized_declarator_list;
+		create_decl_identifier(n, decl_spec, idl->node_data.initialized_declarator_list->initialized_declarator, current, st, 0);
+		idl = idl->node_data.initialized_declarator_list->initialized_declarator_list;
 	}
 }
 symbol_table_identifier *create_decl_identifier(node *parent, node *decl_spec, node *declarator, symbol_table_identifier *current, symbol_table *st, int is_param) {
 	int declarator_node_type =  declarator->node_type;
 	node *id = get_identifier_from_declarator(declarator);
-	current->name = id->data.identifier->name;
-	id->data.identifier->symbol_table_identifier = current;
-	if (decl_spec->node_type == RESERVED_WORD_NODE && !strcmp(decl_spec->data.reserved_word->text, "void") && declarator_node_type != POINTER_DECL_NODE) {
+	current->name = id->node_data.identifier->name;
+	id->node_data.identifier->symbol_table_identifier = current;
+	if (decl_spec->node_type == RESERVED_WORD_NODE && !strcmp(decl_spec->node_data.reserved_word->text, "void") && declarator_node_type != POINTER_DECL_NODE) {
 		// TODO deal with void * as a valid type, add to symbol_table, etc
-		current->name = get_identifier_from_declarator(declarator)->data.identifier->name;
+		current->name = get_identifier_from_declarator(declarator)->node_data.identifier->name;
 		printf("ERROR: variable %s: void is not a valid type\n", current->name);
 		current = NULL;
 	}
@@ -1345,6 +1349,7 @@ symbol_table_identifier *create_decl_identifier(node *parent, node *decl_spec, n
 	}
 	if (current != NULL) {
 		current->type = get_type_from_decl_node(parent);
+		current->is_param = is_param;
 		st->identifiers = add_to_symbol_table_identifier_list(st->identifiers, current); 
   }       
 	return current;
@@ -1352,13 +1357,13 @@ symbol_table_identifier *create_decl_identifier(node *parent, node *decl_spec, n
 
 void create_function_def_specifier_node_symbol_table(node *n, symbol_table *st, node *compound_statement) {
 	symbol_table_identifier *current = create_identifier(st);
-	current->name = get_identifier_from_declarator(n)->data.identifier->name;
+	current->name = get_identifier_from_declarator(n)->node_data.identifier->name;
 	if (!redeclared_variable(st, current->name)) {
 		current->type = get_type_from_decl_node(n);
 		st->identifiers = add_to_symbol_table_identifier_list(st->identifiers, current); 
-		get_identifier_from_declarator(n)->data.identifier->symbol_table_identifier = current;
+		get_identifier_from_declarator(n)->node_data.identifier->symbol_table_identifier = current;
 		//now prepare the function scope ST then add the arguments to it
-		node *parameter_type_list = get_parameter_type_list_from_declarator(n->data.function_def_specifier->declarator);
+		node *parameter_type_list = get_parameter_type_list_from_declarator(n->node_data.function_def_specifier->declarator);
 		// need to create the child ST, then add parameter_type_list to it, then deal with the function contents
 		symbol_table *child_st = create_child_symbol_table(st, compound_statement, current);
 		create_symbol_table(parameter_type_list, child_st);
@@ -1370,10 +1375,10 @@ node *get_parameter_type_list_from_declarator(node *declarator) {
 	// assert(function_def_specifier->node_type == FUNCTION_DEF_SPECIFIER_NODE);
 	int declarator_node_type = declarator->node_type;
 	if (declarator->node_type == POINTER_DECL_NODE) {
-		return get_parameter_type_list_from_declarator(declarator->data.pointer_decl->direct_declarator);
+		return get_parameter_type_list_from_declarator(declarator->node_data.pointer_decl->direct_declarator);
 	}
 	else if (declarator_node_type == FUNCTION_DECLARATOR_NODE) {
-		return declarator->data.function_declarator->parameter_type_list;
+		return declarator->node_data.function_declarator->parameter_type_list;
 	}
 	else {
 		printf("ERROR: node type %d doesn't have parameters\n", declarator->node_type);
@@ -1396,52 +1401,102 @@ symbol_table *create_child_symbol_table(symbol_table *parent_st, node *compound_
 	return new;	
 }
 void create_compound_statement_node_symbol_table(node *n, symbol_table *st, int create_new_symbol_table) {
-	if (n->data.compound_statement->declaration_or_statement_list != NULL) {
+	if (n->node_data.compound_statement->declaration_or_statement_list != NULL) {
 	// if create_new_symbol_table is 0, which is only in a function definition, then just deal with the declaration_or_statement_list
 		if (create_new_symbol_table) {
-			create_symbol_table(n->data.compound_statement->declaration_or_statement_list, create_child_symbol_table(st, n, NULL));
+			create_symbol_table(n->node_data.compound_statement->declaration_or_statement_list, create_child_symbol_table(st, n, NULL));
 		}
 		else {
-			create_symbol_table(n->data.compound_statement->declaration_or_statement_list, st);
+			create_symbol_table(n->node_data.compound_statement->declaration_or_statement_list, st);
 		}
 	}
 }
 
 void create_declaration_or_statement_list_node_symbol_table(node *n, symbol_table *st) {
-	if (n->data.declaration_or_statement_list->declaration_or_statement_list != NULL) {
-		create_symbol_table(n->data.declaration_or_statement_list->declaration_or_statement_list, st);
+	if (n->node_data.declaration_or_statement_list->declaration_or_statement_list != NULL) {
+		create_symbol_table(n->node_data.declaration_or_statement_list->declaration_or_statement_list, st);
 	}
-	create_symbol_table(n->data.declaration_or_statement_list->declaration_or_statement, st);
+	create_symbol_table(n->node_data.declaration_or_statement_list->declaration_or_statement, st);
 }
-void create_parameter_list_node_symbol_table(node *n, symbol_table *st) {
-	create_symbol_table(n->data.parameter_list->parameter_list, st);
-	create_symbol_table(n->data.parameter_list->parameter_decl, st);
+void create_parameter_list_node_symbol_table(node *top_param_list, symbol_table *st) {
+	node *param_list = top_param_list->node_data.parameter_list->parameter_list;
+	// param list node has param list and param decl members
+	// 3 cases
+	// param list member is itself a param decl node, meaning there are 2 params -> call create_param_decl twice
+	// param list member is null, so there's only 1 param -> call create_param_decl once on param decl member
+	// param list member is a param list node, so > 2 params -> call create_param_decl on  param decl member then create_param_list on param list member
+	if (param_list->node_type == PARAMETER_LIST_NODE) {
+		create_parameter_list_node_symbol_table(param_list, st);
+		create_parameter_decl_node_symbol_table(top_param_list->node_data.parameter_list->parameter_decl, st, top_param_list);
+	}
+	else if (param_list->node_type == PARAMETER_DECL_NODE) {
+		create_parameter_decl_node_symbol_table(top_param_list->node_data.parameter_list->parameter_list, st, top_param_list);
+		create_parameter_decl_node_symbol_table(top_param_list->node_data.parameter_list->parameter_decl, st, top_param_list);
+	}
+	else {
+		create_parameter_decl_node_symbol_table(top_param_list, st, top_param_list);
+	}
 }
-void create_parameter_decl_node_symbol_table(node *n, symbol_table *st)  {
+void create_parameter_decl_node_symbol_table(node *param_decl, symbol_table *st, node *param_list)  {
 	symbol_table_identifier *current = create_identifier(st);
-	node *decl_spec = n->data.parameter_decl->declaration_specifiers;
-	node *declarator = n->data.parameter_decl->declarator;
-	current = create_decl_identifier(n, decl_spec, declarator, current, st, 1);
+	node *decl_spec = param_decl->node_data.parameter_decl->declaration_specifiers;
+	node *declarator = param_decl->node_data.parameter_decl->declarator;
+	current = create_decl_identifier(param_decl, decl_spec, declarator, current, st, 1);
+	current->offset = offset_of_param(param_list);
+}
+int offset_of_param(node *top_param_list) {
+	assert(top_param_list->node_type == PARAMETER_LIST_NODE || top_param_list->node_type == PARAMETER_DECL_NODE);
+	// if is param_decl, return 0
+	// else if top_param_list's top_param_list is a param_decl, return size(top_param_list's top_param_list)
+	// else return size(top_param_list's param_decl) + offset(top_param_list's top_param_list)
+	node *param_list = top_param_list->node_data.parameter_list->parameter_list;
+	if (top_param_list->node_type == PARAMETER_DECL_NODE) { // last param, must be offset 0
+		return 0;
+	}
+	else if (param_list->node_type == PARAMETER_DECL_NODE) { // 2nd last param, offset is size of last param
+		return get_size_from_decl(param_list);
+	}
+	else { // any other param, offset is sum of size of all the param_decl after the current one, so
+		return offset_of_param(param_list) + offset_of_param(param_list->node_data.parameter_list->parameter_decl);
+	}
+}
+int get_size_from_decl(node *n) {
+	switch (n->node_type) {
+		case PARAMETER_DECL_NODE:
+			return get_size_from_decl(n->node_data.parameter_decl->declaration_specifiers);
+		case COMPOUND_NUMBER_TYPE_SPECIFIER_NODE:
+			switch (n->node_data.compound_number_type_specifier->number_type) {
+			case INT:
+			case LONG:
+				return 4;
+			case SHORT:
+				return 2;
+			case CHAR:
+				return 1;
+			}
+		default:
+			break;
+	}
 }
 void create_subscript_expr_node_symbol_table(node *n, symbol_table *st)  {
-	node *postfix_expr = n->data.subscript_expr->postfix_expr;
+	node *postfix_expr = n->node_data.subscript_expr->postfix_expr;
 	if (postfix_expr->node_type == IDENTIFIER_NODE) {
 		create_identifier_node_symbol_table(postfix_expr, st);
 	}
 	else {
 		create_symbol_table(postfix_expr, st);
 	}
-	create_symbol_table(n->data.subscript_expr->expr, st);
+	create_symbol_table(n->node_data.subscript_expr->expr, st);
 }
 
 void create_identifier_node_symbol_table(node *n, symbol_table *st)  {
 	// search the current ST and its parents for the closest matching ID name; 
 	// if found, attach it to the id of the expr; 
 	// if not found, print error
-	char *name = n->data.identifier->name;
+	char *name = n->node_data.identifier->name;
 	symbol_table_identifier *i = find_identifier_in_symbol_table(st, name);
 	if (i != NULL) {
-		n->data.identifier->symbol_table_identifier = i;
+		n->node_data.identifier->symbol_table_identifier = i;
 	}
 	else {
 		fprintf(stderr, "ERROR: Variable %s undeclared\n", name);
@@ -1457,60 +1512,60 @@ type *get_type_from_decl_node(node *n) {
 		node *initialized_declarator_list;
 		node *declarator;
 		if (n->node_type == DECL_NODE) {
-			decl_spec = n->data.decl->declaration_specifier;
-			initialized_declarator_list = n->data.decl->initialized_declarator_list;
-			declarator = initialized_declarator_list->data.initialized_declarator_list->initialized_declarator;	
+			decl_spec = n->node_data.decl->declaration_specifier;
+			initialized_declarator_list = n->node_data.decl->initialized_declarator_list;
+			declarator = initialized_declarator_list->node_data.initialized_declarator_list->initialized_declarator;	
 		}
 		else {
-			decl_spec = n->data.parameter_decl->declaration_specifiers;
-			declarator = n->data.parameter_decl->declarator;
+			decl_spec = n->node_data.parameter_decl->declaration_specifiers;
+			declarator = n->node_data.parameter_decl->declarator;
 		}
 		node *reduced_node = create_node(n->node_type);
-		reduced_node->data.decl = malloc(sizeof(*reduced_node->data.decl));
-		reduced_node->data.decl->declaration_specifier = decl_spec;
+		reduced_node->node_data.decl = malloc(sizeof(*reduced_node->node_data.decl));
+		reduced_node->node_data.decl->declaration_specifier = decl_spec;
 		if (declarator->node_type == POINTER_DECL_NODE) {
 			id_type->type = POINTER_TYPE;                     
 			id_type->data.pointer_type = malloc(sizeof(pointer_type));
-			reduced_node->data.decl->initialized_declarator_list = create_temp_ini_param_list(declarator->data.pointer_decl->direct_declarator);
+			reduced_node->node_data.decl->initialized_declarator_list = create_temp_ini_param_list(declarator->node_data.pointer_decl->direct_declarator);
 			id_type->data.pointer_type->base_type = get_type_from_decl_node(reduced_node);
 		}
 		else if (declarator->node_type == ARRAY_DECLARATOR_NODE) {
 			id_type->type = ARRAY_TYPE;
 			id_type->data.array_type = malloc(sizeof(array_type));
-			if (declarator->data.array_declarator->constant_expr != NULL && 
-					declarator->data.array_declarator->constant_expr->node_type == NUMBER_NODE) { 
+			if (declarator->node_data.array_declarator->constant_expr != NULL && 
+					declarator->node_data.array_declarator->constant_expr->node_type == NUMBER_NODE) { 
 				// if not NUMBER_NODE, it's an IDENTIFIER_NODE or expr, so size is unknown
-				id_type->data.array_type->size = declarator->data.array_declarator->constant_expr->data.number->value;
+				id_type->data.array_type->size = declarator->node_data.array_declarator->constant_expr->node_data.number->value;
 			}
-			reduced_node->data.decl->initialized_declarator_list = create_temp_ini_param_list(declarator->data.array_declarator->direct_declarator);
+			reduced_node->node_data.decl->initialized_declarator_list = create_temp_ini_param_list(declarator->node_data.array_declarator->direct_declarator);
 			id_type->data.array_type->element_type = get_type_from_decl_node(reduced_node);
 		}
 		else if (declarator->node_type == IDENTIFIER_NODE) {
 			// plain ol' vanilla arithmetic identifier
 			id_type->type = ARITHMETIC_TYPE;
 			id_type->data.arithmetic_type = malloc(sizeof(arithmetic_type));
-			id_type->data.arithmetic_type->number_type = decl_spec->data.compound_number_type_specifier->number_type;
-			id_type->data.arithmetic_type->is_unsigned = decl_spec->data.compound_number_type_specifier->is_unsigned;
+			id_type->data.arithmetic_type->number_type = decl_spec->node_data.compound_number_type_specifier->number_type;
+			id_type->data.arithmetic_type->is_unsigned = decl_spec->node_data.compound_number_type_specifier->is_unsigned;
 		}
 	}
 	else if (n->node_type == FUNCTION_DEF_SPECIFIER_NODE) {
 		// have declarator and param list, must figure out return type, argc, arg types
 		id_type->type = FUNCTION_TYPE;
-		node *decl_spec = n->data.function_def_specifier->declaration_specifiers;
+		node *decl_spec = n->node_data.function_def_specifier->declaration_specifiers;
 		id_type->data.function_type = malloc(sizeof(function_type));
-		if (decl_spec->node_type == RESERVED_WORD_NODE && !strcmp(decl_spec->data.reserved_word->text, "void")) {
+		if (decl_spec->node_type == RESERVED_WORD_NODE && !strcmp(decl_spec->node_data.reserved_word->text, "void")) {
 			id_type->data.function_type->return_type = NULL;
 		}
 		else {
 			node *reduced_node = create_node(DECL_NODE);
-			reduced_node->data.decl = malloc(sizeof(*reduced_node->data.decl));
-			reduced_node->data.decl->declaration_specifier = decl_spec;
-			reduced_node->data.decl->initialized_declarator_list = create_temp_ini_param_list(n->data.function_def_specifier->declarator->data.function_declarator->direct_declarator);
+			reduced_node->node_data.decl = malloc(sizeof(*reduced_node->node_data.decl));
+			reduced_node->node_data.decl->declaration_specifier = decl_spec;
+			reduced_node->node_data.decl->initialized_declarator_list = create_temp_ini_param_list(n->node_data.function_def_specifier->declarator->node_data.function_declarator->direct_declarator);
 			id_type->data.function_type->return_type = get_type_from_decl_node(reduced_node);
 		}
-		node *parameter_type_list = n->data.function_def_specifier->declarator->data.function_declarator->parameter_type_list;
+		node *parameter_type_list = n->node_data.function_def_specifier->declarator->node_data.function_declarator->parameter_type_list;
 		if (parameter_type_list->node_type == PARAMETER_LIST_NODE) {
-			id_type->data.function_type->argc = parameter_type_list->data.parameter_list->number_of_params;
+			id_type->data.function_type->argc = parameter_type_list->node_data.parameter_list->number_of_params;
 		}
 		else if (parameter_type_list->node_type == PARAMETER_DECL_NODE) {
 			// DEBUG
@@ -1526,13 +1581,13 @@ type *get_type_from_decl_node(node *n) {
 			}
 			else {
 				int i = 0;
-				node *current_param_decl = parameter_type_list->data.parameter_list->parameter_decl;
-				node *current_param_list = parameter_type_list->data.parameter_list->parameter_list;
+				node *current_param_decl = parameter_type_list->node_data.parameter_list->parameter_decl;
+				node *current_param_list = parameter_type_list->node_data.parameter_list->parameter_list;
 				for (i = 0; i < id_type->data.function_type->argc; i++) {
 					id_type->data.function_type->arg_types[i] = get_type_from_decl_node(current_param_decl);
 					if (current_param_list->node_type == PARAMETER_LIST_NODE) {
-						current_param_decl = current_param_list->data.parameter_list->parameter_decl;
-						current_param_list = current_param_list->data.parameter_list->parameter_list;
+						current_param_decl = current_param_list->node_data.parameter_list->parameter_decl;
+						current_param_list = current_param_list->node_data.parameter_list->parameter_list;
 					}
 					else {
 						current_param_decl = current_param_list;
@@ -1686,8 +1741,8 @@ type *complete_type(type *incomplete, type *missing) {
 // }
 node *create_temp_ini_param_list(node *ini_declarator) {
 	node *initialized_declarator_list = create_node(INITIALIZED_DECLARATOR_LIST_NODE);
-	initialized_declarator_list->data.initialized_declarator_list = malloc(sizeof(initialized_declarator_list));
-	initialized_declarator_list->data.initialized_declarator_list->initialized_declarator = ini_declarator;
+	initialized_declarator_list->node_data.initialized_declarator_list = malloc(sizeof(initialized_declarator_list));
+	initialized_declarator_list->node_data.initialized_declarator_list->initialized_declarator = ini_declarator;
 	return initialized_declarator_list;
 }
 void advance_current_identifier(symbol_table_identifier *current) {
@@ -1804,41 +1859,41 @@ char *type_to_s(type *t) {
 void type_check(node *n) {
 	switch (n->node_type) {
 		case TRANSLATION_UNIT_NODE:
-			type_check(n->data.translation_unit->translation_unit);
-			type_check(n->data.translation_unit->top_level_decl);
+			type_check(n->node_data.translation_unit->translation_unit);
+			type_check(n->node_data.translation_unit->top_level_decl);
 			break;
 		case DECLARATION_OR_STATEMENT_LIST_NODE:
-			if (n->data.declaration_or_statement_list->declaration_or_statement_list != NULL) {
-				type_check(n->data.declaration_or_statement_list->declaration_or_statement_list);
+			if (n->node_data.declaration_or_statement_list->declaration_or_statement_list != NULL) {
+				type_check(n->node_data.declaration_or_statement_list->declaration_or_statement_list);
 			}
-			type_check(n->data.declaration_or_statement_list->declaration_or_statement);
+			type_check(n->node_data.declaration_or_statement_list->declaration_or_statement);
 			break;
 		case UNARY_EXPRESSION_NODE:
 			do_unary_conversion(n);
 			break;
 		case FUNCTION_DEFINITION_NODE:
-			type_check(n->data.function_definition->compound_statement);
+			type_check(n->node_data.function_definition->compound_statement);
 			break;
 		case COMPOUND_STATEMENT_NODE:
-			if (n->data.compound_statement->declaration_or_statement_list != NULL) {
-				type_check(n->data.compound_statement->declaration_or_statement_list);
+			if (n->node_data.compound_statement->declaration_or_statement_list != NULL) {
+				type_check(n->node_data.compound_statement->declaration_or_statement_list);
 			}
 			break;
 		case STATEMENT_NODE:
-			type_check(n->data.statement->statement);
+			type_check(n->node_data.statement->statement);
 			break;
 		case BINARY_EXPRESSION_NODE:
-			type_check(n->data.binary_expression->left);
-			type_check(n->data.binary_expression->right);
-			if (n->data.binary_expression->op->data.operator->value == ASSIGN) {
-				assignment_type_check(n->data.binary_expression->left, n->data.binary_expression->right);
+			type_check(n->node_data.binary_expression->left);
+			type_check(n->node_data.binary_expression->right);
+			if (n->node_data.binary_expression->op->node_data.operator->value == ASSIGN) {
+				assignment_type_check(n->node_data.binary_expression->left, n->node_data.binary_expression->right);
 			}
 			do_binary_conversion(n);
 			break;
 	}
 }
 node *get_core_operand_from_unary_expr(node *n) {
-	node *operand = n->data.unary_expression->operand;
+	node *operand = n->node_data.unary_expression->operand;
 	if (operand->node_type == IDENTIFIER_NODE || operand->node_type == NUMBER_NODE) {
 		return operand;
 	}
@@ -1850,7 +1905,7 @@ node *get_core_operand_from_unary_expr(node *n) {
 node *get_identifier_from_node(node *n) {
 	switch (n->node_type) {
 	case UNARY_EXPRESSION_NODE:
-		return get_core_operand_from_unary_expr(n->data.unary_expression->operand);
+		return get_core_operand_from_unary_expr(n->node_data.unary_expression->operand);
 	case FUNCTION_CALL_NODE:
 //		return get_identifier_from_declarator(n->data.function_call->postfix_expr)->type;
 	case IDENTIFIER_NODE:
@@ -1862,14 +1917,14 @@ void do_unary_conversion(node *n) {
 	// only !, ~, +, -, * and array
 	// TODO look up operand's type, don't cast if int/long
 	if (n->node_type == UNARY_EXPRESSION_NODE) {
-		char *op = n->data.unary_expression->operator->data.operator->text;
-		node *operand = n->data.unary_expression->operand;
+		char *op = n->node_data.unary_expression->operator->node_data.operator->text;
+		node *operand = n->node_data.unary_expression->operand;
 		if (str_equals(op, "!") || str_equals(op, "~") || str_equals(op, "+") || str_equals(op, "-")) {
 		// only insert cast if not already right type, ie short, char and not already cast to int  
 			if (operand->node_type == CAST_EXPR_NODE && !cast_equal_or_larger_than_int(operand) /* &&
 					(type_of_node(operand) == CHAR || type_of_node(operand) == SHORT) */) {
-				n->data.unary_expression->operand = insert_cast_from_string("int", 0, operand);
-				do_unary_conversion(operand->data.cast_expr->cast_expr);
+				n->node_data.unary_expression->operand = insert_cast_from_string("int", 0, operand);
+				do_unary_conversion(operand->node_data.cast_expr->cast_expr);
 			}
 			else if (operand->node_type == UNARY_EXPRESSION_NODE) {
 				do_unary_conversion(operand);
@@ -1877,8 +1932,8 @@ void do_unary_conversion(node *n) {
 			// if (operand->node_type == BINARY_EXPRESSION_NODE) {
 			// 	do_binary_conversion(operand);
 			// }
-			else if (operand->node_type == IDENTIFIER_NODE && operand->data.identifier->symbol_table_identifier->type->type == ARITHMETIC_TYPE && !int_or_long(operand->data.identifier->symbol_table_identifier->type->data.arithmetic_type->number_type)) {
-				n->data.unary_expression->operand = insert_cast_from_string("int", 0, operand);
+			else if (operand->node_type == IDENTIFIER_NODE && operand->node_data.identifier->symbol_table_identifier->type->type == ARITHMETIC_TYPE && !int_or_long(operand->node_data.identifier->symbol_table_identifier->type->data.arithmetic_type->number_type)) {
+				n->node_data.unary_expression->operand = insert_cast_from_string("int", 0, operand);
 			}
 		}
 	}
@@ -1890,7 +1945,7 @@ void do_unary_conversion(node *n) {
 		// n = insert_cast(pointer_type, n);
 	}
 	else if (n->node_type == CAST_EXPR_NODE) {
-		do_unary_conversion(n->data.cast_expr->cast_expr);
+		do_unary_conversion(n->node_data.cast_expr->cast_expr);
 	}
 }
 type *create_pointer_type(type *base_type) {
@@ -1905,7 +1960,7 @@ int str_equals(char *str1, char *str2) {
 
 int cast_equal_or_larger_than_int(node *n) {
 	if (n->node_type == CAST_EXPR_NODE) {
-		int num_type = n->data.cast_expr->type_name->data.type_name->declaration_specifiers->data.compound_number_type_specifier->number_type;
+		int num_type = n->node_data.cast_expr->type_name->node_data.type_name->declaration_specifiers->node_data.compound_number_type_specifier->number_type;
 		return int_or_long(num_type);
 	}
 	else {
@@ -1979,18 +2034,18 @@ node *insert_cast_from_string(char *cast_type, int is_unsigned, node *n) {
 	return insert_cast(int_type, n);
 }
 void do_binary_conversion(node *n) {
-	node *left = n->data.binary_expression->left;
-	node *right = n->data.binary_expression->right;
+	node *left = n->node_data.binary_expression->left;
+	node *right = n->node_data.binary_expression->right;
 	// extract identifier from left and right
 	// look up type of left and right in symbol table
 	type *left_type = type_of_expr(left);
 	type *right_type = type_of_expr(right);
 	if (is_arithmetic_type(left_type) && is_arithmetic_type(right_type)) {
 		if (compare_arithmetic_types(left_type, right_type) == 1) {
-			n->data.binary_expression->right = insert_cast(left_type, right);
+			n->node_data.binary_expression->right = insert_cast(left_type, right);
 		}
 		else if (compare_arithmetic_types(left_type, right_type) == -1) {
-			n->data.binary_expression->left = insert_cast(right_type, left);
+			n->node_data.binary_expression->left = insert_cast(right_type, left);
 		}
 	}
 }
@@ -2004,7 +2059,7 @@ void assignment_type_check(node *left, node *right) {
 		if (left_type->type != right_type->type) {
 			// allowed assignments of different types:
 			// 0 to pointer
-			if (!(left_type->type == POINTER_TYPE && right->node_type == NUMBER_NODE && right->data.number->value == 0)) {
+			if (!(left_type->type == POINTER_TYPE && right->node_type == NUMBER_NODE && right->node_data.number->value == 0)) {
 				printf("ERROR: assignment to incompatible type\n");
 			}
 		}
@@ -2021,25 +2076,35 @@ type *type_of_expr(node *n) {
 	type *t = malloc(sizeof(type));
 	switch (n->node_type) {
 	case BINARY_EXPRESSION_NODE:
-		return larger_type(type_of_expr(n->data.binary_expression->left), type_of_expr(n->data.binary_expression->right));
+		return larger_type(type_of_expr(n->node_data.binary_expression->left), type_of_expr(n->node_data.binary_expression->right));
 	case UNARY_EXPRESSION_NODE:
-		return type_of_unary_expr(n->data.unary_expression->operand);
+		return type_of_unary_expr(n->node_data.unary_expression->operand);
 	case NUMBER_NODE:
 		t->type = ARITHMETIC_TYPE;
 		t->data.arithmetic_type = malloc(sizeof(*t->data.arithmetic_type));
-		t->data.arithmetic_type->number_type = n->data.number->type;
-		t->data.arithmetic_type->is_unsigned = n->data.number->is_unsigned;
+		t->data.arithmetic_type->number_type = n->node_data.number->type;
+		t->data.arithmetic_type->is_unsigned = n->node_data.number->is_unsigned;
 		return t;
 	case IDENTIFIER_NODE:
-		return n->data.identifier->symbol_table_identifier->type;
+		return n->node_data.identifier->symbol_table_identifier->type;
 	case CAST_EXPR_NODE:
 		// if the type_name has an abstract declarator, it's a pointer cast, otherwise an arithmetic cast
 		// if (n->data.cast_expr->type_name->data.type_name->abstract_declarator != NULL) {
-		return get_type_from_decl_node(n->data.cast_expr->type_name);
+		return get_type_from_decl_node(n->node_data.cast_expr->type_name);
 			// t->data.pointer_type = malloc(sizeof(*t->data.pointer_type));
 			// t->data.pointer_type->
-	case FUNCTION_CALL_NODE:
-		return get_identifier_from_node(n);
+//	case FUNCTION_CALL_NODE:
+//		return get_identifier_from_node(n);
+//	case PARAMETER_DECL_NODE:
+//		return ge
+	case STRING_NODE:
+		t->type = POINTER_TYPE;
+		t->data.pointer_type = malloc(sizeof(*t->data.pointer_type));
+		t->data.pointer_type->base_type = create_type(ARITHMETIC_TYPE);
+		t->data.pointer_type->base_type->data.arithmetic_type = malloc(sizeof(*t->data.pointer_type->base_type->data.arithmetic_type));
+		t->data.pointer_type->base_type->data.arithmetic_type->number_type = CHAR;
+		t->data.pointer_type->base_type->data.arithmetic_type->is_unsigned = 1;
+		return t;
 	}
 	return NULL;
 }
@@ -2104,7 +2169,7 @@ type *type_of_unary_expr(node *unary_expression) {
 	node *operand = get_core_operand_from_unary_expr(unary_expression);
 	switch (operand->node_type) {
 	case IDENTIFIER_NODE:
-		return operand->data.identifier->symbol_table_identifier->type;
+		return operand->node_data.identifier->symbol_table_identifier->type;
 	case NUMBER_NODE:
 		return type_of_expr(operand);
 	default:
@@ -2155,7 +2220,7 @@ int size_of_type(type *t) {
 }
 temp *load_lvalue_from_rvalue_ir_if_needed(node *n, temp *may_be_address) {
 	if (may_be_address->is_lvalue) {
-		return create_load_indirect_ir(n, may_be_address)->data.op_ir->rd;
+		return create_load_indirect_ir(n, may_be_address)->ir_data.op_ir->rd;
 	}
 	else {
 		return may_be_address;
@@ -2173,11 +2238,11 @@ list *generate_ir_from_node(node *n) {
 			break;
 		}
 		case UNARY_EXPRESSION_NODE: {
-			join_lists(n->ir_list, generate_ir_from_node(n->data.unary_expression->operand));
-			temp *operand_temp = load_lvalue_from_rvalue_ir_if_needed(n, n->data.unary_expression->operand->temp);
-			switch (n->data.unary_expression->operator->data.operator->value) {
+			join_lists(n->ir_list, generate_ir_from_node(n->node_data.unary_expression->operand));
+			temp *operand_temp = load_lvalue_from_rvalue_ir_if_needed(n, n->node_data.unary_expression->operand->temp);
+			switch (n->node_data.unary_expression->operator->node_data.operator->value) {
 			case AMPERSAND:
-				create_load_addr_ir(n, n->data.unary_expression->operand);
+				create_load_addr_ir(n, n->node_data.unary_expression->operand);
 				break;
 			case STAR:
 				create_load_indirect_ir(n, operand_temp);
@@ -2194,7 +2259,7 @@ list *generate_ir_from_node(node *n) {
 			break;      
 		}
 		case NUMBER_NODE: {
-			create_load_const_ir(n, n->data.number->value);
+			create_load_const_ir(n, n->node_data.number->value);
 			break;
 		}
 		case SUBSCRIPT_EXPR_NODE: {
@@ -2207,24 +2272,24 @@ list *generate_ir_from_node(node *n) {
 			break;
 		}
 		case COMPOUND_STATEMENT_NODE: {
-			node *declaration_or_statement_list = n->data.compound_statement->declaration_or_statement_list;
+			node *declaration_or_statement_list = n->node_data.compound_statement->declaration_or_statement_list;
 			if (declaration_or_statement_list != NULL) {
 				join_lists(n->ir_list, generate_ir_from_node(declaration_or_statement_list));
 			}
 			break;
 		}
 		case DECLARATION_OR_STATEMENT_LIST_NODE: {
-			join_lists(n->ir_list, generate_ir_from_node(n->data.declaration_or_statement_list->declaration_or_statement_list));
-			join_lists(n->ir_list, generate_ir_from_node(n->data.declaration_or_statement_list->declaration_or_statement));
+			join_lists(n->ir_list, generate_ir_from_node(n->node_data.declaration_or_statement_list->declaration_or_statement_list));
+			join_lists(n->ir_list, generate_ir_from_node(n->node_data.declaration_or_statement_list->declaration_or_statement));
 			break;
 		}
 		case STATEMENT_NODE: {
-			join_lists(n->ir_list, generate_ir_from_node(n->data.statement->statement));
+			join_lists(n->ir_list, generate_ir_from_node(n->node_data.statement->statement));
 			break;
 		}
 		case TRANSLATION_UNIT_NODE: {
-			join_lists(n->ir_list, generate_ir_from_node(n->data.translation_unit->translation_unit));
-			join_lists(n->ir_list, generate_ir_from_node(n->data.translation_unit->top_level_decl));
+			join_lists(n->ir_list, generate_ir_from_node(n->node_data.translation_unit->translation_unit));
+			join_lists(n->ir_list, generate_ir_from_node(n->node_data.translation_unit->top_level_decl));
 			break;
 		}
 		case IF_ELSE_STATEMENT_NODE: {
@@ -2253,9 +2318,11 @@ list *generate_ir_from_node(node *n) {
 			create_function_call_ir(n);
 			break;
 		case EXPRESSION_LIST_NODE: {
-			join_lists(n->ir_list, generate_ir_from_node(n->data.expression_list->assignment_expr));
+			join_lists(n->ir_list, generate_ir_from_node(n->node_data.expression_list->assignment_expr));
 			break;
 		}
+		case STRING_NODE:
+			create_string_node_ir(n);
 	}
 	return n->ir_list;
 }
@@ -2265,91 +2332,113 @@ ir *create_ir(int ir_type, int opcode) {
 	ir_node->opcode = opcode;
 	switch (ir_type) {
 	case OP:
-		ir_node->data.op_ir = malloc(sizeof(*ir_node->data.op_ir));
+		ir_node->ir_data.op_ir = malloc(sizeof(*ir_node->ir_data.op_ir));
 		break;
 	case LOAD:
-		ir_node->data.load_ir = malloc(sizeof(*ir_node->data.load_ir));
+		ir_node->ir_data.load_ir = malloc(sizeof(*ir_node->ir_data.load_ir));
 		break;
 	case STORE:
-		ir_node->data.store_ir = malloc(sizeof(*ir_node->data.store_ir));
+		ir_node->ir_data.store_ir = malloc(sizeof(*ir_node->ir_data.store_ir));
 		break;
 	case LOAD_CONST:
-		ir_node->data.load_const_ir = malloc(sizeof(*ir_node->data.load_const_ir));
+		ir_node->ir_data.load_const_ir = malloc(sizeof(*ir_node->ir_data.load_const_ir));
 		break;
 	case JUMP:
-		ir_node->data.jump_ir = malloc(sizeof(*ir_node->data.jump_ir));
+		ir_node->ir_data.jump_ir = malloc(sizeof(*ir_node->ir_data.jump_ir));
 		break;
 	case CALL:
-		ir_node->data.call_ir = malloc(sizeof(*ir_node->data.call_ir));
+		ir_node->ir_data.call_ir = malloc(sizeof(*ir_node->ir_data.call_ir));
+		break;
+	case NOP:
+		ir_node->ir_data.nop_ir = malloc(sizeof(*ir_node->ir_data.nop_ir));
+		break;
+	case LOAD_STRING:
+		ir_node->ir_data.load_string_ir = malloc(sizeof(*ir_node->ir_data.load_string_ir));
 		break;
 	}
 	return ir_node;
 } 
+ir *create_string_node_ir(node *node_to_attach_ir_to) {
+	ir *ir = create_ir(LOAD_STRING, LoadString);
+	ir->ir_data.load_string_ir->name = malloc(1000);
+	ir->ir_data.load_string_ir->content = node_to_attach_ir_to->node_data.string->value;
+	sprintf(ir->ir_data.load_string_ir->name, "string_%d", spim_string_id);
+	spim_string_id++;
+	add_data_to_list(node_to_attach_ir_to->ir_list, ir);
+	return ir;
+}
 void create_function_definition_ir(node *node_to_attach_ir_to) {
 	// create nop label IR with name being function's name, taken from the function def specifier
 	// generate and attach IR for n's compound statement
-	add_data_to_list(node_to_attach_ir_to->ir_list, create_nop_ir(get_identifier_from_declarator(node_to_attach_ir_to->data.function_definition->function_def_specifier->data.function_def_specifier->declarator)->data.identifier->name));
-	join_lists(node_to_attach_ir_to->ir_list, generate_ir_from_node(node_to_attach_ir_to->data.function_definition->compound_statement));
+	node *id = get_identifier_from_declarator(node_to_attach_ir_to->node_data.function_definition->function_def_specifier->node_data.function_def_specifier->declarator);
+	add_data_to_list(node_to_attach_ir_to->ir_list, create_nop_ir(id->node_data.identifier->name, 1, id->node_data.identifier->symbol_table_identifier));
+	node *compound_statement = node_to_attach_ir_to->node_data.function_definition->compound_statement;
+	if (compound_statement != NULL) {
+		join_lists(node_to_attach_ir_to->ir_list, generate_ir_from_node(compound_statement));
+	}
 }
 void create_function_call_ir(node *node_to_attach_ir_to) {
-	// function calls have postfix_expr and expr_list
-	// expr_list has expr_list and assignment_expr
-	// make array of exprs that are children of expr_list; these are the parameters
-	// create paramWord IR for each array element
-	// OR create paramWord IR for expr_list's assignment_expr and its expr_list's assignment_expr and so on recursively
-	// make call IR, attach results to node_to_attach_ir_to's temp
-	// node params[get_number_of_exprs_from_expr_list(node_to_attach_ir_to->data.function_call->expression_list)] = 
-	node *expression_list = node_to_attach_ir_to->data.function_call->expression_list;
-	// get number of arguments from function's symbol table entry
-	// get identifier from function_call's postfix_expr
-//	node *identifier = get_identifier_from_node(node_to_attach_ir_to->data.function_call->postfix_expr);
-	// get symbol table entry from identifier
-//	symbol_table_identifier *entry = find_identifier_in_symbol_table(node_to_attach_ir_to->symbol_table, identifier->data.identifier->name);
-	// get argument number from symbol table entry
+	char *fn_name = get_identifier_from_declarator(node_to_attach_ir_to->node_data.function_call->postfix_expr)->node_data.identifier->name;
+	// if function is a SPIM supported function, skip the assembly generation
+	if (!(str_equals(fn_name, "print_int") || str_equals(fn_name, "print_string") || str_equals(fn_name, "read_int") || str_equals(fn_name, "read_string"))) {
+		// function calls have postfix_expr and expr_list
+		// expr_list has expr_list and assignment_expr
+		// make array of exprs that are children of expr_list; these are the parameters
+		// create paramWord IR for each array element
+		// OR create paramWord IR for expr_list's assignment_expr and its expr_list's assignment_expr and so on recursively
+		// make call IR, attach results to node_to_attach_ir_to's temp
+		// node params[get_number_of_exprs_from_expr_list(node_to_attach_ir_to->data.function_call->expression_list)] =
+		node *expression_list = node_to_attach_ir_to->node_data.function_call->expression_list;
+		// get number of arguments from function's symbol table entry
+		// get identifier from function_call's postfix_expr
+	//	node *identifier = get_identifier_from_node(node_to_attach_ir_to->data.function_call->postfix_expr);
+		// get symbol table entry from identifier
+	//	symbol_table_identifier *entry = find_identifier_in_symbol_table(node_to_attach_ir_to->symbol_table, identifier->data.identifier->name);
+		// get argument number from symbol table entry
 
-		/* stable version, would require reversing expression_list and assignment_expr in parser.y and create_expression_list_node
-//  int argc = entry->type->data.function_type->argc;
-//	ir *param_irs[100]; // had no end of trouble when i attempted to declare a variable-sized array, even when compiled in C99
-//	int i = 0;
- * 	while (expression_list->node_type == EXPRESSION_LIST_NODE) {
-		// this is tricky because the highest level expression_list's assignment_expr contains the last parameter, so collect all the param IRs into an array and add them in reverse order
+			/* stable version, would require reversing expression_list and assignment_expr in parser.y and create_expression_list_node
+	//  int argc = entry->type->data.function_type->argc;
+	//	ir *param_irs[100]; // had no end of trouble when i attempted to declare a variable-sized array, even when compiled in C99
+	//	int i = 0;
+	 * 	while (expression_list->node_type == EXPRESSION_LIST_NODE) {
+			// this is tricky because the highest level expression_list's assignment_expr contains the last parameter, so collect all the param IRs into an array and add them in reverse order
+			generate_ir_from_node(expression_list);
+			node *assignment_expr = expression_list->data.expression_list->assignment_expr;
+			ir *param_ir = create_param_ir(node_to_attach_ir_to, assignment_expr->temp, assignment_expr);
+			param_irs[i] = param_ir;
+			i++;
+			expression_list = expression_list->data.expression_list->expression_list;
+		}
+		// do it one last time for the last expression_list, which is an assignment_expr
 		generate_ir_from_node(expression_list);
-		node *assignment_expr = expression_list->data.expression_list->assignment_expr;
-		ir *param_ir = create_param_ir(node_to_attach_ir_to, assignment_expr->temp, assignment_expr);
-		param_irs[i] = param_ir;
-		i++;
-		expression_list = expression_list->data.expression_list->expression_list;
-	}
-	// do it one last time for the last expression_list, which is an assignment_expr
-	generate_ir_from_node(expression_list);
-	param_irs[i] = create_param_ir(node_to_attach_ir_to, expression_list->temp, expression_list);
-	// now add IRs in param_irs from last to first
-	for (i = argc - 1; i >= 0; i--) {
-		add_to_list(node_to_attach_ir_to->ir, param_irs[i]);
-	}
-	*/
-	/* EXPERIMENTAL reversing order of expression_list and assignment_expr to avoid having to reverse processing parameters*/
-	while (expression_list->node_type == EXPRESSION_LIST_NODE) {
-		// this is tricky because the highest level expression_list's assignment_expr contains the last parameter, so collect all the param IRs into an array and add them in reverse order
+		param_irs[i] = create_param_ir(node_to_attach_ir_to, expression_list->temp, expression_list);
+		// now add IRs in param_irs from last to first
+		for (i = argc - 1; i >= 0; i--) {
+			add_to_list(node_to_attach_ir_to->ir, param_irs[i]);
+		}
+		*/
+		/* EXPERIMENTAL reversing order of expression_list and assignment_expr to avoid having to reverse processing parameters */
+		while (expression_list->node_type == EXPRESSION_LIST_NODE) {
+			// this is tricky because the highest level expression_list's assignment_expr contains the last parameter, so collect all the param IRs into an array and add them in reverse order
+			join_lists(node_to_attach_ir_to->ir_list, generate_ir_from_node(expression_list));
+			node *assignment_expr = expression_list->node_data.expression_list->assignment_expr;
+			add_data_to_list(node_to_attach_ir_to->ir_list, create_param_ir(node_to_attach_ir_to, assignment_expr->temp, assignment_expr));
+			expression_list = expression_list->node_data.expression_list->expression_list;
+		}
+		// do it one last time for the last expression_list, which is an assignment_expr
 		join_lists(node_to_attach_ir_to->ir_list, generate_ir_from_node(expression_list));
-		node *assignment_expr = expression_list->data.expression_list->assignment_expr;
-		add_data_to_list(node_to_attach_ir_to->ir_list, create_param_ir(node_to_attach_ir_to, assignment_expr->temp, assignment_expr));
-		expression_list = expression_list->data.expression_list->expression_list;
+		add_data_to_list(node_to_attach_ir_to->ir_list, create_param_ir(node_to_attach_ir_to, expression_list->temp, expression_list));
+		// call($t8, fn, argc)
 	}
-	// do it one last time for the last expression_list, which is an assignment_expr
-	join_lists(node_to_attach_ir_to->ir_list, generate_ir_from_node(expression_list));
-	add_data_to_list(node_to_attach_ir_to->ir_list, create_param_ir(node_to_attach_ir_to, expression_list->temp, expression_list));
-	// call($t8, fn, argc)
-	create_call_ir(node_to_attach_ir_to, find_identifier_in_symbol_table(node_to_attach_ir_to->symbol_table, get_identifier_from_node(node_to_attach_ir_to->data.function_call->postfix_expr)->data.identifier->name));
-
+	create_call_ir(node_to_attach_ir_to, find_identifier_in_symbol_table(node_to_attach_ir_to->symbol_table, get_identifier_from_node(node_to_attach_ir_to->node_data.function_call->postfix_expr)->node_data.identifier->name));
 }
 ir *create_call_ir(node *node_to_attach_ir_to, symbol_table_identifier *function) {
 	ir *ir = create_ir(CALL, Call);
-	ir->data.call_ir->ra = create_temp();
-	ir->data.call_ir->function = function;
-	ir->data.call_ir->argc = function->type->data.function_type->argc;
+	ir->ir_data.call_ir->ra = create_temp();
+	ir->ir_data.call_ir->function = function;
+	ir->ir_data.call_ir->argc = function->type->data.function_type->argc;
 	add_data_to_list(node_to_attach_ir_to->ir_list, ir);
-	node_to_attach_ir_to->temp = ir->data.call_ir->ra;
+	node_to_attach_ir_to->temp = ir->ir_data.call_ir->ra;
 	return ir;
 }
 ir *create_param_ir(node *node_to_attach_ir_to, temp *temp, node *param_expr) {
@@ -2366,7 +2455,7 @@ ir *create_param_ir(node *node_to_attach_ir_to, temp *temp, node *param_expr) {
 		ir = create_ir(OP, ParamByte);
 		break;
 	}
-	ir->data.op_ir->rd = temp;
+	ir->ir_data.op_ir->rd = temp;
 	// join_lists(node_to_attach_ir_to->ir, ir);
 	return ir;
 }
@@ -2381,22 +2470,22 @@ void create_if_else_statement_ir(node *node_to_attach_ir_to) {
 	// if A then B else C -> load A, make nop IR l1, insert "if A false, jump to l1" IR, load B, , make nop IR l2, insert "jump to l2" IR, insert l1, load C, insert l2
 	
 	// load A
-	join_lists(node_to_attach_ir_to->ir_list, generate_ir_from_node(node_to_attach_ir_to->data.if_else_statement->expr));
+	join_lists(node_to_attach_ir_to->ir_list, generate_ir_from_node(node_to_attach_ir_to->node_data.if_else_statement->expr));
 	// make nop IR l1
-	ir *nop_ir = create_nop_ir(NULL);
+	ir *nop_ir = create_nop_ir(NULL, 0, NULL);
 	// insert "if A false, jump to l1" IR
 	create_jump_ir(node_to_attach_ir_to, beqz, get_rd_register_from_ir(get_last_list_item(node_to_attach_ir_to->ir_list)->data), NULL, nop_ir);
 	// load B
-	join_lists(node_to_attach_ir_to->ir_list, generate_ir_from_node(node_to_attach_ir_to->data.if_else_statement->if_statement));
-	if (node_to_attach_ir_to->data.if_else_statement->else_statement != NULL) {
+	join_lists(node_to_attach_ir_to->ir_list, generate_ir_from_node(node_to_attach_ir_to->node_data.if_else_statement->if_statement));
+	if (node_to_attach_ir_to->node_data.if_else_statement->else_statement != NULL) {
 		// make nop IR l2
-		ir *after_else_label_ir = create_nop_ir(NULL);
+		ir *after_else_label_ir = create_nop_ir(NULL, 0, NULL);
 		// insert "jump to l2" IR
 		create_jump_ir(node_to_attach_ir_to, Jump, NULL, NULL, after_else_label_ir);
 		// insert l1
 		add_data_to_list(node_to_attach_ir_to->ir_list, nop_ir);
 		// load C
-		join_lists(node_to_attach_ir_to->ir_list, generate_ir_from_node(node_to_attach_ir_to->data.if_else_statement->else_statement));		
+		join_lists(node_to_attach_ir_to->ir_list, generate_ir_from_node(node_to_attach_ir_to->node_data.if_else_statement->else_statement));		
 		// insert l2
 		add_data_to_list(node_to_attach_ir_to->ir_list, after_else_label_ir);
 	}
@@ -2405,7 +2494,7 @@ void create_if_else_statement_ir(node *node_to_attach_ir_to) {
 	}
 }
 void create_reserved_word_statement_ir(node *node_to_attach_ir_to) {
-	switch (node_to_attach_ir_to->data.reserved_word_statement->reserved_word->data.reserved_word->value) {
+	switch (node_to_attach_ir_to->node_data.reserved_word_statement->reserved_word->node_data.reserved_word->value) {
 		case RETURN: {
 			create_return_statement_ir(node_to_attach_ir_to);
 			break;
@@ -2423,22 +2512,22 @@ void create_for_statement_ir(node *node_to_attach_ir_to) {
 	// for statements have for_expr and statement
 	// for_expr has initial_clause, goal_expr, advance_expr
 	// attach initial_clause
-	join_lists(node_to_attach_ir_to->ir_list, generate_ir_from_node(node_to_attach_ir_to->data.for_statement->for_expr->data.for_expr->initial_clause));
+	join_lists(node_to_attach_ir_to->ir_list, generate_ir_from_node(node_to_attach_ir_to->node_data.for_statement->for_expr->node_data.for_expr->initial_clause));
 	// create nop IR to statement
-	ir *before_statement_ir = create_nop_ir(NULL);
+	ir *before_statement_ir = create_nop_ir(NULL, 0, NULL);
 	add_data_to_list(node_to_attach_ir_to->ir_list, before_statement_ir);
 	// attach goal_expr
-	node *goal_expr = node_to_attach_ir_to->data.for_statement->for_expr->data.for_expr->goal_expr;
+	node *goal_expr = node_to_attach_ir_to->node_data.for_statement->for_expr->node_data.for_expr->goal_expr;
 	list *goal_expr_ir_list = generate_ir_from_node(goal_expr);
 	join_lists(node_to_attach_ir_to->ir_list, goal_expr_ir_list);
 	// make nop IR for end of loop
-	ir *end_of_loop_ir = create_nop_ir(NULL);
+	ir *end_of_loop_ir = create_nop_ir(NULL, 0, NULL);
 	// if goal_expr isFalse, go to nop IR
 	create_jump_ir(node_to_attach_ir_to, beqz, goal_expr->temp, NULL, end_of_loop_ir);
 	// attach statement
-	join_lists(node_to_attach_ir_to->ir_list, generate_ir_from_node(node_to_attach_ir_to->data.for_statement->statement));	
+	join_lists(node_to_attach_ir_to->ir_list, generate_ir_from_node(node_to_attach_ir_to->node_data.for_statement->statement));	
 	// attach advance_expr
-	join_lists(node_to_attach_ir_to->ir_list, generate_ir_from_node(node_to_attach_ir_to->data.for_statement->for_expr->data.for_expr->advance_expr));	
+	join_lists(node_to_attach_ir_to->ir_list, generate_ir_from_node(node_to_attach_ir_to->node_data.for_statement->for_expr->node_data.for_expr->advance_expr));	
 	// create and attach jump IR to nop IR before statement
 	create_jump_ir(node_to_attach_ir_to, Jump, NULL, NULL, before_statement_ir);
 	// attach nop IR for end of loop
@@ -2448,7 +2537,7 @@ void create_return_statement_ir(node *node_to_attach_ir_to) {
 	// return statement has optional expr
 	// attach expr, then create return<Size> with expr's temp
 	assert(node_to_attach_ir_to->node_type == RESERVED_WORD_STATEMENT_NODE);
-	node *expr = node_to_attach_ir_to->data.reserved_word_statement->expr;
+	node *expr = node_to_attach_ir_to->node_data.reserved_word_statement->expr;
 	if (expr != NULL) {
 		join_lists(node_to_attach_ir_to->ir_list, generate_ir_from_node(expr));
 		create_return_ir(node_to_attach_ir_to, expr, expr->temp);
@@ -2460,29 +2549,29 @@ void create_return_statement_ir(node *node_to_attach_ir_to) {
 void create_do_statement_ir(node *node_to_attach_ir_to) {
 	// do statement has statement and expr
 	// create and insert before_stmt label IR
-	ir *before_stmt = create_nop_ir(NULL);
+	ir *before_stmt = create_nop_ir(NULL, 0, NULL);
 	add_data_to_list(node_to_attach_ir_to->ir_list, before_stmt);
 	// create IR for statement 
-	join_lists(node_to_attach_ir_to->ir_list, generate_ir_from_node(node_to_attach_ir_to->data.do_statement->statement));
+	join_lists(node_to_attach_ir_to->ir_list, generate_ir_from_node(node_to_attach_ir_to->node_data.do_statement->statement));
 	// create IR for expr
-	list *expr_ir_list = generate_ir_from_node(node_to_attach_ir_to->data.do_statement->expr);
+	list *expr_ir_list = generate_ir_from_node(node_to_attach_ir_to->node_data.do_statement->expr);
 	join_lists(node_to_attach_ir_to->ir_list, expr_ir_list);
 	// insert JumpIfTrue(before_stmt, expr)	
-	create_jump_ir(node_to_attach_ir_to, JumpIfTrue, node_to_attach_ir_to->data.do_statement->expr->temp, NULL, before_stmt);
+	create_jump_ir(node_to_attach_ir_to, JumpIfTrue, node_to_attach_ir_to->node_data.do_statement->expr->temp, NULL, before_stmt);
 }
 void create_while_statement_ir(node *node_to_attach_ir_to) {
 	// while statement has expr and statement
 	// create and attach before_expr label
-	ir *before_expr = create_nop_ir(NULL);
+	ir *before_expr = create_nop_ir(NULL, 0, NULL);
 	add_data_to_list(node_to_attach_ir_to->ir_list, before_expr);
 	// create and attach expr IR
-	join_lists(node_to_attach_ir_to->ir_list, generate_ir_from_node(node_to_attach_ir_to->data.while_statement->expr));
-	temp *expr_temp = node_to_attach_ir_to->data.while_statement->expr->temp;
+	join_lists(node_to_attach_ir_to->ir_list, generate_ir_from_node(node_to_attach_ir_to->node_data.while_statement->expr));
+	temp *expr_temp = node_to_attach_ir_to->node_data.while_statement->expr->temp;
 	// create and attach JumpIfFalse IR to after_statement IR
-	ir *after_statement = create_nop_ir(NULL);
+	ir *after_statement = create_nop_ir(NULL, 0, NULL);
 	create_jump_ir(node_to_attach_ir_to, beqz, expr_temp, NULL, after_statement);
 	// create and attach statement IR
-	join_lists(node_to_attach_ir_to->ir_list, generate_ir_from_node(node_to_attach_ir_to->data.while_statement->statement));
+	join_lists(node_to_attach_ir_to->ir_list, generate_ir_from_node(node_to_attach_ir_to->node_data.while_statement->statement));
 	// create and attach unconditional jump to before_expr label
 	create_jump_ir(node_to_attach_ir_to, Jump, NULL, NULL, before_expr);
 	// create and attach after_statement IR
@@ -2506,23 +2595,25 @@ ir *create_return_ir(node *node_to_attach_ir_to, node *expr, temp *temp) {
 			break;
 		}
 		ir = create_ir(OP, opcode);
-		ir->data.op_ir->rd = temp;
+		ir->ir_data.op_ir->rd = temp;
 		add_data_to_list(node_to_attach_ir_to->ir_list, ir);
 		// TODO add jump IR to after function
 		return ir;
 	}
 	return NULL;
 }
-ir *create_nop_ir(char *name) {
+ir *create_nop_ir(char *name, int is_fn, symbol_table_identifier *function) {
 	ir *nop_ir = create_ir(NOP, nop);
 	if (name != NULL) {
 		nop_ir->ir_label = name;
 	}
 	else {
-//		char *ir_label = malloc(200);
-		sprintf(nop_ir->ir_label, "label_%d", num_to_s(ir_label_id));
+		nop_ir->ir_label = malloc(200);
+		sprintf(nop_ir->ir_label, "label_%d", ir_label_id);
 		ir_label_id++;
 	}
+	nop_ir->ir_data.nop_ir->is_fn = is_fn;
+	nop_ir->ir_data.nop_ir->function = function;
 	return nop_ir;
 }
 char *num_to_s(int num) {
@@ -2532,9 +2623,9 @@ char *num_to_s(int num) {
 }
 ir *create_jump_ir(node *node_to_attach_ir_to, int op, temp *src1, temp *src2, ir *label_ir) {
 	ir *ir = create_ir(JUMP, op);
-	ir->data.jump_ir->s1 = src1;
-	ir->data.jump_ir->s2 = src2;
-	ir->data.jump_ir->label_ir = label_ir;
+	ir->ir_data.jump_ir->s1 = src1;
+	ir->ir_data.jump_ir->s2 = src2;
+	ir->ir_data.jump_ir->label_ir = label_ir;
 	add_data_to_list(node_to_attach_ir_to->ir_list, ir);
 	return ir;
 }
@@ -2542,21 +2633,21 @@ void create_subscript_expr_ir(node *node_to_attach_ir_to) {
 	assert(node_to_attach_ir_to->node_type == SUBSCRIPT_EXPR_NODE);
 			// int a[]; a[3]; -> load addr of postfix expr, load expr, load size of postfix expr's element type, multiply last 2, add that to 1, load word (half/byte) there
 			//load addr of postfix expr
-	join_lists(node_to_attach_ir_to->ir_list, generate_ir_from_node(node_to_attach_ir_to->data.subscript_expr->postfix_expr));
+	join_lists(node_to_attach_ir_to->ir_list, generate_ir_from_node(node_to_attach_ir_to->node_data.subscript_expr->postfix_expr));
 	// load expr
-	join_lists(node_to_attach_ir_to->ir_list, generate_ir_from_node(node_to_attach_ir_to->data.subscript_expr->expr));  
+	join_lists(node_to_attach_ir_to->ir_list, generate_ir_from_node(node_to_attach_ir_to->node_data.subscript_expr->expr));  
 	load_lvalue_from_rvalue_ir_if_needed(node_to_attach_ir_to, get_rd_register_from_ir((ir *)get_last_list_item(node_to_attach_ir_to->ir_list)->data));
 	// load size of postfix expr's element type
-	create_load_const_ir(node_to_attach_ir_to, size_of_type(node_to_attach_ir_to->data.subscript_expr->postfix_expr->data.identifier->symbol_table_identifier->type));
+	create_load_const_ir(node_to_attach_ir_to, size_of_type(node_to_attach_ir_to->node_data.subscript_expr->postfix_expr->node_data.identifier->symbol_table_identifier->type));
 	item *last_ir_item = get_last_list_item(node_to_attach_ir_to->ir_list);
 	ir *last_ir = last_ir_item->data;
 	type *signed_arithmetic_type = create_type(ARITHMETIC_TYPE);
 	signed_arithmetic_type->data.arithmetic_type->is_unsigned = 0;
 	signed_arithmetic_type->data.arithmetic_type->number_type = INT;
 	// multiply last 2
-	ir *mult_ir = create_simple_binary_ir(node_to_attach_ir_to, STAR, last_ir->data.load_const_ir->rd, get_rd_register_from_ir((ir *)last_ir_item->prev->data), signed_arithmetic_type);
+	ir *mult_ir = create_simple_binary_ir(node_to_attach_ir_to, STAR, last_ir->ir_data.load_const_ir->rd, get_rd_register_from_ir((ir *)last_ir_item->prev->data), signed_arithmetic_type);
 	 // add that to 1
-	ir *add_ir = create_simple_binary_ir(node_to_attach_ir_to, PLUS, get_rd_register_from_ir(mult_ir), node_to_attach_ir_to->data.subscript_expr->postfix_expr->temp, signed_arithmetic_type);
+	ir *add_ir = create_simple_binary_ir(node_to_attach_ir_to, PLUS, get_rd_register_from_ir(mult_ir), node_to_attach_ir_to->node_data.subscript_expr->postfix_expr->temp, signed_arithmetic_type);
 	// load word (half/byte) there
 	create_load_indirect_ir(node_to_attach_ir_to, get_rd_register_from_ir(add_ir));	
 }
@@ -2582,11 +2673,11 @@ type *create_type(int type_type) {
 temp *get_rd_register_from_ir(ir *ir) {
 	switch (ir->ir_type) {
 	case OP:
-		return ir->data.op_ir->rd;
+		return ir->ir_data.op_ir->rd;
 	case LOAD:
-		return ir->data.load_ir->rd;
+		return ir->ir_data.load_ir->rd;
 	case LOAD_CONST:
-		return ir->data.load_const_ir->rd;
+		return ir->ir_data.load_const_ir->rd;
 	default:
 		printf("ERROR: no destination register for this type of IR node\n");
 		break;
@@ -2601,16 +2692,16 @@ void create_binary_expr_ir(node *node_to_attach_ir_to) {
 	// generate op IR for left-op-right
 	assert (node_to_attach_ir_to->node_type == BINARY_EXPRESSION_NODE);
 	temp *left_temp, *right_temp;
-	join_lists(node_to_attach_ir_to->ir_list, generate_ir_from_node(node_to_attach_ir_to->data.binary_expression->left));
-	join_lists(node_to_attach_ir_to->ir_list, generate_ir_from_node(node_to_attach_ir_to->data.binary_expression->right));
-	right_temp = load_lvalue_from_rvalue_ir_if_needed(node_to_attach_ir_to, node_to_attach_ir_to->data.binary_expression->right->temp);
-	switch (node_to_attach_ir_to->data.binary_expression->op->data.operator->value) {
+	join_lists(node_to_attach_ir_to->ir_list, generate_ir_from_node(node_to_attach_ir_to->node_data.binary_expression->left));
+	join_lists(node_to_attach_ir_to->ir_list, generate_ir_from_node(node_to_attach_ir_to->node_data.binary_expression->right));
+	right_temp = load_lvalue_from_rvalue_ir_if_needed(node_to_attach_ir_to, node_to_attach_ir_to->node_data.binary_expression->right->temp);
+	switch (node_to_attach_ir_to->node_data.binary_expression->op->node_data.operator->value) {
 		case ASSIGN: // a = b; load addr of a, load addr of b, load value of b into t1, store into a from t1
-			create_store_ir(node_to_attach_ir_to, node_to_attach_ir_to->data.binary_expression->left, right_temp);
+			create_store_ir(node_to_attach_ir_to->node_data.binary_expression->left, right_temp);
 			break;
 		default: {
-			left_temp = load_lvalue_from_rvalue_ir_if_needed(node_to_attach_ir_to, node_to_attach_ir_to->data.binary_expression->left->temp);
-			create_simple_binary_ir(node_to_attach_ir_to, node_to_attach_ir_to->data.binary_expression->op->data.operator->value, left_temp, right_temp, type_of_expr(node_to_attach_ir_to));
+			left_temp = load_lvalue_from_rvalue_ir_if_needed(node_to_attach_ir_to, node_to_attach_ir_to->node_data.binary_expression->left->temp);
+			create_simple_binary_ir(node_to_attach_ir_to, node_to_attach_ir_to->node_data.binary_expression->op->node_data.operator->value, left_temp, right_temp, type_of_expr(node_to_attach_ir_to));
 			break;
 		}
 	}
@@ -2618,21 +2709,21 @@ void create_binary_expr_ir(node *node_to_attach_ir_to) {
 ir *create_load_addr_ir(node *node_to_attach_ir_to, node *id) {
 	assert(id->node_type == IDENTIFIER_NODE);
 	ir *identifier_ir = create_ir(LOAD, LoadAddr);
-	load_ir *l = identifier_ir->data.load_ir;
+	load_ir *l = identifier_ir->ir_data.load_ir;
 	l->rd = create_temp();
 	l->rd->is_lvalue = 1;
-	l->rs = id->data.identifier->symbol_table_identifier;
+	l->rs = id->node_data.identifier->symbol_table_identifier;
 	add_data_to_list(node_to_attach_ir_to->ir_list, identifier_ir);
 	node_to_attach_ir_to->temp = l->rd;
 	return identifier_ir;
 }
 ir *create_load_indirect_ir(node *node_to_attach_ir_to, temp *rs) {
 	ir *ir = create_ir(OP, LoadWordIndirect);
-	ir->data.op_ir->rd = create_temp();
-	ir->data.op_ir->rd->is_lvalue = 0;
-	ir->data.op_ir->rs = rs;
+	ir->ir_data.op_ir->rd = create_temp();
+	ir->ir_data.op_ir->rd->is_lvalue = 0;
+	ir->ir_data.op_ir->rs = rs;
 	add_data_to_list(node_to_attach_ir_to->ir_list, ir);
-	node_to_attach_ir_to->temp = ir->data.op_ir->rd;
+	node_to_attach_ir_to->temp = ir->ir_data.op_ir->rd;
 	return ir;
 }
 ir *create_simple_binary_ir(node *node_to_attach_ir_to, int op, temp *rs, temp *rt, type *type) {
@@ -2800,26 +2891,40 @@ ir *create_simple_binary_ir(node *node_to_attach_ir_to, int op, temp *rs, temp *
 			break;
 		}
 	}
-	ir->data.op_ir->rd = create_temp();
-	ir->data.op_ir->rd->is_lvalue = 0;
-	ir->data.op_ir->rs = rs;
-	ir->data.op_ir->rt = rt;
+	ir->ir_data.op_ir->rd = create_temp();
+	ir->ir_data.op_ir->rd->is_lvalue = 0;
+	ir->ir_data.op_ir->rs = rs;
+	ir->ir_data.op_ir->rt = rt;
 	add_data_to_list(node_to_attach_ir_to->ir_list, ir);
-	node_to_attach_ir_to->temp = ir->data.op_ir->rd;
+	node_to_attach_ir_to->temp = ir->ir_data.op_ir->rd;
 	return ir;
 }
 ir *create_load_const_ir(node *node_to_attach_ir_to, int number) {
 	ir *ir = create_ir(LOAD_CONST, LoadConst);
-	ir->data.load_const_ir->rd = create_temp();
-	ir->data.load_const_ir->rd->is_lvalue = 0;
-	ir->data.load_const_ir->rs = number;
+	ir->ir_data.load_const_ir->rd = create_temp();
+	ir->ir_data.load_const_ir->rd->is_lvalue = 0;
+	ir->ir_data.load_const_ir->rs = number;
 	add_data_to_list(node_to_attach_ir_to->ir_list, ir);
-	node_to_attach_ir_to->temp = ir->data.load_const_ir->rd;
+	node_to_attach_ir_to->temp = ir->ir_data.load_const_ir->rd;
 	return ir;
 }
-ir *create_store_ir(node *current, node *stored_to, temp *from_register) {
-	assert(stored_to->node_type == IDENTIFIER_NODE);
-	type *type = stored_to->data.identifier->symbol_table_identifier->type;
+ir *create_store_ir(node *stored_to, temp *from_register) {
+	assert(stored_to->node_type == IDENTIFIER_NODE || stored_to->node_type == SUBSCRIPT_EXPR_NODE);
+	ir *subscript_expr_address;
+	int offset_from_id;
+//	if (stored_to->node_type == SUBSCRIPT_EXPR_NODE) {
+//
+//		// if assigning to a subscript expr node, gotta evaluate its expr
+//		// multiply that by the size of the identifier's type
+//		// those are done when creating the sub's IR
+//		create_subscript_expr_ir(stored_to);
+//		// load the address that's that many bytes from the address of the identifier
+//		subscript_expr_address = (ir*)get_last_list_item(stored_to->ir_list)->prev;
+////		offset_from_id =
+//		// store the value there
+//		stored_to = get_identifier_from_node(stored_to->data.subscript_expr->postfix_expr);
+//	}
+	type *type = stored_to->node_data.identifier->symbol_table_identifier->type;
 	// store byte/halfword if arithmetic and number type = char/short
 	// otherwise store word
 	ir *ir;
@@ -2840,15 +2945,16 @@ ir *create_store_ir(node *current, node *stored_to, temp *from_register) {
 			break;
 		}
 	}
-	ir->data.store_ir->rd = stored_to->data.identifier->symbol_table_identifier;
-	ir->data.store_ir->rs = from_register;
-	add_data_to_list(current->ir_list, ir);
+	ir->ir_data.store_ir->rd = stored_to->node_data.identifier->symbol_table_identifier;
+	ir->ir_data.store_ir->rs = from_register;
+//	ir->data.store_ir->offset_from_id = subscript_expr_address->data.
+	add_data_to_list(stored_to->ir_list, ir);
 	return ir;
 }
 ir *create_unary_ir(node *node_to_attach_ir_to, temp *t) {
 	ir *ir;
 	assert(node_to_attach_ir_to->node_type == UNARY_EXPRESSION_NODE);
-	switch (node_to_attach_ir_to->data.unary_expression->operator->data.operator->value) {
+	switch (node_to_attach_ir_to->node_data.unary_expression->operator->node_data.operator->value) {
 	case BITWISE_COMPLEMENT:
 		ir = create_ir(OP, not);
 		break;
@@ -2859,10 +2965,10 @@ ir *create_unary_ir(node *node_to_attach_ir_to, temp *t) {
 		ir = create_ir(OP, neg);
 		break;
 	}
-	ir->data.op_ir->rd = create_temp();
-	ir->data.op_ir->rd->is_lvalue = 0;
-	ir->data.op_ir->rs = t;
-	node_to_attach_ir_to->temp = ir->data.op_ir->rd;
+	ir->ir_data.op_ir->rd = create_temp();
+	ir->ir_data.op_ir->rd->is_lvalue = 0;
+	ir->ir_data.op_ir->rs = t;
+	node_to_attach_ir_to->temp = ir->ir_data.op_ir->rd;
 	add_data_to_list(node_to_attach_ir_to->ir_list, ir);
 	return ir;
 }
@@ -2898,41 +3004,44 @@ void print_ir(FILE *output, ir *ir, int is_ir) {
 			fprintf(output, "%s\t", opcodes[ir->opcode]);
 		switch (ir->ir_type) {
 			case OP:
-				fprintf(output, "$t%d", ir->data.op_ir->rd->id);
-				if (ir->data.op_ir->rs != NULL) {
-					fprintf(output, ", $t%d", ir->data.op_ir->rs->id);
+				fprintf(output, "$t%d", ir->ir_data.op_ir->rd->id);
+				if (ir->ir_data.op_ir->rs != NULL) {
+					fprintf(output, ", $t%d", ir->ir_data.op_ir->rs->id);
 				}
-				if (ir->data.op_ir->rt != NULL) {
-					fprintf(output, ", $t%d", ir->data.op_ir->rt->id);
+				if (ir->ir_data.op_ir->rt != NULL) {
+					fprintf(output, ", $t%d", ir->ir_data.op_ir->rt->id);
 				}
 				break;
 			case LOAD:
-				fprintf(output, "$t%d, ", ir->data.load_ir->rd->id);
-				fprintf(output, "%s", ir->data.load_ir->rs->name);
+				fprintf(output, "$t%d, ", ir->ir_data.load_ir->rd->id);
+				fprintf(output, "%s", ir->ir_data.load_ir->rs->name);
 				break;
 			case STORE:
-				fprintf(output, "%s, ", ir->data.store_ir->rd->name);
-				fprintf(output, "$t%d", ir->data.store_ir->rs->id);
+				fprintf(output, "%s, ", ir->ir_data.store_ir->rd->name);
+				fprintf(output, "$t%d", ir->ir_data.store_ir->rs->id);
 				break;
 			case LOAD_CONST:
-				fprintf(output, "$t%d, ", ir->data.load_const_ir->rd->id);
-				fprintf(output, "%d", ir->data.load_const_ir->rs);
+				fprintf(output, "$t%d, ", ir->ir_data.load_const_ir->rd->id);
+				fprintf(output, "%d", ir->ir_data.load_const_ir->rs);
 				break;
 			case JUMP:
-				if (ir->data.jump_ir->s1 != NULL) {
-					fprintf(output, "$t%d, ", ir->data.jump_ir->s1->id);
+				if (ir->ir_data.jump_ir->s1 != NULL) {
+					fprintf(output, "$t%d, ", ir->ir_data.jump_ir->s1->id);
 				}
-				if (ir->data.jump_ir->s2 != NULL) {
-					fprintf(output, "$t%d, ", ir->data.jump_ir->s2->id);
+				if (ir->ir_data.jump_ir->s2 != NULL) {
+					fprintf(output, "$t%d, ", ir->ir_data.jump_ir->s2->id);
 				}
-				if (ir->data.jump_ir->label_ir != NULL) {
-					fprintf(output, "label_%s", ir->data.jump_ir->label_ir->ir_label);
+				if (ir->ir_data.jump_ir->label_ir != NULL) {
+					fprintf(output, "%s", ir->ir_data.jump_ir->label_ir->ir_label);
 				}
 				break;
 			case CALL:
-				fprintf(output, "$t%d, ", ir->data.call_ir->ra->id);
-				fprintf(output, "%s, ", ir->data.call_ir->function->name);
-				fprintf(output, "%d", ir->data.call_ir->argc);
+				fprintf(output, "$t%d, ", ir->ir_data.call_ir->ra->id);
+				fprintf(output, "%s, ", ir->ir_data.call_ir->function->name);
+				fprintf(output, "%d", ir->ir_data.call_ir->argc);
+				break;
+			case LOAD_STRING:
+				fprintf(output, "\"%s\", %s", ir->ir_data.load_string_ir->content, ir->ir_data.load_string_ir->name);
 				break;
 			default:
 				fprintf(output, "ERROR: unknown IR node type: %d\n", ir->ir_type);
@@ -2990,6 +3099,7 @@ void add_ir_opcodes() {
 	ir_opcodes[ParamHalf] = "ParamHalf";
 	ir_opcodes[ParamByte] = "ParamByte";
 	ir_opcodes[Call] = "Call";
+	ir_opcodes[LoadString] = "LoadString";
 }
 void add_opcodes() {
 	opcodes[LoadAddr] = "la";
@@ -3030,13 +3140,7 @@ void add_opcodes() {
 	opcodes[nop] = "nop";
 	opcodes[beqz] = "beqz";
 	opcodes[Jump] = "Jump";
-	opcodes[ReturnWord] = "ReturnWord";
-	opcodes[ReturnByte] = "ReturnByte";
-	opcodes[ReturnHalf] = "ReturnHalf";
 	opcodes[JumpIfTrue] = "JumpIfTrue";
-	opcodes[ParamWord] = "ParamWord";
-	opcodes[ParamHalf] = "ParamHalf";
-	opcodes[ParamByte] = "ParamByte";
 }
 void print_spim_code(list *ir_list, FILE *output) {
 	fprintf(output, "\t.text\n");
@@ -3045,14 +3149,61 @@ void print_spim_code(list *ir_list, FILE *output) {
 	while (current_item != NULL) {
 		ir *current_ir = current_item->data;
 		switch (current_ir->ir_type) {
-		case OP:
 		case NOP:
+			print_ir(output, current_ir, 0);
+			if (current_ir->ir_data.nop_ir->is_fn && !str_equals(current_ir->ir_data.nop_ir->function->name, "main")) {
+				// print
+				print_function_entry_spim_code(current_ir->ir_data.nop_ir->function, output);
+//				print_spim_code()
+			}
+			break;
+		case OP:
 			// plus/minus: eg add $t1, $2
-
+			switch (current_ir->opcode) {
+			case LoadAddr:
+				fprintf(output, "\tsubi\t$fp, %d\n", 80 + current_ir->ir_data.load_ir->rs->offset);
+				break;
+//			case LoadWordIndirect:
+//			case BitwiseOr:
+//			case LogicalNot:
+//			case Jump:
+			case LoadWordIndirect:
+				fprintf(output, "\tlw\t$t%d, 0($t%d)\n", current_ir->ir_data.op_ir->rd->id, current_ir->ir_data.op_ir->rs->id);
+				break;
+			case ReturnWord:
+			case ReturnHalf:
+			case ReturnByte:
+				fprintf(output, "\tmove\t$v0, $t%d\n", current_ir->ir_data.op_ir->rd->id);
+				break;
+			case ParamWord:
+				fprintf(output, "\tsub\t$sp, $sp, 4\n");
+				fprintf(output, "\tsw\t$t%d, 0($sp)\n", current_ir->ir_data.op_ir->rd->id);
+				break;
+			case ParamHalf:
+				fprintf(output, "sub\t$sp, $sp, 2");
+				fprintf(output, "\tsw\t$t%d, 0($sp)\n", current_ir->ir_data.op_ir->rd->id);
+				break;
+			case ParamByte:
+				fprintf(output, "sub\t$sp, $sp, 1");
+				fprintf(output, "\tsw\t$t%d, 0($sp)\n", current_ir->ir_data.op_ir->rd->id);
+				break;
+			default:
+				print_ir(output, current_ir, 0);
+				break;
+			}
+			break;
+		case LOAD_CONST:
 			print_ir(output, current_ir, 0);
 			break;
+		case LOAD:
+			fprintf(output, "\tsub\t$t%d, $fp, %d\n", current_ir->ir_data.load_ir->rd->id, 80 + current_ir->ir_data.load_ir->rs->offset);
+			break;
 		case CALL:
-			print_function_entry_spim_code(current_ir->data.call_ir->function, output);
+//			print_function_entry_spim_code(current_ir->data.call_ir->function, output);
+			fprintf(output, "\tjal %s\n", current_ir->ir_data.call_ir->function->name);
+			break;
+		case LOAD_STRING:
+			fprintf(output, "\t.data\n%s\t.asciiz\t\"%s\"\n", current_ir->ir_data.load_string_ir->name, current_ir->ir_data.load_string_ir->content);
 			break;
 		}
 		current_item = current_item->next;
@@ -3061,18 +3212,18 @@ void print_spim_code(list *ir_list, FILE *output) {
 }
 void print_function_entry_spim_code(symbol_table_identifier *fn, FILE *output) {
 	fprintf(output, "\taddi	$sp, $sp, -80\n");
-	fprintf(output, "\tsw		$s7, -36($sp)\n");
-	fprintf(output, "\tsw		$s6, -32($sp)\n");
-	fprintf(output, "\tsw		$s5, -28($sp)\n");
-	fprintf(output, "\tsw		$s4, -24($sp)\n");
-	fprintf(output, "\tsw		$s3, -20($sp)\n");
-	fprintf(output, "\tsw		$s2, -16($sp)\n");
-	fprintf(output, "\tsw		$s1, -12($sp)\n");
-	fprintf(output, "\tsw		$s0, -8($sp)\n");
-	fprintf(output, "\tsw		$ra, -4($sp)\n");
-	fprintf(output, "\tsw		$fp, 0($sp)\n");
-	fprintf(output, "\taddi	$fp, $sp, 80\n");
-	fprintf(output, "\tsub 	$sp, $sp, %d\n", scope_memory(fn->parent));
+	fprintf(output, "\tsw\t$s7, -36($sp)\n");
+	fprintf(output, "\tsw\t$s6, -32($sp)\n");
+	fprintf(output, "\tsw\t$s5, -28($sp)\n");
+	fprintf(output, "\tsw\t$s4, -24($sp)\n");
+	fprintf(output, "\tsw\t$s3, -20($sp)\n");
+	fprintf(output, "\tsw\t$s2, -16($sp)\n");
+	fprintf(output, "\tsw\t$s1, -12($sp)\n");
+	fprintf(output, "\tsw\t$s0, -8($sp)\n");
+	fprintf(output, "\tsw\t$ra, -4($sp)\n");
+	fprintf(output, "\tsw\t$fp, 0($sp)\n");
+	fprintf(output, "\taddi\t$fp, $sp, 80\n");
+	fprintf(output, "\tsub\t$sp, $sp, %d\n", scope_memory(fn->parent));
 }
 void print_print_int_spim_code(FILE *output, int i) {
 	fprintf(output, "");
@@ -3085,7 +3236,7 @@ int scope_memory(symbol_table *st) {
 	symbol_table_identifier *current = st->identifiers;
 	symbol_table *child = st->children;
 	while (current != NULL) {
-		if (current->type->type != FUNCTION_TYPE) {
+		if (current->type->type != FUNCTION_TYPE && !current->is_param) {
 			count += size_of_type(current->type);
 		}
 		current = current->next;

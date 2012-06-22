@@ -1225,7 +1225,7 @@ Assume all branches are close enough to use branch instructions
 
 Also: BGTZ, BLTZ, BLEZ
 
-BEQ: takes 2 registers, branch of equal. Difference: opcode is in 6 most significant bits:
+BEQ: takes 2 registers, branch if equal. Difference: opcode is in 6 most significant bits:
 	000100 rs rt offset
 	
 16 bit offset has range (-32k, 32k - 1)
@@ -1287,8 +1287,8 @@ Sample programs:
 
 			.text
 			.globl	main
-		main:	li	$t0,97         // overwrite .word with 97
-			sw	$t0,count	# zero count
+		main:	li	$t0,97         
+			sw	$t0,count	# zero count // overwrite .word with 97
 
 			li	$v0,1		# v0 <- syscall code for print_int     
 			lw	$a0,count	# a0 <- int to print
