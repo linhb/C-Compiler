@@ -489,6 +489,7 @@ typedef struct t_function_type
 	type *return_type;
 	int argc;
 	type *arg_types[20]; // hack to get around "invalid use of flexible array member" error with an untyped array
+	struct t_symbol_table *own_st;
 } function_type;
 
 // returns pointer to updated ST
@@ -603,6 +604,7 @@ typedef struct n_store_ir {
 	symbol_table_identifier *rd;
 	struct n_temp *rs;
 	int offset_from_id;
+	struct n_temp *rd_temp;
 } store_ir;
 typedef struct n_jump_ir	
 {
@@ -705,7 +707,7 @@ void add_ir_opcodes();
 ir *create_load_addr_ir(node *n, node *id);
 ir *create_simple_binary_ir(node *n, int op, temp *rs, temp *rt, type *type);
 ir *create_load_const_ir(node *node_to_attach_ir_to, int number);
-ir *create_store_ir(node *stored_to, temp *from_register);
+ir *create_store_ir(node *node_to_attach_ir_to, node *stored_to, temp *from_register);
 ir *create_unary_ir(node *n, temp *t);
 void create_subscript_expr_ir(node *node_to_attach_ir_to);
 void create_binary_expr_ir(node *n);
@@ -723,6 +725,7 @@ void create_while_statement_ir(node *node_to_attach_ir_to);
 ir *create_call_ir(node *node_to_attach_ir_to, symbol_table_identifier *function);
 ir *create_string_node_ir(node *node_to_attach_ir_to);
 int spim_string_id;
+int is_system_function_name(char *fn_name);
 temp *create_temp();
 char *num_to_s(int num);
 temp *get_rd_register_from_ir(ir *ir);
@@ -730,6 +733,6 @@ void print_ir(FILE *output, ir *ir, int is_ir);
 void add_opcodes();
 void print_spim_code(list *ir_list, FILE *output);
 void print_function_entry_spim_code(symbol_table_identifier *fn, FILE *output);
-int scope_memory(symbol_table *st);
+int scope_memory(symbol_table *st, int initial_offset);
 #endif
 

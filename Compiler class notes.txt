@@ -1550,3 +1550,10 @@ Function entry code:
 	update fp to sp + 80 (so at the beginning of the new stack frame)
 	move sp forward as many bytes as the function takes up
 	start actual function
+
+	when you enter a function, first you store the prev ra in sp-4 (so it's in the first word forward of sp)
+	then set fp to sp
+	then start moving sp forward as many bytes as the function needs
+	each time you need a local var, go forward from the fp by the var's offset
+	at the end of the function you take ra from the stack (sp - 4) and put it back in $ra
+	then you jump to it

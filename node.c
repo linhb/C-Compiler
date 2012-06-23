@@ -1012,7 +1012,7 @@ void print_comma_expr_node(FILE *output, node *n) {
 void print_indentation(FILE *output) {
 	int i;
 	for (i = 1; i <= indent; i++) {
-		fputs("  ", output);
+		fputs("\t", output);
 	}
 }
 void add_data_to_list(list *list, void *new_data) {
@@ -1367,6 +1367,7 @@ void create_function_def_specifier_node_symbol_table(node *n, symbol_table *st, 
 		// need to create the child ST, then add parameter_type_list to it, then deal with the function contents
 		symbol_table *child_st = create_child_symbol_table(st, compound_statement, current);
 		create_symbol_table(parameter_type_list, child_st);
+		current->type->data.function_type->own_st = child_st;
 		create_compound_statement_node_symbol_table(compound_statement, child_st, 0);
 	}
 }
@@ -2377,10 +2378,13 @@ void create_function_definition_ir(node *node_to_attach_ir_to) {
 		join_lists(node_to_attach_ir_to->ir_list, generate_ir_from_node(compound_statement));
 	}
 }
+int is_system_function_name(char *fn_name) {
+	return (str_equals(fn_name, "print_int") || str_equals(fn_name, "print_string") || str_equals(fn_name, "read_int") || str_equals(fn_name, "read_string"));
+}
 void create_function_call_ir(node *node_to_attach_ir_to) {
 	char *fn_name = get_identifier_from_declarator(node_to_attach_ir_to->node_data.function_call->postfix_expr)->node_data.identifier->name;
 	// if function is a SPIM supported function, skip the assembly generation
-	if (!(str_equals(fn_name, "print_int") || str_equals(fn_name, "print_string") || str_equals(fn_name, "read_int") || str_equals(fn_name, "read_string"))) {
+	if (!is_system_function_name(fn_name)) {
 		// function calls have postfix_expr and expr_list
 		// expr_list has expr_list and assignment_expr
 		// make array of exprs that are children of expr_list; these are the parameters
@@ -2435,6 +2439,7 @@ void create_function_call_ir(node *node_to_attach_ir_to) {
 ir *create_call_ir(node *node_to_attach_ir_to, symbol_table_identifier *function) {
 	ir *ir = create_ir(CALL, Call);
 	ir->ir_data.call_ir->ra = create_temp();
+	ir->ir_data.call_ir->ra->is_lvalue = 0;
 	ir->ir_data.call_ir->function = function;
 	ir->ir_data.call_ir->argc = function->type->data.function_type->argc;
 	add_data_to_list(node_to_attach_ir_to->ir_list, ir);
@@ -2697,7 +2702,7 @@ void create_binary_expr_ir(node *node_to_attach_ir_to) {
 	right_temp = load_lvalue_from_rvalue_ir_if_needed(node_to_attach_ir_to, node_to_attach_ir_to->node_data.binary_expression->right->temp);
 	switch (node_to_attach_ir_to->node_data.binary_expression->op->node_data.operator->value) {
 		case ASSIGN: // a = b; load addr of a, load addr of b, load value of b into t1, store into a from t1
-			create_store_ir(node_to_attach_ir_to->node_data.binary_expression->left, right_temp);
+			create_store_ir(node_to_attach_ir_to, node_to_attach_ir_to->node_data.binary_expression->left, right_temp);
 			break;
 		default: {
 			left_temp = load_lvalue_from_rvalue_ir_if_needed(node_to_attach_ir_to, node_to_attach_ir_to->node_data.binary_expression->left->temp);
@@ -2908,7 +2913,11 @@ ir *create_load_const_ir(node *node_to_attach_ir_to, int number) {
 	node_to_attach_ir_to->temp = ir->ir_data.load_const_ir->rd;
 	return ir;
 }
-ir *create_store_ir(node *stored_to, temp *from_register) {
+ir *create_store_ir(node *node_to_attach_ir_to, node *stored_to, temp *from_register) {
+	// first need to load the address being stored into into a temp: LoadAddr(t3, identifier)
+	create_load_addr_ir(node_to_attach_ir_to, stored_to);
+	// now we know the temp the address is in which is node_to_attach_ir_to's temp
+	// node_to_attach_ir_to and stored_to can be different, e.g. in n = 1, 1 is stored to n but the store IR is attached to the n = 1 binary expr node
 	assert(stored_to->node_type == IDENTIFIER_NODE || stored_to->node_type == SUBSCRIPT_EXPR_NODE);
 	ir *subscript_expr_address;
 	int offset_from_id;
@@ -2933,10 +2942,13 @@ ir *create_store_ir(node *stored_to, temp *from_register) {
 			switch (type->data.arithmetic_type->number_type) {
 			case SHORT:
 				ir = create_ir(STORE, sh);
+				break;
 			case CHAR:
 				ir = create_ir(STORE, sb);
+				break;
 			default:
 				ir = create_ir(STORE, sw);
+				break;
 			}
 		break;
 		}
@@ -2947,8 +2959,9 @@ ir *create_store_ir(node *stored_to, temp *from_register) {
 	}
 	ir->ir_data.store_ir->rd = stored_to->node_data.identifier->symbol_table_identifier;
 	ir->ir_data.store_ir->rs = from_register;
+	ir->ir_data.store_ir->rd_temp = node_to_attach_ir_to->temp;
 //	ir->data.store_ir->offset_from_id = subscript_expr_address->data.
-	add_data_to_list(stored_to->ir_list, ir);
+	add_data_to_list(node_to_attach_ir_to->ir_list, ir);
 	return ir;
 }
 ir *create_unary_ir(node *node_to_attach_ir_to, temp *t) {
@@ -3139,7 +3152,7 @@ void add_opcodes() {
 	opcodes[neg] = "neg";
 	opcodes[nop] = "nop";
 	opcodes[beqz] = "beqz";
-	opcodes[Jump] = "Jump";
+	opcodes[Jump] = "jal";
 	opcodes[JumpIfTrue] = "JumpIfTrue";
 }
 void print_spim_code(list *ir_list, FILE *output) {
@@ -3151,14 +3164,22 @@ void print_spim_code(list *ir_list, FILE *output) {
 		switch (current_ir->ir_type) {
 		case NOP:
 			print_ir(output, current_ir, 0);
-			if (current_ir->ir_data.nop_ir->is_fn && !str_equals(current_ir->ir_data.nop_ir->function->name, "main")) {
-				// print
-				print_function_entry_spim_code(current_ir->ir_data.nop_ir->function, output);
-//				print_spim_code()
+			if (current_ir->ir_data.nop_ir->is_fn) {
+				char *fn_name = current_ir->ir_data.nop_ir->function->name;
+				if (is_system_function_name(fn_name)) {
+					if (str_equals(fn_name, "print_int")) {
+						fprintf(output, "print_int: nop\n\tlw $a0, 0($sp)\n\tli $v0, 1\n\tsyscall\n\tjr\t$ra\n");
+					}
+					else if (str_equals(fn_name, "print_string")) {
+						fprintf(output, "print_string: nop\n\tlw $a0, 0($sp)\n\tli $v0, 4\n\tsyscall\n\tjr\t$ra\n");
+					}
+				}
+				else {
+					print_function_entry_spim_code(current_ir->ir_data.nop_ir->function, output);
+				}
 			}
 			break;
 		case OP:
-			// plus/minus: eg add $t1, $2
 			switch (current_ir->opcode) {
 			case LoadAddr:
 				fprintf(output, "\tsubi\t$fp, %d\n", 80 + current_ir->ir_data.load_ir->rs->offset);
@@ -3166,7 +3187,6 @@ void print_spim_code(list *ir_list, FILE *output) {
 //			case LoadWordIndirect:
 //			case BitwiseOr:
 //			case LogicalNot:
-//			case Jump:
 			case LoadWordIndirect:
 				fprintf(output, "\tlw\t$t%d, 0($t%d)\n", current_ir->ir_data.op_ir->rd->id, current_ir->ir_data.op_ir->rs->id);
 				break;
@@ -3193,14 +3213,23 @@ void print_spim_code(list *ir_list, FILE *output) {
 			}
 			break;
 		case LOAD_CONST:
+		case JUMP:
 			print_ir(output, current_ir, 0);
+			break;
+		case STORE:
+			// store IR has the identifier (and its offset, so can compute its address), and the temp that has the thing to be stored
+			// load the identifier's address by subtracting 80+offset from $fp, store in a reg
+			// assuming offset is 8
+			// lw $t4,
+			// sw $t5, 0($t3)
+			// print like above
+			fprintf(output, "\t%s\t$t%d, 0($t%d)\n", opcodes[current_ir->opcode], current_ir->ir_data.store_ir->rs->id, current_ir->ir_data.store_ir->rd_temp->id);
 			break;
 		case LOAD:
 			fprintf(output, "\tsub\t$t%d, $fp, %d\n", current_ir->ir_data.load_ir->rd->id, 80 + current_ir->ir_data.load_ir->rs->offset);
 			break;
 		case CALL:
-//			print_function_entry_spim_code(current_ir->data.call_ir->function, output);
-			fprintf(output, "\tjal %s\n", current_ir->ir_data.call_ir->function->name);
+			fprintf(output, "\tjal\t%s\n", current_ir->ir_data.call_ir->function->name);
 			break;
 		case LOAD_STRING:
 			fprintf(output, "\t.data\n%s\t.asciiz\t\"%s\"\n", current_ir->ir_data.load_string_ir->name, current_ir->ir_data.load_string_ir->content);
@@ -3211,24 +3240,26 @@ void print_spim_code(list *ir_list, FILE *output) {
 	fprintf(output, "\tli	$v0, 10\n\tsyscall\n");
 }
 void print_function_entry_spim_code(symbol_table_identifier *fn, FILE *output) {
-	fprintf(output, "\taddi	$sp, $sp, -80\n");
-	fprintf(output, "\tsw\t$s7, -36($sp)\n");
-	fprintf(output, "\tsw\t$s6, -32($sp)\n");
-	fprintf(output, "\tsw\t$s5, -28($sp)\n");
-	fprintf(output, "\tsw\t$s4, -24($sp)\n");
-	fprintf(output, "\tsw\t$s3, -20($sp)\n");
-	fprintf(output, "\tsw\t$s2, -16($sp)\n");
-	fprintf(output, "\tsw\t$s1, -12($sp)\n");
-	fprintf(output, "\tsw\t$s0, -8($sp)\n");
-	fprintf(output, "\tsw\t$ra, -4($sp)\n");
-	fprintf(output, "\tsw\t$fp, 0($sp)\n");
-	fprintf(output, "\taddi\t$fp, $sp, 80\n");
-	fprintf(output, "\tsub\t$sp, $sp, %d\n", scope_memory(fn->parent));
+	if (!str_equals(fn->name, "main")) {
+		fprintf(output, "\taddi	$sp, $sp, -80\n");
+		fprintf(output, "\tsw\t$s7, -36($sp)\n");
+		fprintf(output, "\tsw\t$s6, -32($sp)\n");
+		fprintf(output, "\tsw\t$s5, -28($sp)\n");
+		fprintf(output, "\tsw\t$s4, -24($sp)\n");
+		fprintf(output, "\tsw\t$s3, -20($sp)\n");
+		fprintf(output, "\tsw\t$s2, -16($sp)\n");
+		fprintf(output, "\tsw\t$s1, -12($sp)\n");
+		fprintf(output, "\tsw\t$s0, -8($sp)\n");
+		fprintf(output, "\tsw\t$ra, -4($sp)\n");
+		fprintf(output, "\tsw\t$fp, 0($sp)\n");
+		fprintf(output, "\taddi\t$fp, $sp, 80\n");
+	}
+	fprintf(output, "\tsub\t$sp, $sp, %d\n", scope_memory(fn->type->data.function_type->own_st, 0));
 }
 void print_print_int_spim_code(FILE *output, int i) {
-	fprintf(output, "");
+	fprintf(output, "print_int");
 }
-int scope_memory(symbol_table *st) {
+int scope_memory(symbol_table *st, int initial_offset) {
 	// count the vars in the current ST
 	// if there are children, do the same to children and add the return value
 	// if not, return count
@@ -3238,13 +3269,15 @@ int scope_memory(symbol_table *st) {
 	while (current != NULL) {
 		if (current->type->type != FUNCTION_TYPE && !current->is_param) {
 			count += size_of_type(current->type);
+			current->offset = count + initial_offset;
+//			printf("%s: offset %d\n", current->name, current->offset);
 		}
 		current = current->next;
 	}
 	int max_child = 0;
 	while (child != NULL) {
 		// return max of scope_memory(children)
-		int current_size = scope_memory(child);
+		int current_size = scope_memory(child, count+initial_offset);
 		if (current_size > max_child) {
 			max_child = current_size;
 		}
