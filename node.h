@@ -565,6 +565,7 @@ int get_size_from_decl(node *n);
 #define JUMP 6
 #define CALL 7
 #define LOAD_STRING 8
+#define READ_INT 9
 
 typedef struct n_ir
 {
@@ -579,6 +580,7 @@ typedef struct n_ir
 		struct n_call_ir *call_ir;
 		struct n_nop_ir *nop_ir;
 		struct n_load_string_ir *load_string_ir;
+		struct n_read_int_ir *read_int_ir;
 	} ir_data;
 
 	char *ir_label;
@@ -626,6 +628,9 @@ typedef struct n_load_string_ir {
 	char *content;
 	char *name;
 } load_string_ir;
+typedef struct n_read_int_ir {
+	struct n_temp *dest;
+} read_int_ir;
 typedef struct n_temp
 {
 	int id;
@@ -633,14 +638,6 @@ typedef struct n_temp
 } temp;
 
 int temp_id;
-
-// typedef struct n_ir_label
-// {
-// 	int id;
-// 	char *name;
-// 	ir *ir;
-// } ir_label;
-
 int ir_label_id; 
 
 char *ir_opcodes[100];
@@ -693,6 +690,7 @@ char *opcodes[100];
 #define ParamByte 47
 #define Call 48
 #define LoadString 49
+#define ReadInt 50
 
 temp *load_lvalue_from_rvalue_ir_if_needed(node *n, temp *may_be_address);
 list *generate_ir_from_node(node *n);
@@ -724,6 +722,7 @@ ir *create_param_ir(node *node_to_attach_ir_to, temp *temp, node *param_expr);
 void create_while_statement_ir(node *node_to_attach_ir_to);
 ir *create_call_ir(node *node_to_attach_ir_to, symbol_table_identifier *function);
 ir *create_string_node_ir(node *node_to_attach_ir_to);
+ir *create_read_int_ir(node *node_to_attach_ir_to, temp *dest);
 int spim_string_id;
 int is_system_function_name(char *fn_name);
 temp *create_temp();

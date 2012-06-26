@@ -2356,6 +2356,9 @@ ir *create_ir(int ir_type, int opcode) {
 	case LOAD_STRING:
 		ir_node->ir_data.load_string_ir = malloc(sizeof(*ir_node->ir_data.load_string_ir));
 		break;
+	case READ_INT:
+		ir_node->ir_data.read_int_ir = malloc(sizeof(*ir_node->ir_data.read_int_ir));
+		break;
 	}
 	return ir_node;
 } 
@@ -2383,58 +2386,76 @@ int is_system_function_name(char *fn_name) {
 }
 void create_function_call_ir(node *node_to_attach_ir_to) {
 	char *fn_name = get_identifier_from_declarator(node_to_attach_ir_to->node_data.function_call->postfix_expr)->node_data.identifier->name;
+	node *expression_list = node_to_attach_ir_to->node_data.function_call->expression_list;
 	// if function is a SPIM supported function, skip the assembly generation
-	if (!is_system_function_name(fn_name)) {
-		// function calls have postfix_expr and expr_list
-		// expr_list has expr_list and assignment_expr
-		// make array of exprs that are children of expr_list; these are the parameters
-		// create paramWord IR for each array element
-		// OR create paramWord IR for expr_list's assignment_expr and its expr_list's assignment_expr and so on recursively
-		// make call IR, attach results to node_to_attach_ir_to's temp
-		// node params[get_number_of_exprs_from_expr_list(node_to_attach_ir_to->data.function_call->expression_list)] =
-		node *expression_list = node_to_attach_ir_to->node_data.function_call->expression_list;
-		// get number of arguments from function's symbol table entry
-		// get identifier from function_call's postfix_expr
-	//	node *identifier = get_identifier_from_node(node_to_attach_ir_to->data.function_call->postfix_expr);
-		// get symbol table entry from identifier
-	//	symbol_table_identifier *entry = find_identifier_in_symbol_table(node_to_attach_ir_to->symbol_table, identifier->data.identifier->name);
-		// get argument number from symbol table entry
-
-			/* stable version, would require reversing expression_list and assignment_expr in parser.y and create_expression_list_node
-	//  int argc = entry->type->data.function_type->argc;
-	//	ir *param_irs[100]; // had no end of trouble when i attempted to declare a variable-sized array, even when compiled in C99
-	//	int i = 0;
-	 * 	while (expression_list->node_type == EXPRESSION_LIST_NODE) {
-			// this is tricky because the highest level expression_list's assignment_expr contains the last parameter, so collect all the param IRs into an array and add them in reverse order
-			generate_ir_from_node(expression_list);
-			node *assignment_expr = expression_list->data.expression_list->assignment_expr;
-			ir *param_ir = create_param_ir(node_to_attach_ir_to, assignment_expr->temp, assignment_expr);
-			param_irs[i] = param_ir;
-			i++;
-			expression_list = expression_list->data.expression_list->expression_list;
-		}
-		// do it one last time for the last expression_list, which is an assignment_expr
-		generate_ir_from_node(expression_list);
-		param_irs[i] = create_param_ir(node_to_attach_ir_to, expression_list->temp, expression_list);
-		// now add IRs in param_irs from last to first
-		for (i = argc - 1; i >= 0; i--) {
-			add_to_list(node_to_attach_ir_to->ir, param_irs[i]);
-		}
-		*/
-		/* EXPERIMENTAL reversing order of expression_list and assignment_expr to avoid having to reverse processing parameters */
-		while (expression_list->node_type == EXPRESSION_LIST_NODE) {
-			// this is tricky because the highest level expression_list's assignment_expr contains the last parameter, so collect all the param IRs into an array and add them in reverse order
-			join_lists(node_to_attach_ir_to->ir_list, generate_ir_from_node(expression_list));
-			node *assignment_expr = expression_list->node_data.expression_list->assignment_expr;
-			add_data_to_list(node_to_attach_ir_to->ir_list, create_param_ir(node_to_attach_ir_to, assignment_expr->temp, assignment_expr));
-			expression_list = expression_list->node_data.expression_list->expression_list;
-		}
-		// do it one last time for the last expression_list, which is an assignment_expr
+	if (str_equals(fn_name, "read_int")) {
 		join_lists(node_to_attach_ir_to->ir_list, generate_ir_from_node(expression_list));
-		add_data_to_list(node_to_attach_ir_to->ir_list, create_param_ir(node_to_attach_ir_to, expression_list->temp, expression_list));
-		// call($t8, fn, argc)
+		create_read_int_ir(node_to_attach_ir_to, expression_list->temp);
 	}
-	create_call_ir(node_to_attach_ir_to, find_identifier_in_symbol_table(node_to_attach_ir_to->symbol_table, get_identifier_from_node(node_to_attach_ir_to->node_data.function_call->postfix_expr)->node_data.identifier->name));
+	else {
+		if (!str_equals(fn_name, "print_string")) {
+			// function calls have postfix_expr and expr_list
+			// expr_list has expr_list and assignment_expr
+			// make array of exprs that are children of expr_list; these are the parameters
+			// create paramWord IR for each array element
+			// OR create paramWord IR for expr_list's assignment_expr and its expr_list's assignment_expr and so on recursively
+			// make call IR, attach results to node_to_attach_ir_to's temp
+			// node params[get_number_of_exprs_from_expr_list(node_to_attach_ir_to->data.function_call->expression_list)] =
+			// get number of arguments from function's symbol table entry
+			// get identifier from function_call's postfix_expr
+		//	node *identifier = get_identifier_from_node(node_to_attach_ir_to->data.function_call->postfix_expr);
+			// get symbol table entry from identifier
+		//	symbol_table_identifier *entry = find_identifier_in_symbol_table(node_to_attach_ir_to->symbol_table, identifier->data.identifier->name);
+			// get argument number from symbol table entry
+
+				/* stable version, would require reversing expression_list and assignment_expr in parser.y and create_expression_list_node
+		//  int argc = entry->type->data.function_type->argc;
+		//	ir *param_irs[100]; // had no end of trouble when i attempted to declare a variable-sized array, even when compiled in C99
+		//	int i = 0;
+		 * 	while (expression_list->node_type == EXPRESSION_LIST_NODE) {
+				// this is tricky because the highest level expression_list's assignment_expr contains the last parameter, so collect all the param IRs into an array and add them in reverse order
+				generate_ir_from_node(expression_list);
+				node *assignment_expr = expression_list->data.expression_list->assignment_expr;
+				ir *param_ir = create_param_ir(node_to_attach_ir_to, assignment_expr->temp, assignment_expr);
+				param_irs[i] = param_ir;
+				i++;
+				expression_list = expression_list->data.expression_list->expression_list;
+			}
+			// do it one last time for the last expression_list, which is an assignment_expr
+			generate_ir_from_node(expression_list);
+			param_irs[i] = create_param_ir(node_to_attach_ir_to, expression_list->temp, expression_list);
+			// now add IRs in param_irs from last to first
+			for (i = argc - 1; i >= 0; i--) {
+				add_to_list(node_to_attach_ir_to->ir, param_irs[i]);
+			}
+			*/
+			/* EXPERIMENTAL reversing order of expression_list and assignment_expr to avoid having to reverse processing parameters */
+			while (expression_list->node_type == EXPRESSION_LIST_NODE) {
+				join_lists(node_to_attach_ir_to->ir_list, generate_ir_from_node(expression_list));
+				node *assignment_expr = expression_list->node_data.expression_list->assignment_expr;
+				add_data_to_list(node_to_attach_ir_to->ir_list, create_param_ir(node_to_attach_ir_to, assignment_expr->temp, assignment_expr));
+				expression_list = expression_list->node_data.expression_list->expression_list;
+			}
+			// do it one last time for the last expression_list, which is an assignment_expr
+			join_lists(node_to_attach_ir_to->ir_list, generate_ir_from_node(expression_list));
+			add_data_to_list(node_to_attach_ir_to->ir_list, create_param_ir(node_to_attach_ir_to, expression_list->temp, expression_list));
+			// call($t8, fn, argc)
+		}
+		else {
+			if (node_to_attach_ir_to->node_data.function_call->expression_list->node_type == STRING_NODE) {
+				node_to_attach_ir_to->ir_list = malloc(sizeof(list));
+				node_to_attach_ir_to->node_data.function_call->expression_list->ir_list = malloc(sizeof(list));
+				add_data_to_list(node_to_attach_ir_to->ir_list, create_string_node_ir(node_to_attach_ir_to->node_data.function_call->expression_list));
+			}
+		}
+		create_call_ir(node_to_attach_ir_to, find_identifier_in_symbol_table(node_to_attach_ir_to->symbol_table, get_identifier_from_node(node_to_attach_ir_to->node_data.function_call->postfix_expr)->node_data.identifier->name));
+	}
+}
+ir *create_read_int_ir(node *node_to_attach_ir_to, temp *dest) {
+	ir *ir = create_ir(READ_INT, ReadInt);
+	ir->ir_data.read_int_ir->dest = dest;
+	add_data_to_list(node_to_attach_ir_to->ir_list, ir);
+	return ir;
 }
 ir *create_call_ir(node *node_to_attach_ir_to, symbol_table_identifier *function) {
 	ir *ir = create_ir(CALL, Call);
@@ -3017,44 +3038,47 @@ void print_ir(FILE *output, ir *ir, int is_ir) {
 			fprintf(output, "%s\t", opcodes[ir->opcode]);
 		switch (ir->ir_type) {
 			case OP:
-				fprintf(output, "$t%d", ir->ir_data.op_ir->rd->id);
+				fprintf(output, "$%d", ir->ir_data.op_ir->rd->id);
 				if (ir->ir_data.op_ir->rs != NULL) {
-					fprintf(output, ", $t%d", ir->ir_data.op_ir->rs->id);
+					fprintf(output, ", $%d", ir->ir_data.op_ir->rs->id);
 				}
 				if (ir->ir_data.op_ir->rt != NULL) {
-					fprintf(output, ", $t%d", ir->ir_data.op_ir->rt->id);
+					fprintf(output, ", $%d", ir->ir_data.op_ir->rt->id);
 				}
 				break;
 			case LOAD:
-				fprintf(output, "$t%d, ", ir->ir_data.load_ir->rd->id);
+				fprintf(output, "$%d, ", ir->ir_data.load_ir->rd->id);
 				fprintf(output, "%s", ir->ir_data.load_ir->rs->name);
 				break;
 			case STORE:
 				fprintf(output, "%s, ", ir->ir_data.store_ir->rd->name);
-				fprintf(output, "$t%d", ir->ir_data.store_ir->rs->id);
+				fprintf(output, "$%d", ir->ir_data.store_ir->rs->id);
 				break;
 			case LOAD_CONST:
-				fprintf(output, "$t%d, ", ir->ir_data.load_const_ir->rd->id);
+				fprintf(output, "$%d, ", ir->ir_data.load_const_ir->rd->id);
 				fprintf(output, "%d", ir->ir_data.load_const_ir->rs);
 				break;
 			case JUMP:
 				if (ir->ir_data.jump_ir->s1 != NULL) {
-					fprintf(output, "$t%d, ", ir->ir_data.jump_ir->s1->id);
+					fprintf(output, "$%d, ", ir->ir_data.jump_ir->s1->id);
 				}
 				if (ir->ir_data.jump_ir->s2 != NULL) {
-					fprintf(output, "$t%d, ", ir->ir_data.jump_ir->s2->id);
+					fprintf(output, "$%d, ", ir->ir_data.jump_ir->s2->id);
 				}
 				if (ir->ir_data.jump_ir->label_ir != NULL) {
 					fprintf(output, "%s", ir->ir_data.jump_ir->label_ir->ir_label);
 				}
 				break;
 			case CALL:
-				fprintf(output, "$t%d, ", ir->ir_data.call_ir->ra->id);
+				fprintf(output, "$%d, ", ir->ir_data.call_ir->ra->id);
 				fprintf(output, "%s, ", ir->ir_data.call_ir->function->name);
 				fprintf(output, "%d", ir->ir_data.call_ir->argc);
 				break;
 			case LOAD_STRING:
 				fprintf(output, "\"%s\", %s", ir->ir_data.load_string_ir->content, ir->ir_data.load_string_ir->name);
+				break;
+			case READ_INT:
+				fprintf(output, "$t%d", ir->ir_data.read_int_ir->dest->id);
 				break;
 			default:
 				fprintf(output, "ERROR: unknown IR node type: %d\n", ir->ir_type);
@@ -3113,6 +3137,7 @@ void add_ir_opcodes() {
 	ir_opcodes[ParamByte] = "ParamByte";
 	ir_opcodes[Call] = "Call";
 	ir_opcodes[LoadString] = "LoadString";
+	ir_opcodes[ReadInt] = "ReadInt";
 }
 void add_opcodes() {
 	opcodes[LoadAddr] = "la";
@@ -3168,10 +3193,13 @@ void print_spim_code(list *ir_list, FILE *output) {
 				char *fn_name = current_ir->ir_data.nop_ir->function->name;
 				if (is_system_function_name(fn_name)) {
 					if (str_equals(fn_name, "print_int")) {
-						fprintf(output, "print_int: nop\n\tlw $a0, 0($sp)\n\tli $v0, 1\n\tsyscall\n\tjr\t$ra\n");
+						fprintf(output, "\tli\t$v0, 1\n\tsyscall\n\tjr\t$ra\n");
 					}
 					else if (str_equals(fn_name, "print_string")) {
-						fprintf(output, "print_string: nop\n\tlw $a0, 0($sp)\n\tli $v0, 4\n\tsyscall\n\tjr\t$ra\n");
+						fprintf(output, "\tli\t$v0, 4\n\tsyscall\n\tjr\t$ra\n");
+					}
+					else if (str_equals(fn_name, "read_int")) {
+						fprintf(output, "\tli\t$v0, 5\n\tsyscall\n\tjr\t$ra\n");
 					}
 				}
 				else {
@@ -3188,24 +3216,24 @@ void print_spim_code(list *ir_list, FILE *output) {
 //			case BitwiseOr:
 //			case LogicalNot:
 			case LoadWordIndirect:
-				fprintf(output, "\tlw\t$t%d, 0($t%d)\n", current_ir->ir_data.op_ir->rd->id, current_ir->ir_data.op_ir->rs->id);
+				fprintf(output, "\tlw\t$%d, 0($%d)\n", current_ir->ir_data.op_ir->rd->id, current_ir->ir_data.op_ir->rs->id);
 				break;
 			case ReturnWord:
 			case ReturnHalf:
 			case ReturnByte:
-				fprintf(output, "\tmove\t$v0, $t%d\n", current_ir->ir_data.op_ir->rd->id);
+				fprintf(output, "\tmove\t$v0, $%d\n", current_ir->ir_data.op_ir->rd->id);
 				break;
 			case ParamWord:
 				fprintf(output, "\tsub\t$sp, $sp, 4\n");
-				fprintf(output, "\tsw\t$t%d, 0($sp)\n", current_ir->ir_data.op_ir->rd->id);
+				fprintf(output, "\tsw\t$%d, 0($sp)\n", current_ir->ir_data.op_ir->rd->id);
 				break;
 			case ParamHalf:
 				fprintf(output, "sub\t$sp, $sp, 2");
-				fprintf(output, "\tsw\t$t%d, 0($sp)\n", current_ir->ir_data.op_ir->rd->id);
+				fprintf(output, "\tsw\t$%d, 0($sp)\n", current_ir->ir_data.op_ir->rd->id);
 				break;
 			case ParamByte:
 				fprintf(output, "sub\t$sp, $sp, 1");
-				fprintf(output, "\tsw\t$t%d, 0($sp)\n", current_ir->ir_data.op_ir->rd->id);
+				fprintf(output, "\tsw\t$%d, 0($sp)\n", current_ir->ir_data.op_ir->rd->id);
 				break;
 			default:
 				print_ir(output, current_ir, 0);
@@ -3223,16 +3251,23 @@ void print_spim_code(list *ir_list, FILE *output) {
 			// lw $t4,
 			// sw $t5, 0($t3)
 			// print like above
-			fprintf(output, "\t%s\t$t%d, 0($t%d)\n", opcodes[current_ir->opcode], current_ir->ir_data.store_ir->rs->id, current_ir->ir_data.store_ir->rd_temp->id);
+			fprintf(output, "\t%s\t$%d, 0($%d)\n", opcodes[current_ir->opcode], current_ir->ir_data.store_ir->rs->id, current_ir->ir_data.store_ir->rd_temp->id);
 			break;
 		case LOAD:
-			fprintf(output, "\tsub\t$t%d, $fp, %d\n", current_ir->ir_data.load_ir->rd->id, 80 + current_ir->ir_data.load_ir->rs->offset);
+			fprintf(output, "\tsub\t$%d, $fp, %d\n", current_ir->ir_data.load_ir->rd->id, 80 + current_ir->ir_data.load_ir->rs->offset);
 			break;
 		case CALL:
+			if (str_equals(current_ir->ir_data.call_ir->function->name, "print_int")) {
+				//
+
+			}
 			fprintf(output, "\tjal\t%s\n", current_ir->ir_data.call_ir->function->name);
 			break;
 		case LOAD_STRING:
-			fprintf(output, "\t.data\n%s\t.asciiz\t\"%s\"\n", current_ir->ir_data.load_string_ir->name, current_ir->ir_data.load_string_ir->content);
+			fprintf(output, "\t.data\n%s\t.asciiz\t\"%s\"\n\t.text\n\tla\t$a0, %s\n", current_ir->ir_data.load_string_ir->name, current_ir->ir_data.load_string_ir->content, current_ir->ir_data.load_string_ir->name);
+			break;
+		case READ_INT:
+			fprintf(output, "\tjal\tread_int\n\tsw\t$v0, 0($%d)\n", current_ir->ir_data.read_int_ir->dest->id);
 			break;
 		}
 		current_item = current_item->next;

@@ -63,6 +63,7 @@ int main(int argc, char **argv) {
 		// ir *ir_list = generate_ir_from_node(root);
 		//list *ir_list = malloc(sizeof(*ir_list));
 		spim_string_id = 1;
+		temp_id = 8;
 		root->ir_list = generate_ir_from_node(root);
 		add_ir_opcodes();
 		add_opcodes();
