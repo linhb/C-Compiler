@@ -12,6 +12,9 @@ make
 # echo "****************WHILE STATEMENTS****************"
 # ./compiler test_inputs/test_input_while_stmt
 echo "**************** SPIM INSTRUCTIONS ****************"
-./compiler test_inputs/spim_input.c - spim_output.s && spim -file spim_output.s
+# ./compiler test_inputs/test_input_comparison.c - test_input_comparison.s && spim -file test_input_comparison.s
+# ./compiler test_inputs/test_input_for_stmt.c - test_input_for_stmt.s && spim -file test_input_for_stmt.s
+./compiler test_inputs/test_input_function_entry.c - test_input_function_entry.s && spim -file test_input_function_entry.s
+# ./compiler test_inputs/test_input_factorial.c - test_input_factorial.s && spim -file test_input_factorial.s
                                                                              
 make clean

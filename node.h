@@ -226,7 +226,8 @@ typedef struct n_reserved_word_statement
 {
 	node *reserved_word;
 	node *expr;
-	// symbol_table *symbol_table;
+	// need reference to ST identifier of fn
+
 } reserved_word_statement;
 typedef struct n_if_else_statement
 {
@@ -566,6 +567,7 @@ int get_size_from_decl(node *n);
 #define CALL 7
 #define LOAD_STRING 8
 #define READ_INT 9
+#define PRINT_INT 10
 
 typedef struct n_ir
 {
@@ -581,8 +583,9 @@ typedef struct n_ir
 		struct n_nop_ir *nop_ir;
 		struct n_load_string_ir *load_string_ir;
 		struct n_read_int_ir *read_int_ir;
+		struct n_print_int_ir *print_int_ir;
 	} ir_data;
-
+	node *belonging_node;
 	char *ir_label;
 } ir;
 typedef struct n_op_ir {
@@ -631,6 +634,9 @@ typedef struct n_load_string_ir {
 typedef struct n_read_int_ir {
 	struct n_temp *dest;
 } read_int_ir;
+typedef struct n_print_int_ir {
+	struct n_temp *src;
+} print_int_ir;
 typedef struct n_temp
 {
 	int id;
@@ -691,6 +697,9 @@ char *opcodes[100];
 #define Call 48
 #define LoadString 49
 #define ReadInt 50
+#define PrintInt 51
+#define Return 52
+#define JumpAndLink 53
 
 temp *load_lvalue_from_rvalue_ir_if_needed(node *n, temp *may_be_address);
 list *generate_ir_from_node(node *n);
@@ -701,6 +710,7 @@ ir *add_to_ir_list(ir *list, ir *new);
 // create_ir functions that take a node will attach the created IR to the IR of that node
 ir *create_load_indirect_ir(node *n, temp *rs);
 void create_function_definition_ir(node *node_to_attach_ir_to);
+ir *create_print_int_ir(node *node_to_attach_ir_to, temp *src);
 void add_ir_opcodes();
 ir *create_load_addr_ir(node *n, node *id);
 ir *create_simple_binary_ir(node *n, int op, temp *rs, temp *rt, type *type);
@@ -732,6 +742,9 @@ void print_ir(FILE *output, ir *ir, int is_ir);
 void add_opcodes();
 void print_spim_code(list *ir_list, FILE *output);
 void print_function_entry_spim_code(symbol_table_identifier *fn, FILE *output);
+void print_function_exit_spim_code(symbol_table_identifier *fn, FILE *output);
+void print_t_saving_spim_code(FILE *output);
+void print_t_restoring_spim_code(FILE *output);
 int scope_memory(symbol_table *st, int initial_offset);
 #endif
 

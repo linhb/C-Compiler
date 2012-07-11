@@ -1,0 +1,117 @@
+
+****** SYMBOL TABLES ********
+Scope level 1:
+Symbol table #1:
+Identifiers:
+print_string -> print_string, 1, function (void, 1, [pointer ()])
+print_int -> print_int, 3, function (void, 1, [signed int])
+read_int -> read_int, 5, function (void, 1, [signed int])
+main -> main, 7, function (signed int, 2, [pointer (), signed int])
+Children:
+	Scope level 2:
+	Symbol table #2:
+	Identifiers:
+	str -> str, 2, pointer ()
+
+	Scope level 2:
+	Symbol table #3:
+	Identifiers:
+	i -> i, 4, signed int
+
+	Scope level 2:
+	Symbol table #4:
+	Identifiers:
+	num -> num, 6, signed int
+
+	Scope level 2:
+	Symbol table #5:
+	Identifiers:
+	argc -> argc, 8, signed int
+	argv -> argv, 9, pointer ()
+	num -> num, 10, signed int
+	i -> i, 11, signed int
+	Children:
+		Scope level 2:
+		Symbol table #6:
+		Identifiers:
+
+
+
+
+
+
+****** PARSE TREE ********
+
+void print_string	/* symbol 1 */	(char (*str	/* symbol 2 */	))
+{
+}
+void print_int	/* symbol 3 */	(int i	/* symbol 4 */	)
+{
+}
+void read_int	/* symbol 5 */	(int num	/* symbol 6 */	)
+{
+}
+int main	/* symbol 7 */	(int argc	/* symbol 8 */	, char (*(*argv	/* symbol 9 */	)))
+{
+	int num	/* symbol 10 */	;
+	print_string	/* symbol 1 */	("Here's your number times 1 to 10:
+");
+	(num	/* symbol 10 */	=9);
+	int i	/* symbol 11 */	;
+	for((i	/* symbol 11 */	=1);(i	/* symbol 11 */	<=10);(i	/* symbol 11 */	=(i	/* symbol 11 */	+1)))
+
+
+	{
+		print_int	/* symbol 3 */	((num	/* symbol 10 */	*i	/* symbol 11 */	));
+		print_string	/* symbol 1 */	("
+");
+	}
+}
+
+
+
+****** INTERMEDIATE REPRESENTATION ********
+
+print_string:	NoOp
+print_int:	NoOp
+read_int:	NoOp
+main:	NoOp
+	LoadString("Here's your number times 1 to 10:
+", string_1)
+	Call(nullprint_string, 1)
+	LoadAddr($8, num)
+	LoadConst($9, 9)
+	LoadAddr($10, num)
+	StoreWord(num, $9)
+	LoadAddr($11, i)
+	LoadConst($12, 1)
+	LoadAddr($13, i)
+	StoreWord(i, $12)
+label_0:	NoOp
+	LoadAddr($14, i)
+	LoadConst($15, 10)
+	LoadWordIndirect($16, $14)
+	IsLessThanOrEqual($17, $16, $15)
+	JumpIfFalse($17, label_1)
+	LoadAddr($18, num)
+	LoadAddr($19, i)
+	LoadWordIndirect($20, $19)
+	LoadWordIndirect($21, $18)
+	MultSigned($22, $21, $20)
+	PrintInt($22)
+	LoadString("
+", string_2)
+	Call(nullprint_string, 1)
+	LoadAddr($23, i)
+	LoadAddr($24, i)
+	LoadConst($25, 1)
+	LoadWordIndirect($26, $24)
+	AddSigned($27, $26, $25)
+	LoadAddr($28, i)
+	StoreWord(i, $27)
+	Jump(label_0)
+label_1:	NoOp
+
+
+******* SPIM INSTRUCTIONS *******
+

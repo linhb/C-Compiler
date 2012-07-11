@@ -1383,8 +1383,11 @@ Small optimizations:
 	look at as few as 4 instructions at a time
 	don't change the semantics at all
 	can't have branches
-	groups of instructions are called basic blocks
-	in a block, a variable is 'live' if its value has been used. a variable is 'killed' if it's overwritten in the block.
+	groups of instructions are called basic blocks. This is the units we'll optimize within.
+	Use/def analysis: use and definition (assignment) of variables
+		e.g.: x = y + z: def of x, use of y and z (in other words, use = read access, def = write access)
+	in a block, a variable is 'live' if its value will be used (read) in the future. a variable is 'killed' if it's overwritten in the block.
+	So for a variable to be live, it has to be read in the next 3 statements AND not be written to. In other words, within a block, the set of live variables is the set of read variables minus the set of written-to variables.
 	use/def: things you can do with variables
 	int i, a[100];
 	int i, *p;
@@ -1557,3 +1560,36 @@ Function entry code:
 	each time you need a local var, go forward from the fp by the var's offset
 	at the end of the function you take ra from the stack (sp - 4) and put it back in $ra
 	then you jump to it
+
+
+	when entering new fn (final version 7/11/12):
+		move sp forward by 80 (SP=SP-80)
+		save t registers to sp+40-80 in caller
+		save s registers to sp+8-40 in callee
+		save fp to sp+4-8 in callee
+		save ra to sp+0-4 in callee
+		move fp to sp+80
+		move sp forward by 8 or however big the fn is
+
+	when exiting fn:
+		move sp back by 8 or however big the fn is
+		restore ra from sp in callee
+		restore fp from sp+4 in callee
+		restore s registers from sp-8-36 in callee
+		restore t registers from sp-40-76 in caller
+		move sp back by 80
+
+	where each register is relative to sp:
+		ra 0
+		fp 4
+		s0 8
+		s1 12
+		s2 16
+		s3 20
+		s4 24
+		s5 28
+		s6 32
+		s7 36
+		t0 40
+		t1 44
+		etc up to 80

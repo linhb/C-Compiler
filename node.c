@@ -1401,6 +1401,14 @@ symbol_table *create_child_symbol_table(symbol_table *parent_st, node *compound_
 	}
 	return new;	
 }
+symbol_table_identifier *find_fn_identifier_parent_of_table(symbol_table *st) {
+	if (st->parent_function_identifier != NULL) {
+		return st->parent_function_identifier;
+	}
+	else {
+		return find_fn_identifier_parent_of_table(st->parent);
+	}
+}
 void create_compound_statement_node_symbol_table(node *n, symbol_table *st, int create_new_symbol_table) {
 	if (n->node_data.compound_statement->declaration_or_statement_list != NULL) {
 	// if create_new_symbol_table is 0, which is only in a function definition, then just deal with the declaration_or_statement_list
@@ -2220,7 +2228,7 @@ int size_of_type(type *t) {
 	return 9999;
 }
 temp *load_lvalue_from_rvalue_ir_if_needed(node *n, temp *may_be_address) {
-	if (may_be_address->is_lvalue) {
+	if (may_be_address != NULL && may_be_address->is_lvalue) {
 		return create_load_indirect_ir(n, may_be_address)->ir_data.op_ir->rd;
 	}
 	else {
@@ -2285,6 +2293,8 @@ list *generate_ir_from_node(node *n) {
 			break;
 		}
 		case STATEMENT_NODE: {
+			// reset symbolic register number to t0 at beginning of each statement
+			temp_id = 8;
 			join_lists(n->ir_list, generate_ir_from_node(n->node_data.statement->statement));
 			break;
 		}
@@ -2359,6 +2369,9 @@ ir *create_ir(int ir_type, int opcode) {
 	case READ_INT:
 		ir_node->ir_data.read_int_ir = malloc(sizeof(*ir_node->ir_data.read_int_ir));
 		break;
+	case PRINT_INT:
+		ir_node->ir_data.print_int_ir = malloc(sizeof(*ir_node->ir_data.print_int_ir));
+		break;
 	}
 	return ir_node;
 } 
@@ -2391,6 +2404,12 @@ void create_function_call_ir(node *node_to_attach_ir_to) {
 	if (str_equals(fn_name, "read_int")) {
 		join_lists(node_to_attach_ir_to->ir_list, generate_ir_from_node(expression_list));
 		create_read_int_ir(node_to_attach_ir_to, expression_list->temp);
+	}
+	else if (str_equals(fn_name, "print_int")) {
+		generate_ir_from_node(expression_list);
+		load_lvalue_from_rvalue_ir_if_needed(expression_list, expression_list->temp);
+		join_lists(node_to_attach_ir_to->ir_list, expression_list->ir_list);
+		create_print_int_ir(node_to_attach_ir_to, expression_list->temp);
 	}
 	else {
 		if (!str_equals(fn_name, "print_string")) {
@@ -2433,7 +2452,10 @@ void create_function_call_ir(node *node_to_attach_ir_to) {
 			while (expression_list->node_type == EXPRESSION_LIST_NODE) {
 				join_lists(node_to_attach_ir_to->ir_list, generate_ir_from_node(expression_list));
 				node *assignment_expr = expression_list->node_data.expression_list->assignment_expr;
-				add_data_to_list(node_to_attach_ir_to->ir_list, create_param_ir(node_to_attach_ir_to, assignment_expr->temp, assignment_expr));
+				// generate IR for asst expr, then if it's an lvalue, load the rvalue
+				create_param_ir(node_to_attach_ir_to, assignment_expr->temp, assignment_expr);
+				load_lvalue_from_rvalue_ir_if_needed(node_to_attach_ir_to, assignment_expr->temp);
+//				join_list(node_to_attach_ir_to->ir_list, assignment_expr->ir_list);
 				expression_list = expression_list->node_data.expression_list->expression_list;
 			}
 			// do it one last time for the last expression_list, which is an assignment_expr
@@ -2457,10 +2479,18 @@ ir *create_read_int_ir(node *node_to_attach_ir_to, temp *dest) {
 	add_data_to_list(node_to_attach_ir_to->ir_list, ir);
 	return ir;
 }
+ir *create_print_int_ir(node *node_to_attach_ir_to, temp *src) {
+	ir *ir = create_ir(PRINT_INT, PrintInt);
+	ir->ir_data.print_int_ir->src = src;
+	add_data_to_list(node_to_attach_ir_to->ir_list, ir);
+	return ir;
+}
 ir *create_call_ir(node *node_to_attach_ir_to, symbol_table_identifier *function) {
 	ir *ir = create_ir(CALL, Call);
-	ir->ir_data.call_ir->ra = create_temp();
-	ir->ir_data.call_ir->ra->is_lvalue = 0;
+	if (function->type->data.function_type->return_type != NULL) {
+		ir->ir_data.call_ir->ra = create_temp();
+		ir->ir_data.call_ir->ra->is_lvalue = 0;
+	}
 	ir->ir_data.call_ir->function = function;
 	ir->ir_data.call_ir->argc = function->type->data.function_type->argc;
 	add_data_to_list(node_to_attach_ir_to->ir_list, ir);
@@ -2622,11 +2652,13 @@ ir *create_return_ir(node *node_to_attach_ir_to, node *expr, temp *temp) {
 		}
 		ir = create_ir(OP, opcode);
 		ir->ir_data.op_ir->rd = temp;
-		add_data_to_list(node_to_attach_ir_to->ir_list, ir);
-		// TODO add jump IR to after function
-		return ir;
 	}
-	return NULL;
+	else { // if here, returning void
+		ir = create_ir(OP, Return);
+	}
+	ir->belonging_node = node_to_attach_ir_to;
+	add_data_to_list(node_to_attach_ir_to->ir_list, ir);
+	return ir;
 }
 ir *create_nop_ir(char *name, int is_fn, symbol_table_identifier *function) {
 	ir *nop_ir = create_ir(NOP, nop);
@@ -3070,7 +3102,12 @@ void print_ir(FILE *output, ir *ir, int is_ir) {
 				}
 				break;
 			case CALL:
-				fprintf(output, "$%d, ", ir->ir_data.call_ir->ra->id);
+				if (ir->ir_data.call_ir->ra != NULL) {
+					fprintf(output, "$%d, ", ir->ir_data.call_ir->ra->id);
+				}
+				else {
+					fprintf(output, "void, ");
+				}
 				fprintf(output, "%s, ", ir->ir_data.call_ir->function->name);
 				fprintf(output, "%d", ir->ir_data.call_ir->argc);
 				break;
@@ -3078,7 +3115,10 @@ void print_ir(FILE *output, ir *ir, int is_ir) {
 				fprintf(output, "\"%s\", %s", ir->ir_data.load_string_ir->content, ir->ir_data.load_string_ir->name);
 				break;
 			case READ_INT:
-				fprintf(output, "$t%d", ir->ir_data.read_int_ir->dest->id);
+				fprintf(output, "$%d", ir->ir_data.read_int_ir->dest->id);
+				break;
+			case PRINT_INT:
+				fprintf(output, "$%d", ir->ir_data.print_int_ir->src->id);
 				break;
 			default:
 				fprintf(output, "ERROR: unknown IR node type: %d\n", ir->ir_type);
@@ -3128,6 +3168,7 @@ void add_ir_opcodes() {
 	ir_opcodes[nop] = "NoOp";
 	ir_opcodes[beqz] = "JumpIfFalse";
 	ir_opcodes[Jump] = "Jump";
+	ir_opcodes[JumpAndLink] = "JumpAndLink";
 	ir_opcodes[ReturnWord] = "ReturnWord";
 	ir_opcodes[ReturnByte] = "ReturnByte";
 	ir_opcodes[ReturnHalf] = "ReturnHalf";
@@ -3138,6 +3179,7 @@ void add_ir_opcodes() {
 	ir_opcodes[Call] = "Call";
 	ir_opcodes[LoadString] = "LoadString";
 	ir_opcodes[ReadInt] = "ReadInt";
+	ir_opcodes[PrintInt] = "PrintInt";
 }
 void add_opcodes() {
 	opcodes[LoadAddr] = "la";
@@ -3177,7 +3219,8 @@ void add_opcodes() {
 	opcodes[neg] = "neg";
 	opcodes[nop] = "nop";
 	opcodes[beqz] = "beqz";
-	opcodes[Jump] = "jal";
+	opcodes[Jump] = "j";
+	opcodes[JumpAndLink] = "jal";
 	opcodes[JumpIfTrue] = "JumpIfTrue";
 }
 void print_spim_code(list *ir_list, FILE *output) {
@@ -3212,16 +3255,10 @@ void print_spim_code(list *ir_list, FILE *output) {
 			case LoadAddr:
 				fprintf(output, "\tsubi\t$fp, %d\n", 80 + current_ir->ir_data.load_ir->rs->offset);
 				break;
-//			case LoadWordIndirect:
 //			case BitwiseOr:
 //			case LogicalNot:
 			case LoadWordIndirect:
 				fprintf(output, "\tlw\t$%d, 0($%d)\n", current_ir->ir_data.op_ir->rd->id, current_ir->ir_data.op_ir->rs->id);
-				break;
-			case ReturnWord:
-			case ReturnHalf:
-			case ReturnByte:
-				fprintf(output, "\tmove\t$v0, $%d\n", current_ir->ir_data.op_ir->rd->id);
 				break;
 			case ParamWord:
 				fprintf(output, "\tsub\t$sp, $sp, 4\n");
@@ -3234,6 +3271,17 @@ void print_spim_code(list *ir_list, FILE *output) {
 			case ParamByte:
 				fprintf(output, "sub\t$sp, $sp, 1");
 				fprintf(output, "\tsw\t$%d, 0($sp)\n", current_ir->ir_data.op_ir->rd->id);
+				break;
+			case ReturnWord:
+			case ReturnHalf:
+			case ReturnByte:
+				fprintf(output, "\tmove\t$v0, $%d\n", current_ir->ir_data.op_ir->rd->id);
+				print_function_exit_spim_code(find_fn_identifier_parent_of_table(current_ir->belonging_node->symbol_table), output);
+				fprintf(output, "\tjr\t$ra\n");
+				break;
+			case Return:
+				print_function_exit_spim_code(find_fn_identifier_parent_of_table(current_ir->belonging_node->symbol_table), output);
+				fprintf(output, "\tjr\t$ra\n");
 				break;
 			default:
 				print_ir(output, current_ir, 0);
@@ -3257,42 +3305,92 @@ void print_spim_code(list *ir_list, FILE *output) {
 			fprintf(output, "\tsub\t$%d, $fp, %d\n", current_ir->ir_data.load_ir->rd->id, 80 + current_ir->ir_data.load_ir->rs->offset);
 			break;
 		case CALL:
-			if (str_equals(current_ir->ir_data.call_ir->function->name, "print_int")) {
-				//
-
-			}
+//			when entering new fn:
+//				move sp forward by 80 (SP=SP-80)
+//				save t registers to sp+40-80 in caller
+//				save s registers to sp+8-40 in callee
+//				save fp to sp+4-8 in callee
+//				save ra to sp+0-4 in callee
+//				move fp to sp+80
+//				move sp forward by 8 or however big the fn is
+			fprintf(output, "\taddi	$sp, $sp, -80\n");
+			print_t_saving_spim_code(output);
 			fprintf(output, "\tjal\t%s\n", current_ir->ir_data.call_ir->function->name);
+//			when exiting fn:
+//				move sp back by 8 or however big the fn is
+//				restore ra from sp in callee
+//				restore fp from sp+4 in callee
+//				restore s registers from sp-8-36 in callee
+//				restore t registers from sp-40-76 in caller
+//				move sp back by 80
+			print_t_restoring_spim_code(output);
+			fprintf(output, "\taddi\t$sp, $sp, 80\n");
 			break;
 		case LOAD_STRING:
-			fprintf(output, "\t.data\n%s\t.asciiz\t\"%s\"\n\t.text\n\tla\t$a0, %s\n", current_ir->ir_data.load_string_ir->name, current_ir->ir_data.load_string_ir->content, current_ir->ir_data.load_string_ir->name);
+			fprintf(output, "\t.data\n%s:\t.asciiz\t\"%s\"\n\t.text\n\tla\t$a0, %s\n", current_ir->ir_data.load_string_ir->name, current_ir->ir_data.load_string_ir->content, current_ir->ir_data.load_string_ir->name);
 			break;
 		case READ_INT:
 			fprintf(output, "\tjal\tread_int\n\tsw\t$v0, 0($%d)\n", current_ir->ir_data.read_int_ir->dest->id);
+			break;
+		case PRINT_INT:
+			fprintf(output, "\tmove\t$a0, $%d\n\tjal\tprint_int\n", current_ir->ir_data.print_int_ir->src->id);
 			break;
 		}
 		current_item = current_item->next;
 	}
 	fprintf(output, "\tli	$v0, 10\n\tsyscall\n");
 }
+void print_t_saving_spim_code(FILE *output) {
+	fprintf(output, "\tsw\t$t9, 76($sp)\n");
+	fprintf(output, "\tsw\t$t8, 72($sp)\n");
+	fprintf(output, "\tsw\t$t7, 68($sp)\n");
+	fprintf(output, "\tsw\t$t6, 64($sp)\n");
+	fprintf(output, "\tsw\t$t5, 60($sp)\n");
+	fprintf(output, "\tsw\t$t4, 56($sp)\n");
+	fprintf(output, "\tsw\t$t3, 52($sp)\n");
+	fprintf(output, "\tsw\t$t2, 48($sp)\n");
+	fprintf(output, "\tsw\t$t1, 44($sp)\n");
+	fprintf(output, "\tsw\t$t0, 40($sp)\n");
+}
+void print_t_restoring_spim_code(FILE *output) {
+	fprintf(output, "\tlw\t$t0, 40($sp)\n");
+	fprintf(output, "\tlw\t$t1, 44($sp)\n");
+	fprintf(output, "\tlw\t$t2, 48($sp)\n");
+	fprintf(output, "\tlw\t$t3, 52($sp)\n");
+	fprintf(output, "\tlw\t$t4, 56($sp)\n");
+	fprintf(output, "\tlw\t$t5, 60($sp)\n");
+	fprintf(output, "\tlw\t$t6, 64($sp)\n");
+	fprintf(output, "\tlw\t$t7, 68($sp)\n");
+	fprintf(output, "\tlw\t$t8, 72($sp)\n");
+	fprintf(output, "\tlw\t$t9, 76($sp)\n");
+}
 void print_function_entry_spim_code(symbol_table_identifier *fn, FILE *output) {
-	if (!str_equals(fn->name, "main")) {
-		fprintf(output, "\taddi	$sp, $sp, -80\n");
-		fprintf(output, "\tsw\t$s7, -36($sp)\n");
-		fprintf(output, "\tsw\t$s6, -32($sp)\n");
-		fprintf(output, "\tsw\t$s5, -28($sp)\n");
-		fprintf(output, "\tsw\t$s4, -24($sp)\n");
-		fprintf(output, "\tsw\t$s3, -20($sp)\n");
-		fprintf(output, "\tsw\t$s2, -16($sp)\n");
-		fprintf(output, "\tsw\t$s1, -12($sp)\n");
-		fprintf(output, "\tsw\t$s0, -8($sp)\n");
-		fprintf(output, "\tsw\t$ra, -4($sp)\n");
-		fprintf(output, "\tsw\t$fp, 0($sp)\n");
-		fprintf(output, "\taddi\t$fp, $sp, 80\n");
-	}
+
+	fprintf(output, "\tsw\t$s7, 36($sp)\n");
+	fprintf(output, "\tsw\t$s6, 32($sp)\n");
+	fprintf(output, "\tsw\t$s5, 28($sp)\n");
+	fprintf(output, "\tsw\t$s4, 24($sp)\n");
+	fprintf(output, "\tsw\t$s3, 20($sp)\n");
+	fprintf(output, "\tsw\t$s2, 16($sp)\n");
+	fprintf(output, "\tsw\t$s1, 12($sp)\n");
+	fprintf(output, "\tsw\t$s0, 8($sp)\n");
+	fprintf(output, "\tsw\t$fp, 4($sp)\n");
+	fprintf(output, "\tsw\t$ra, 0($sp)\n");
+	fprintf(output, "\taddi\t$fp, $sp, 80\n");
 	fprintf(output, "\tsub\t$sp, $sp, %d\n", scope_memory(fn->type->data.function_type->own_st, 0));
 }
-void print_print_int_spim_code(FILE *output, int i) {
-	fprintf(output, "print_int");
+void print_function_exit_spim_code(symbol_table_identifier *fn, FILE *output) {
+	fprintf(output, "\tadd\t$sp, $sp, %d\n", scope_memory(fn->type->data.function_type->own_st, 0));
+	fprintf(output, "\tlw\t$ra, 0($sp)\n");
+	fprintf(output, "\tlw\t$fp, 4($sp)\n");
+	fprintf(output, "\tlw\t$s0, 8($sp)\n");
+	fprintf(output, "\tlw\t$s1, 12($sp)\n");
+	fprintf(output, "\tlw\t$s2, 16($sp)\n");
+	fprintf(output, "\tlw\t$s3, 20($sp)\n");
+	fprintf(output, "\tlw\t$s4, 24($sp)\n");
+	fprintf(output, "\tlw\t$s5, 28($sp)\n");
+	fprintf(output, "\tlw\t$s6, 32($sp)\n");
+	fprintf(output, "\tlw\t$s7, 36($sp)\n");
 }
 int scope_memory(symbol_table *st, int initial_offset) {
 	// count the vars in the current ST
